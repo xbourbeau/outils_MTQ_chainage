@@ -1,0 +1,311 @@
+# -*- coding: utf-8 -*-
+
+"""
+***************************************************************************
+*                                                                         *
+*   This program is free software; you can redistribute it and/or modify  *
+*   it under the terms of the GNU General Public License as published by  *
+*   the Free Software Foundation; either version 2 of the License, or     *
+*   (at your option) any later version.                                   *
+*                                                                         *
+***************************************************************************
+"""
+
+from qgis.PyQt.QtCore import QCoreApplication, QVariant
+from qgis.core import (QgsProcessing,
+                       QgsFeatureSink,
+                       QgsPropertyDefinition,
+                       QgsWkbTypes,
+                       QgsGeometry,
+                       QgsField,
+                       QgsFeature,
+                       QgsRaster,
+                       QgsPointXY,
+                       QgsProcessingException,
+                       QgsProcessingAlgorithm,
+                       QgsCoordinateTransform,
+                       QgsProject,
+                       QgsCoordinateReferenceSystem,
+                       QgsProcessingParameterFeatureSource,
+                       QgsProcessingParameterField,
+                       QgsProcessingParameterString,
+                       QgsProcessingParameterDistance,
+                       QgsProcessingParameterFile,
+                       QgsProcessingParameterFeatureSink)
+
+from ..mtq.geocodage import geocodage
+
+class GeocodeLine(QgsProcessingAlgorithm):
+
+    # Constants used to refer to parameters and outputs. They will be
+    # used when calling the algorithm from another algorithm, or when
+    # calling from the QGIS console.
+
+    INPUT_RTSS = 'INPUT_RTSS'
+    RTSS = 'RTSS'
+    LONG = 'LONG'
+    GEOCODE = 'GEOCODE'
+    RTSSFIELD = 'RTSSFIELD'
+    CHAINED = 'CHAINED'
+    CHAINEF = 'CHAINEF'
+    DISTTRACED = 'DISTTRACED'
+    DISTTRACEF = 'DISTTRACEF'
+    OUTPUT = 'OUTPUT'
+
+    def tr(self, string):
+        """
+        Returns a translatable string with the self.tr() function.
+        """
+        return QCoreApplication.translate('Processing', string)
+
+    def createInstance(self):
+        return GeocodeLine()
+
+    def name(self):
+        """
+        Returns the algorithm name, used for identifying the algorithm. This
+        string should be fixed for the algorithm, and must not be localised.
+        The name should be unique within each provider. Names should contain
+        lowercase alphanumeric characters only and no spaces or other
+        formatting characters.
+        """
+        return 'Geocodef'
+
+    def displayName(self):
+        """
+        Returns the translated algorithm name, which should be used for any
+        user-visible display of the algorithm name.
+        """
+        return self.tr('Géocoder (ligne)')
+
+    def group(self):
+        """
+        Returns the name of the group this algorithm belongs to. This string
+        should be localised.
+        """
+        return self.tr('RTSS')
+
+    def groupId(self):
+        """
+        Returns the unique ID of the group this algorithm belongs to. This
+        string should be fixed for the algorithm, and must not be localised.
+        The group id should be unique within each provider. Group id should
+        contain lowercase alphanumeric characters only and no spaces or other
+        formatting characters.
+        """
+        return 'rtss'
+
+    def helpUrl(self):
+        return "file://sstao00-adm005/TridentAnalyst/Plugin_chainage_mtq/Documentation/Index.html#subsection4-3"
+
+    def shortHelpString(self):
+        """
+        Returns a localised short helper string for the algorithm. This string
+        should provide a basic description about what the algorithm does and the
+        parameters and outputs associated with it..
+        """
+        return self.tr("""
+            Géocoder des lignes à partir d'un RTSS et d'un chainage (début/fin). Un offset (début/fin) peut aussi être spécifié.
+            Un offset positive représente un décalage à droite alors qu'un offset négative représente un décalage à gauche.
+            Si seulement un offset est définie ou que les deux offset sont pareille,
+            la ligne vas être parallel au RTSS. Si deux offset sont défini, la difference entre les deux offset vas être répartie sur la longeur de la ligne.  """)
+
+    def initAlgorithm(self, config=None):
+        """
+        Here we define the INPUT_RTSSs and output of the algorithm, along
+        with some other properties.
+        """
+        # =================== Paramètres ===================
+        # We add the INPUT_RTSS vector features source. It can have any kind of
+        # geometry.
+        # ------------------- INPUT_RTSS -------------------
+        self.addParameter(
+            QgsProcessingParameterFeatureSource(
+                self.INPUT_RTSS,
+                self.tr('Couche des RTSS'),
+                [QgsProcessing.TypeVectorLine],
+                'BGR - RTSS'))
+        
+        # ------------------- Champ RTSS -------------------
+        self.addParameter(
+            QgsProcessingParameterField(
+                self.RTSS,
+                self.tr('Numéro de RTSS'),
+                'num_rts',
+                self.tr(self.INPUT_RTSS)))
+                
+        # ------------------- Champ LONG -------------------
+        self.addParameter(
+            QgsProcessingParameterField(
+                self.LONG,
+                self.tr('Chainage de fin des RTSS'),
+                'val_longr_sous_route',
+                self.tr(self.INPUT_RTSS)))
+                
+        # ------------------- Fichier à géocoder -------------------
+        self.addParameter(
+            QgsProcessingParameterFeatureSource(
+                self.GEOCODE,
+                self.tr('Fichier à géocoder'),
+                [QgsProcessing.TypeFile]))
+                
+        # ------------------- colone rtss -------------------
+        self.addParameter(
+            QgsProcessingParameterField(
+                self.RTSSFIELD,
+                self.tr('Numéro de RTSS'),
+                'RTSS',
+                self.tr(self.GEOCODE),
+                type=QgsProcessingParameterField.String))
+                
+        # ------------------- colone chainage début -------------------
+        self.addParameter(
+            QgsProcessingParameterField(
+                self.CHAINED,
+                self.tr('Chainage de début'),
+                'chainage_d',
+                self.tr(self.GEOCODE),
+                type=QgsProcessingParameterField.Numeric))
+        
+        # ------------------- colone chainage fin -------------------
+        self.addParameter(
+            QgsProcessingParameterField(
+                self.CHAINEF,
+                self.tr('Chainage de fin'),
+                'chainage_f',
+                self.tr(self.GEOCODE),
+                type=QgsProcessingParameterField.Numeric))
+                
+        # ------------------- offset début -------------------
+        self.addParameter(QgsProcessingParameterField(
+                self.DISTTRACED,
+                self.tr('Distance de décalage'),
+                None,
+                self.tr(self.GEOCODE),
+                type=QgsProcessingParameterField.Numeric,
+                optional=True))
+        
+        # ------------------- offset fin -------------------
+        self.addParameter(QgsProcessingParameterField(
+                self.DISTTRACEF,
+                self.tr('Distance de décalage de fin'),
+                None,
+                self.tr(self.GEOCODE),
+                type=QgsProcessingParameterField.Numeric,
+                optional=True))
+        
+        # ------------------- OUTPUT -------------------
+        # We add a feature sink in which to store our processed features (this
+        # usually takes the form of a newly created vector layer when the
+        # algorithm is run in QGIS).
+        self.addParameter(
+            QgsProcessingParameterFeatureSink(
+                self.OUTPUT,
+                self.tr('Output layer')))
+
+    def processAlgorithm(self, parameters, context, feedback):
+        """
+        Here is where the processing itself takes place.
+        """
+
+        # Retrieve the feature source and sink. The 'dest_id' variable is used
+        # to uniquely identify the feature sink, and must be included in the
+        # dictionary returned by the processAlgorithm function.
+        source_rtss = self.parameterAsVectorLayer(parameters, self.INPUT_RTSS, context)
+        if not source_rtss:
+            raise QgsProcessingException(self.invalidSourceError(parameters, self.INPUT_RTSS))
+        
+        champ_rtss_1 = self.parameterAsString(parameters, self.RTSS, context)
+        
+        champ_chainage_1 = self.parameterAsString(parameters, self.LONG, context)
+        
+        file_geocoder = self.parameterAsLayer(parameters, self.GEOCODE, context)
+        # Verifier que le paramètre n'est pas vide
+        if not file_geocoder:
+            raise QgsProcessingException(self.invalidSourceError(parameters, self.GEOCODE))
+        
+        champ_rtss_2 = self.parameterAsString(parameters, self.RTSSFIELD, context)
+        
+        champ_chainage_d = self.parameterAsString(parameters, self.CHAINED, context)
+        champ_chainage_f = self.parameterAsString(parameters, self.CHAINEF, context)
+        
+        champ_offset_d = self.parameterAsString(parameters, self.DISTTRACED, context)
+        champ_offset_f = self.parameterAsString(parameters, self.DISTTRACEF, context)
+        
+        fields = file_geocoder.fields()
+        fields.append(QgsField("valide", QVariant.Bool))
+        (sink, dest_id) = self.parameterAsSink(
+            parameters,
+            self.OUTPUT,
+            context,
+            fields,
+            QgsWkbTypes.LineString,
+            source_rtss.sourceCrs())
+        if not sink:
+            raise QgsProcessingException(self.invalidSinkError(parameters, self.OUTPUT))
+        
+        # Send some information to the user
+        feedback.pushInfo('CRS is {}'.format(source_rtss.sourceCrs().authid()))
+        
+        geocode = geocodage(source_rtss.getFeatures(), source_rtss.sourceCrs(),
+                            champ_rtss_1, champ_chainage_1)
+        # Compute the number of steps to display within the progress bar and
+        # get features from source
+        total = 100.0 / file_geocoder.featureCount() if file_geocoder.featureCount() else 0
+        feat_total = 0
+        
+        for current, feature in enumerate(file_geocoder.getFeatures()):
+            # Stop the algorithm if cancel button has been clicked
+            if feedback.isCanceled(): break
+            if champ_offset_d and champ_offset_f: 
+                offset_d = feature[champ_offset_d]
+                offset_f = feature[champ_offset_f]
+            elif champ_offset_d:
+                offset_d = feature[champ_offset_d]
+                offset_f = offset_d
+            else: 
+                offset_d = 0
+                offset_f = 0
+            
+            is_valide = True
+            chainage_d = feature[champ_chainage_d]
+            chainage_f = feature[champ_chainage_f]
+            if chainage_d == chainage_f:
+                is_valide = False
+                geom = QgsGeometry()
+                feedback.pushWarning('L\'entité {} n\'a pas été géocodée: Le chainage de début et de fin sont les mêmes'.format(feature.id()))
+                
+            else:
+                if chainage_f < chainage_d:
+                    geom = geocode.geocoder(feature[champ_rtss_2], chainage_f, chainage_d, offset=offset_f, offset_f=offset_d)
+                else:
+                    geom = geocode.geocoder(feature[champ_rtss_2], chainage_d, chainage_f, offset=offset_d, offset_f=offset_f)
+                
+                if not geom:
+                    # Send some information to the user
+                    feedback.pushWarning('L\'entité {} n\'a pas été géocodée: Le rtss {} n\'est pas dans la couche des rtss'.format(feature.id(), feature[champ_rtss_2]))
+                    is_valide = False
+                else:
+                    feat_total += 1
+                
+            feat = QgsFeature()
+            feat.setGeometry(geom)
+            attrs = feature.attributes()
+            attrs.append(is_valide)
+            feat.setAttributes(attrs)
+            # Add a feature in the sink
+            sink.addFeature(feat, QgsFeatureSink.FastInsert)
+            
+            
+            # Update the progress bar
+            feedback.setProgress(int(current * total))
+        
+        feedback.pushInfo('{} entitée géocodées'.format(feat_total))
+        # Return the results of the algorithm. In this case our only result is
+        # the feature sink which contains the processed features, but some
+        # algorithms may return multiple feature sinks, calculated numeric
+        # statistics, etc. These should all be included in the returned
+        # dictionary, with keys matching the feature corresponding parameter
+        # or output names.
+        
+        return {self.OUTPUT: dest_id}

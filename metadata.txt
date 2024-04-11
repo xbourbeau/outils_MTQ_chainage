@@ -1,0 +1,59 @@
+# This file contains metadata for your plugin.
+
+# This file should be included when you package your plugin.# Mandatory items:
+
+[general]
+name=Outils chainage MTQ
+qgisMinimumVersion=3.16
+description=Regroupe les outils pratiques pour les RTSS/Chainage
+version=3.2.3
+author=Xavier Bourbeau
+email=xavier.bourbeau@transports.gouv.qc.ca
+
+about=L'outil de chainage est une extention de QGIS qui a pour but de faciliter l'utilisation du système de référencement linéaire du MTQ (RTSS/Chainage).
+    Pour ce faire, il utilise une couche vectorielle des RTSS présente dans le projet. Le plugin ajoute également des géotraitements et un module python de géocodage.
+    
+    Le plugin permet entre autres de :
+        &nbsp&nbsp&nbsp1) Suivre le chainage selon la position du curseur.
+        &nbsp&nbsp&nbsp2) Géocoder des géométries selon leurs RTSS et chainage.
+        &nbsp&nbsp&nbsp3) Rechercher un RTSS.
+        &nbsp&nbsp&nbsp4) Ouvrir SIGO avec la vue courante.
+        &nbsp&nbsp&nbsp5) Faire le placement ponctuel d'écussons de route.
+        &nbsp&nbsp&nbsp6) Mesurer des distances le long d'un RTSS.
+        &nbsp&nbsp&nbsp7) Afficher un intervalle de chainage pour les RTSS sélectionnées.
+
+tracker=file://sstao00-adm005/TridentAnalyst/Plugin_chainage_mtq/Plugin/Listes d'amélioration.docx
+repository=file://sstao00-adm005/TridentAnalyst/Plugin_chainage_mtq/Plugin
+# End of mandatory metadata
+
+# Recommended items:
+
+hasProcessingProvider=yes
+# Uncomment the following line and add your changelog:
+changelog=
+   2.2.3 - Correction bug: Erreur sur la géometrie temporaire de l'outils de mesure dans la version 3.32 de QGIS
+   2.2.3 - Ajout: Un géotraitement de géocodage inverse a été ajouté 
+
+# Tags are comma separated with spaces allowed
+tags=python;chainage;mtq;rtss
+
+homepage=file://sstao00-adm005/TridentAnalyst/Plugin_chainage_mtq/Documentation/Index.html
+category=Plugins
+icon=Icons/Chainage.png
+# experimental flag
+experimental=False
+
+# deprecated flag (applies to the whole plugin, not just a single version)
+deprecated=False
+
+# Since QGIS 3.8, a comma separated list of plugins to be installed
+# (or upgraded) can be specified.
+# Check the documentation for more information.
+# plugin_dependencies=
+
+Category of the plugin: Raster, Vector, Database or Web
+# category=Vector
+
+# If the plugin can run on QGIS Server.
+server=False
+
