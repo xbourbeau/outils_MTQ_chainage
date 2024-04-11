@@ -1,12 +1,17 @@
 # -*- coding: utf-8 -*-
-
 import os, math
 from qgis.core import QgsGeometry
 from .fnt import reprojectGeometry
 
 def openSIGO(iface, layers=None):
+    """
+    Fonction qui permet d'ouvrir SIGO selon l'étendue de la carte.
+
+    Args:
+        - iface: iface de QGIS
+        - layers (LayerManager): Le gestionnaire de couche pour ajouter les couches de la carte dans SIGO
+    """
     default_link = "https://www.geomsp.qc/igo2/transports-quebec/"
-    #try:
     canvas = iface.mapCanvas()
     scale = canvas.scale()
     dpi = iface.mainWindow().physicalDpiX()
@@ -30,5 +35,4 @@ def openSIGO(iface, layers=None):
                 wms_layers += "(" + ','.join(layers) + "),"
             default_link = f"https://www.geomsp.qc/igo2/transports-quebec/?context=_default&zoom={zoom_level}&center={center_point.x()},{center_point.y()}&{urls[:-1]}&{wms_layers[:-1]}"
         else: default_link = f"https://www.geomsp.qc/igo2/transports-quebec/?context=_default&zoom={zoom_level}&center={center_point.x()},{center_point.y()}"
-    #except: pass
     os.startfile(default_link)

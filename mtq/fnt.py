@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
-
 from qgis.core import (QgsProject, QgsCoordinateReferenceSystem, QgsCoordinateTransform,
-    QgsFeatureRequest, QgsVectorLayer, QgsFeature, QgsGeometry)
+                       QgsFeatureRequest, QgsVectorLayer, QgsFeature)
 import numpy as np
 from qgis.PyQt.QtWidgets import QFileDialog
 import os.path
@@ -9,104 +8,106 @@ import random
 from copy import deepcopy
 import shapely.ops
 
-
-'''
-Fonction qui inverse la géometrique d'un ligne
-Entrée:
-    - geom (list coordonnée) = La géometrie a inverser
-Sortie:
-    - La geometrie inversés
-'''
 def reverse_geom(geom):
+    """
+    Fonction qui inverse la géometrique d'un ligne
+    Args:
+        - geom (list coordonnée): La géometrie a inverser
+    Sortie:
+        - La geometrie inversés
+    """
     def _reverse(x, y, z=None):
-        if z:
-            return x[::-1], y[::-1], z[::-1]
+        if z: return x[::-1], y[::-1], z[::-1]
         return x[::-1], y[::-1]
-
     return shapely.ops.transform(_reverse, geom)
     
-
-'''
-Fonction compare deux liste de chainage de la même longueur pour savoir si les chainage
-s'intersect.
-Entrée:
-    c_compare (liste) = Liste des chainages #1
-    c_source (liste) = Liste des chainages #2
-
-Sortie:
-    - (bool) = Si il y a une intersection
-'''
 def chainageIntersects(c_compare, c_source):
+    """
+    Fonction compare deux liste de chainage de la même longueur pour savoir si les chainage s'intersect.
+    Args:
+        c_compare (liste): Liste des chainages #1
+        c_source (liste): Liste des chainages #2
+
+    Sortie:
+        - (bool) = Si il y a une intersection
+    """
     compare = np.append(np.array(c_compare), np.flip(np.array(c_compare)))
     source = np.append(np.array(c_source), np.array(c_source))
     if compare.size == source.size:
         lesser = np.less_equal(source, compare)
         greater = np.greater_equal(source, compare)
-        if np.all(lesser) is np.any(lesser) and np.all(greater) is np.any(greater):
-            return False
-        return True
-        
+        return not (np.all(lesser) is np.any(lesser) and np.all(greater) is np.any(greater))   
     return None
 
-# Fonction qui ouvre une fenêtre de dialog pour que l'utilisateur choisi un dossier
-def choisirDossier(window_name="Choisir le dossier", default_folder=None):
-    folder = os.path.expanduser("~") + '\Desktop\\'
-    if default_folder:
-        if os.path.exists(default_folder):
-            folder = default_folder
-        
+def choisirDossier(window_name="Choisir le dossier", default_folder=""):
+    """
+    Fonction qui ouvre une fenêtre de dialog pour que l'utilisateur choisi un dossier.
+
+    Args:
+        - window_name (str): Nom de la fenêtre à créer
+        - default_folder (str): Le dossier par défault
+    """
+    if os.path.exists(default_folder): folder = default_folder
+    else: folder = os.path.expanduser("~") + '\Desktop\\'
     chemin = QFileDialog.getExistingDirectory(None, window_name, folder)
     
-    if os.path.exists(chemin):
-        return chemin + '/'
-    else:
-        return default_folder
+    if os.path.exists(chemin): return chemin + '/'
+    else: return default_folder
 
-# Fonction qui ouvre une fenêtre de dialog pour que l'utilisateur enregistre un fichier
-def saveFichier(window_name="Enregistrer le fichier", ext=".geojson", default_file=None):
+def saveFichier(window_name="Enregistrer le fichier", ext=".geojson", default_file=""):
+    """
+    Fonction qui ouvre une fenêtre de dialog pour que l'utilisateur enregistre un fichier.
+
+    Args: 
+        - window_name (str): Nom de la fenêtre à créer
+        - ext (str): Extention du fichier à enregistrer (incluant le point)
+        - default_file (str): Le dossier par défault
+    """
     folder = os.path.expanduser("~") + '\Desktop\\'
     if default_file:
         default_file = os.path.realpath(default_file)
-        if os.path.exists(os.path.dirname(default_file)):
-            # Conserver le nom du dossier où est enregistré le fichier 
-            folder = default_file
-        
-        
+        # Conserver le nom du dossier où est enregistré le fichier 
+        if os.path.exists(os.path.dirname(default_file)): folder = default_file
     file, extention = QFileDialog.getSaveFileName(None, window_name, folder, ext)
-    if file:
-        return file
-    else:
-        return default_file
+    if file:  return file
+    else: return default_file
 
-# Fonction qui ouvre une fenêtre de dialog pour que l'utilisateur choisi un fichier
-def choisirFichier(window_name="Choisir le fichier", ext=".txt", default_file=None):
+def choisirFichier(window_name="Choisir le fichier", ext=".txt", default_file=""):
+    """
+    Fonction qui ouvre une fenêtre de dialog pour que l'utilisateur choisi un fichier.
+
+    Args: 
+        - window_name (str): Nom de la fenêtre à créer
+        - ext (str): Extention du fichier à choisir (incluant le point)
+        - default_file (str): Le dossier par défault
+    """
     folder = os.path.expanduser("~") + '\Desktop\\'
     if default_file:
-        if os.path.exists(default_file):
-            # Conserver le nom du dossier où est enregistré le fichier 
-            folder = default_file
+        # Conserver le nom du dossier où est enregistré le fichier 
+        if os.path.exists(default_file): folder = default_file
         
     file, extention = QFileDialog.getOpenFileName(None, window_name, folder, ext)
-    if os.path.exists(file):
-        return file
-    else:
-        return default_file
-    
+    if os.path.exists(file): return file
+    else: return default_file
+
+# TODO: Change name to getWFSExtentRequest
 def getWFSRequest(canvas, epsg=3798):
-    map_crs = QgsProject.instance().crs().authid()
+    """
+    Permet d'optenir une requête d'intersection pour une selection SQL d'une couche WFS.
+    L'intersection ce fait selon l'étendu de la carte. 
+
+    Args:
+        - canvas (QgsMapCanvas): Le canvas de la carte
+        - epsg (int/QgsCoordinateReferenceSystem): Le système de coordonnée de la couche
+    """
     crsDest = QgsCoordinateReferenceSystem(epsg)
-    crsSrc = QgsCoordinateReferenceSystem(map_crs)
+    crsSrc = QgsCoordinateReferenceSystem(QgsProject.instance().crs().authid())
     
     if crsSrc != crsDest:
         crs_transform = QgsCoordinateTransform(crsSrc, crsDest, QgsProject.instance())
         extent = crs_transform.transform(canvas.extent())
-    else:
-        extent = canvas.extent()
-
-    spatial_request = "ST_Intersects( ST_GeometryFromText('%s'), geometry)" % (extent.asWktPolygon())
-
-    return spatial_request 
-            
+    else:  extent = canvas.extent()
+    return f"ST_Intersects( ST_GeometryFromText('{extent.asWktPolygon()}'), geometry)"
 
 '''
     Fonction qui permet de choisir une couleur pour chaque entitées d'une couche en fonction de 
@@ -120,6 +121,17 @@ def getWFSRequest(canvas, epsg=3798):
         - requete (str) = Une requête à appliquer pour filtrer les entitées
 '''
 def colorPicker(layer, pallette, champ_couleur="color", requete=None):
+    """
+    Fonction qui permet de choisir une couleur pour chaque entitées d'une couche en fonction de 
+    sa proximité avec les autres entitées de la couche. Le nombre de couleur devrait être supérieur
+    aux nombres d'entitées pouvant être superposé (distance 0).
+    
+    Args:
+        - layer (QgsVectorLayer): La couche à choisir les couleurs
+        - pallette (list): Une list de valeurs unique représentant les couleurs
+        - champ_couleur (str): Le champ contennat les valeurs de couleur
+        - requete (str): Une requête à appliquer pour filtrer les entitées
+    """
     # Nombre max de feature à vérifier la proximité
     feat_number = len(pallette)-1
     # La position du champ dans la couche
@@ -169,18 +181,18 @@ def colorPicker(layer, pallette, champ_couleur="color", requete=None):
         # Modifier le champ de couleurs de la couche 
         layer.changeAttributeValue(feat1.id(), field_id, color_picked)
 
-'''
+def reprojectFeats(feats, org_epsg, dest_epsg):
+    """
     Fonction qui permet de reprojeter une entitée dans un autres système de coordonnée
     
-    Entrée:
-        - feat (List of QgsFeatures) = Liste des entitée à reprojeté
-        - org_epsg (int) = Code EPSG du CRS des entitées
-        - dest_epsg (int) = Code EPSG du CRS des entitées résultantes
+    Args:
+        - feat (List of QgsFeatures): Liste des entitée à reprojeté
+        - org_epsg (int): Code EPSG du CRS des entitées
+        - dest_epsg (int): Code EPSG du CRS des entitées résultantes
         
     Sortie:
-        - reproject_feats (List of QgsFeatures) = Liste d'entitée reprojeté
-'''
-def reprojectFeats(feats, org_epsg, dest_epsg):
+        - reproject_feats (List of QgsFeatures): Liste d'entitée reprojeté
+    """
     # Instancier les CRS à partir des codes EPSG
     crsDest = QgsCoordinateReferenceSystem(dest_epsg)
     crsSrc = QgsCoordinateReferenceSystem(org_epsg)
@@ -197,19 +209,18 @@ def reprojectFeats(feats, org_epsg, dest_epsg):
     # Retourner les entitées résultantes
     return reproject_feats
 
-
-'''
+def reprojectFeat(feat, org_epsg, dest_epsg):
+    """
     Fonction qui permet de reprojeter une entitée dans un autres système de coordonnée
     
-    Entrée:
-        - feat (QgsFeatures) = L'entitée à reprojeté
-        - org_epsg (int) = Code EPSG du CRS de l'entitée
-        - dest_epsg (int) = Code EPSG du CRS de l'entitée résultante
+    Args:
+        - feat (QgsFeatures): L'entitée à reprojeté
+        - org_epsg (int): Code EPSG du CRS de l'entitée
+        - dest_epsg (int): Code EPSG du CRS de l'entitée résultante
         
     Sortie:
-        - reproject_feat (QgsFeatures) = L'entitée reprojeté
-'''
-def reprojectFeat(feat, org_epsg, dest_epsg):
+        - reproject_feat (QgsFeatures): L'entitée reprojeté
+    """
     # Instancier les CRS à partir des codes EPSG
     crsDest = QgsCoordinateReferenceSystem(dest_epsg)
     crsSrc = QgsCoordinateReferenceSystem(org_epsg)
@@ -224,54 +235,51 @@ def reprojectFeat(feat, org_epsg, dest_epsg):
     # Retourner l'entitée résultante
     return feat
 
-'''
-    Fonction qui permet de reprojeter une geometrie dans un autres système de coordonnée
+def reprojectGeometry(geom, org_epsg, dest_epsg):
+    """
+    Fonction qui permet de reprojeter une géometrie dans un autres système de coordonnée
     
-    Entrée:
-        - geom (QgsGeometry) = La geometrie à reprojeté
-        - org_epsg (int) = Code EPSG du CRS de l'entitée
-        - dest_epsg (int) = Code EPSG du CRS de l'entitée résultante
+    Args:
+        - geom (QgsGeometry): La geometrie à reprojeté
+        - org_epsg (int): Code EPSG du CRS de l'entitée
+        - dest_epsg (int): Code EPSG du CRS de l'entitée résultante
         
     Sortie:
-        - geom (QgsGeometry) = La geometrie reprojeté
-'''
-def reprojectGeometry(geom, org_epsg, dest_epsg):
+        - geom (QgsGeometry): La geometrie reprojeté
+    """
+    # Instancier les CRS à partir des codes EPSG
+    crsDest = QgsCoordinateReferenceSystem(dest_epsg)
+    crsSrc = QgsCoordinateReferenceSystem(org_epsg)
     # Vérifier si les CRS sont différent
     if org_epsg != dest_epsg:
-        # Instancier les CRS à partir des codes EPSG
-        crsDest = QgsCoordinateReferenceSystem(dest_epsg)
-        crsSrc = QgsCoordinateReferenceSystem(org_epsg)
-        if crsDest.isValid() and crsSrc.isValid():
-            # Instancier la méthode de transformation entre les deux CRS
-            crs_transform = QgsCoordinateTransform(crsSrc, crsDest, QgsProject.instance())
-            # Reprojeter l'entitée
-            geom.transform(crs_transform)
-        else: return False
+        if not crsDest.isValid() or not crsSrc.isValid(): return False
+        # Reprojeter l'entitée avec la méthode de transformation entre les deux CRS
+        geom.transform(QgsCoordinateTransform(crsSrc, crsDest, QgsProject.instance()))
     
     # Retourner l'entitée résultante
     return geom
 
-'''
+def reprojectExtent(extent, org_epsg, dest_epsg):
+    """
     Fonction qui permet de reprojeter un étendu dans un autres système de coordonnée
     
-    Entrée:
-        - feat (QgsRectangle) = L'extent à reprojeté
-        - org_epsg (int) = Code EPSG du CRS de l'entitée
-        - dest_epsg (int) = Code EPSG du CRS de l'entitée résultante
+    Args:
+        - feat (QgsRectangle): L'extent à reprojeté
+        - org_epsg (int): Code EPSG du CRS de l'entitée
+        - dest_epsg (int): Code EPSG du CRS de l'entitée résultante
         
     Sortie:
-        - reproject_extent (QgsRectangle) = L'extent reprojeté
-'''
-def reprojectExtent(extent, org_epsg, dest_epsg):
+        - reproject_extent (QgsRectangle): L'extent reprojeté
+    """
+    # Instancier les CRS à partir des codes EPSG
+    crsDest = QgsCoordinateReferenceSystem(dest_epsg)
+    crsSrc = QgsCoordinateReferenceSystem(org_epsg)
     # Vérifier si les CRS sont différent
     if org_epsg != dest_epsg:
         # Instancier la méthode de transformation entre les deux CRS
-        crs_transform = QgsCoordinateTransform(
-            QgsCoordinateReferenceSystem(org_epsg),
-            QgsCoordinateReferenceSystem(dest_epsg),
-            QgsProject.instance())
+        crs_transform = QgsCoordinateTransform(crsSrc, crsDest, QgsProject.instance().transformContext())
         # Reprojeter l'entitée
-        reproject_extent = crs_transform.transform(extent)
+        reproject_extent = crs_transform.transformBoundingBox(extent)
     # Sinon les entitées n'on pas besoin d'être reprojetés
     else: reproject_extent = extent
     # Retourner l'entitée résultante
@@ -349,53 +357,51 @@ def copyVectorLayer(source_layer: QgsVectorLayer, epsg=None):
 
     return destination_layer
 
-
-
-'''
-    Fonction qui valide si une couche existe dans le projet.
-    Entrée:
-        layer_name (str) = Nom de la couche
-        fields_name (list of str) = Nom des champs que la couche doit contenir
-        geom_type (int) = Le type de géometrie de la couche
-'''
-def validateLayer (layer_name, fields_name=[], geom_type=None):
+def validateLayer(layer_name, fields_name=[], geom_type=None):
+    """
+    Fonction qui valide si une couche avec des champs et géometrie existe dans le projet.
+    Args:
+        layer_name (str): Nom de la couche
+        fields_name (list of str): Nom des champs que la couche doit contenir
+        geom_type (int): Le type de géometrie de la couche
+    """
     # Vérifier pour chaque couche avec le même nom laquel est la bonne
     for layer in QgsProject.instance().mapLayersByName(layer_name):
         if layer.type() == 0:
-            if not geom_type or layer.geometryType() == geom_type:
+            if geom_type is None or layer.geometryType() == geom_type:
                 # Vérifier si le champs se retrouve dans la couche
                 liste_fields = [field.name() for field in layer.fields()]
-                if set(fields_name).issubset(liste_fields):
-                    # Succesful
-                    return layer
+                if set(fields_name).issubset(liste_fields): return layer    
     # Not Succesful
     return None 
 
 def isLayerInGeopackage(geopackage, layer_name):
+    """
+    Fonction qui permet de vérifier si un couche est dans un géopackage
+
+    Args:
+        - geopackage (str): Chemin vers le géopackage à vérifier
+        - layer_name (str): Le nom de la couche à vérifier dans le géopackage
+    """
     if not os.path.exists(geopackage): return False
-    source = f'{geopackage}|subset=SELECT * FROM gpkg_contents WHERE "table_name" LIKE \'{layer_name}\''
+    source = f"""{geopackage}|subset=SELECT * FROM gpkg_contents WHERE "table_name" LIKE '{layer_name}'"""
     for i in QgsVectorLayer(source, "names", "ogr").getFeatures(): return True
-    
     return False
 
-
-"""
+def getPageFormat(paper_name, unit='mm'):
+    """
     Retrieves the dimensions (height and width) of paper sizes based on their name.
 
     Paramètres:
         paper_name (str): The name of the paper size, such as 'A4' or 'ANSI A'.
-        unit (str, optional): The unit of measurement for the dimensions.
-            Supported values are 'mm' (millimeters), 'cm' (centimeters), and 'in' (inches).
-            Defaults to 'mm'.
+        unit (str): The unit of measurement for the dimensions. Supported values are 'mm' (millimeters), 'cm' (centimeters), and 'in' (inches).
 
     Returns:
         tuple: A tuple containing the height and width of the paper size in the specified unit.
 
     Raises:
         ValueError: If an invalid unit is provided.
-
-"""
-def getPageFormat(paper_name, unit='mm'):
+    """
     paper_sizes = {
         # ANSI sizes
         'ANSI A': (215.9, 279.4),
@@ -442,13 +448,8 @@ def getPageFormat(paper_name, unit='mm'):
     
     if paper_name in paper_sizes:
         dimensions = paper_sizes[paper_name]
-        if unit == 'mm':
-            return dimensions
-        elif unit == 'cm':
-            return tuple(dim / 10 for dim in dimensions)
-        elif unit == 'in':
-            return tuple(dim * 0.0393701 for dim in dimensions)
-        else:
-            raise ValueError("Invalid unit. Supported units are 'mm', 'cm', and 'in'.")
-    else:
-        return None
+        if unit == 'mm': return dimensions
+        elif unit == 'cm': return tuple(dim / 10 for dim in dimensions)
+        elif unit == 'in': return tuple(dim * 0.0393701 for dim in dimensions)
+        else: raise ValueError("Invalid unit. Supported units are 'mm', 'cm', and 'in'.")
+    else: return None

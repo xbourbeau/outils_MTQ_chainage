@@ -1,13 +1,11 @@
 # -*- coding: utf-8 -*-
-
 from qgis.core import QgsPointXY, QgsGeometry, QgsVectorLayer, QgsField, QgsProject, QgsFeature
 from qgis.PyQt.QtCore import QVariant
-import os, pyodbc
-import numpy as np
+import pyodbc
 import pandas as pd
 
-class gsrPanneau:
-
+class PanneauGSR:
+    """ Objet qui permet de ce connecter à la Base de données GSR et de retourner des panneaux """
     def __init__(self, dt='90', dsn='GSR'):
         self.dt = dt
         self.setConnectionString(dsn)
@@ -23,23 +21,26 @@ class gsrPanneau:
     def testConnection(self, conextion_str=''):
         try:
             # Connection ODBC
-            with pyodbc.connect(self.connextion_str) as conn:
-                return True
+            with pyodbc.connect(self.connextion_str) as conn: return True
         except: return False
     
     def setConnectionString(self, dsn):
         self.connextion_str = 'DSN=%s' % dsn
         self.dsn_is_valide = self.testConnection(self.connextion_str)
     
-    def getPanneau(self, code_nsr):
-        
-        # code_nsr = liste des code à conserver. ex: ["I-185-1", "I-185-2", "I-185-3"] 
+    def getPanneau(self, code_nsr, add_layer=True):
+        """
+        Méthode qui permet d'ajouter une couche temporaire dans la carte qui contient 
+        la localisation des panneaux selon le code NSR.
+
+        Args:
+            - code_nsr (Liste of str): Liste des codes NSR des panneaux ex: ["I-185-1", "I-185-2"]
+            - add_layer (bool): Ajouter la couche résultat au projet
+        """
         if self.dsn_is_valide:
-            # Connection ODBC
-            with pyodbc.connect(self.connextion_str) as conn:
-                # Lire la table des panneaux dans un data frame Pandas
-                data = pd.read_sql(self.sql, conn)
-                
+            # Lire la table des panneaux dans un data frame Pandas
+            with pyodbc.connect(self.connextion_str) as conn: data = pd.read_sql(self.sql, conn)
+
             # Conversion des types utilisé pour limiter l'espace
             data["NOM_DT"] = data["NOM_DT"].astype("category")
             data["NSR_PHOTO_trim"] = data["NSR_PHOTO_trim"].astype("category")
@@ -84,7 +85,8 @@ class gsrPanneau:
             pr.addFeatures(feats)
             vl.updateExtents()
             # Ajouter la couche au projet
-            QgsProject.instance().addMapLayer(vl)
+            if add_layer: QgsProject.instance().addMapLayer(vl)
+            return vl
     
     
     ''' *** À titre informatique seulement, ne fonctionne pas *** '''

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from .fnt import reprojectGeometry, validateLayer
 
 # ======================== Nom des options par défault ============================
@@ -139,70 +140,70 @@ DICT_PROVINCE = {
     },
 }
 
-""" Object représentant une région administrative """
 class Region:
-
+    """ Object représentant une région administrative """
     def __init__(self, code, name, geom=None, proj=None):
         # Définir les pramètres de l'oject région
         self.setCode(code)
         self.setName(name)
         self.setGeometry(geom, proj)
 
-    # Méthode qui retourne le code de la région
-    def getCode(self):
+    def getCode(self, as_string=False):
+        """ Méthode qui retourne le code de la région """
+        if as_string:
+            if self.code < 10: return '0'+ str(self.code)
+            else: return str(self.code)
         return self.code
 
-    # Méthode qui retourne le nom de la région
     def getName(self):
+        """ Méthode qui retourne le nom de la région """
         return self.name
 
-    # Méthode qui retourne la géométrie de la région
     def getGeom(self):
+        """ Méthode qui retourne la géométrie de la région """
         return self.geom
-
-    # Méthode qui permet de vérifie si une géométrie est dans la région
+    
     def contains (self, geom_to_check, proj):
+        """ Méthode qui permet de vérifie si une géométrie est dans la région """
         # Reprojecter la geometrie dans le même système de coordonnées si 2 projection sont défini
         if self.proj and proj: geom_to_check = reprojectGeometry(geom_to_check, proj, self.proj)
-        
         # Retrouner VRAI ou FAUX selon l'intersection
         if self.geom.boundingBoxIntersects(geom_to_check): return self.geom.intersects(geom_to_check)
         return False
 
-    # Méthode pour définir le code de la région
     def setCode(self, code):
+        """ Méthode pour définir le code de la région """
         self.code = int(code)
 
-    # Méthode pour définir le nom de la région
     def setName(self, name):
+        """ Méthode pour définir le nom de la région """
         self.name = name
 
-    # Méthode pour définir une geometry et un projection pour la région
     def setGeometry(self, geom, proj=None):
+        """ Méthode pour définir une geometry et un projection pour la région """
         self.geom = geom
         self.proj = proj
 
-
-""" Object représentant les centres de services du MTQ """
 class CS(Region):
+    """ Object représentant les centres de services du MTQ """
     def __init__(self, code, name, geom=None, proj=None):
         Region.__init__(self, code, name, geom, proj)
         # List des préfix possible pour le nom du CS
         self.prefix = ("CS des ", "CS de ", "CS d' ")
     
     # Méthode qui retourne le nom du CS
-    def getName(self, complet=False):
+    def getName(self, type="court"):
         # Retroune le nom complet avec préfix
-        if complet: return self.name
+        if type == "complet": return self.name.replace("CS", 'Centre de services')
+        elif type == "long": return self.name
         # Retire le préfix du nom
         else:
             name = self.name
             for s in self.prefix: name = name.replace(s, '')
             return name
 
-""" Object représentant les directions territoriale du MTQ """
 class DT (Region):
-    
+    """ Object représentant les directions territoriale du MTQ """
     def __init__(self, code, name, geom=None, proj=None):
         Region.__init__(self, code, name, geom, proj)
         # Définir les pramètres de l'oject DT
@@ -210,63 +211,83 @@ class DT (Region):
         # List des préfix possible pour le nom de la DT
         self.prefix = ("DG de l'", "DG de la ", "DG du ", "DG des ", "DG d'")
     
-    # Méthode qui permet d'ajouter un objet Region a l'interieur de la DT
     def addCS(self, cs):
+        """ Méthode qui permet d'ajouter un objet Region a l'interieur de la DT """
         if cs.getCode() in self.dict_cs: return False
         self.dict_cs[cs.getCode()] = cs
         return True
+    
+    def getCS(self, value):
+        """ Permet de retourner l'objet CS selon un code ou un nom """
+        cs = None
+        # Vérifier si la valeur est un chiffre
+        if isinstance(value, int): cs = self.getCSByCode(value)
+        # Vérifier si la valeur est un texte
+        elif isinstance (value, str):
+            cs = self.getCSByName(value)
+            if cs is None: cs = self.getCSByCode(value)
+        return cs
+    
+    def getCSByCode(self, code_cs):
+        """ Méthode qui permet de retourner le CS selon un code """
+        try:
+            code_cs = int(code_cs)
+            if code_cs in self.dict_cs: return self.dict_cs[code_cs]
+            else: return None
+        except: return None
 
-    # Méthode qui permet de retourner le CS selon un code
-    def getCS(self, code_cs):
-        if code_cs in self.dict_cs: return self.dict_cs[code_cs]
-        else: return None
+    def getCSByName(self, name_cs):
+        """ Méthode qui permet de retourner le CS selon un nom """
+        for cs in self.getListCS():
+            for type in ["court", "long", "complet"]:
+                if cs.getName(type=type) == name_cs: return cs
+        return None
 
-    # Méthode qui permet de retourner une liste des codes de CS de la DT
     def getListCodeCS(self):
+        """ Méthode qui permet de retourner une liste des codes de CS de la DT """
         return list(self.dict_cs.keys())
     
-    # Méthode qui permet de retourner une liste des objet CS de la DT
     def getListCS(self):
+        """ Méthode qui permet de retourner une liste des objet CS de la DT """
         return self.dict_cs.values()
 
-    # Retourne une list des noms des cs présents dans le dt
-    def getListNameCS(self, complet=False):
-        return [cs.getName(complet) for cs in self.getListCS()]
+    def getListNameCS(self, type="court"):
+        """ Retourne une list des noms des cs présents dans le dt """
+        return [cs.getName(type=type) for cs in self.getListCS()]
 
-    # Méthode qui retourne le nom du CS
-    def getName(self, complet=False):
+    def getName(self, type="court"):
+        """ Méthode qui retourne le nom du CS """
         # Retroune le nom complet avec préfix
-        if complet: return self.name
+        if type == "complet": return self.name.replace("DG", 'Direction générale')
+        elif type == "long": return self.name
         # Retire le préfix du nom
         else:
             name = self.name
             for s in self.prefix: name = name.replace(s, '')
             return name
         
-    # Permet de vérifier si un un CS est dans une DT
     def isInDT(self, value):
+        """ Permet de vérifier si un un CS est dans une DT """
         for code_cs,  cs in self.dict_cs.items():
             # Vérifier si la valeur est un chiffre
             if isinstance(value, int):
                 if code_cs == value: return True
             # Vérifier si la valeur est un texte
             elif isinstance (value, str):
-                if cs.getName(True) == value or cs.getName(False) == value: return True
+                if self.getCSByName(value) is not None: return True
+                elif self.getCS(value) is not None: return True
             # Vérifier si la valeur est un objet CS
             elif isinstance (value, CS):
                 if code_cs == value.getCode(): return True  
         return False
 
-
-""" Object représentant la province du Québec """
 class Province(Region):
-    
+    """ Object représentant la province du Québec """
     def __init__(self, code, name, geom=None, proj=None): 
         Region.__init__(self, code, name, geom, proj)
         # Définir les pramètres de l'oject DT
         self.dict_dt = {}
     
-    ''' Constructeur des CS et DT dans l'objet Province a partir des couches '''
     @classmethod
     def fromLayer(cls,
                   layer_dt,
@@ -276,6 +297,7 @@ class Province(Region):
                   champ_code_cs=DEFAULT_NOM_CHAMP_CODE_CS,
                   champ_nom_cs=DEFAULT_NOM_CHAMP_NOM_CS,
                   champ_cs_code_DT=DEFAULT_NOM_CHAMP_CS_CODE_DT):
+        """ Constructeur des CS et DT dans l'objet Province a partir des couches """
         # Créer un objet Province
         prov = cls(53, "Québec")
         dt_epsg = layer_dt.crs().authid().split(":")[1]
@@ -292,10 +314,9 @@ class Province(Region):
             if dt: dt.addCS(CS(feat_cs[champ_code_cs], feat_cs[champ_nom_cs], feat_cs.geometry(), cs_epsg))
         return prov
     
-
-    ''' Constructeur des CS et DT dans l'objet Province a partir du projet '''
     @classmethod
     def fromMemory(cls):
+        """ Constructeur des CS et DT dans l'objet Province a partir du dictionnaire par défault """
         # Créer un objet Province
         prov = cls(53, "Québec")
         # Parcourir les DT du dictionnaire
@@ -309,7 +330,6 @@ class Province(Region):
             prov.addDT(obj_dt)
         return prov
 
-    ''' Constructeur des CS et DT dans l'objet Province a partir du projet '''
     @classmethod
     def fromProject(cls,
                   layer_dt_name=DEFAULT_NOM_COUCHE_DT,
@@ -319,6 +339,7 @@ class Province(Region):
                   champ_code_cs=DEFAULT_NOM_CHAMP_CODE_CS,
                   champ_nom_cs=DEFAULT_NOM_CHAMP_NOM_CS,
                   champ_cs_code_DT=DEFAULT_NOM_CHAMP_CS_CODE_DT):
+        """ Constructeur des CS et DT dans l'objet Province a partir du projet """
         # Définir et la couche des DT dans le projet
         layer_dt = validateLayer(layer_dt_name, [champ_code_dt, champ_nom_dt], geom_type=2)
         # Définir et la couche des CS dans le projet
@@ -328,12 +349,12 @@ class Province(Region):
         # Sinon retourner un objet Province vide
         return cls(53, "QuébecEmpty")
 
-    # Méthode qui retourn une liste des DT qui intersectes avec la géométrie rentrée
     def DTIntersection(self, geom, proj=None):
+        """ Méthode qui retourn une liste des DT qui intersectes avec la géométrie rentrée """
         return [dt for dt in self.dict_dt.values() if dt.contains(geom, proj)]
-
-    # Méthode qui retourn une liste des CS qui intersectes avec la géométrie rentrée
+    
     def CSIntersection(self, geom, proj=None, filter_dt=None):
+        """ Méthode qui retourn une liste des CS qui intersectes avec la géométrie rentrée """
         # Liste des objet CS
         list_cs = []
         # Parcourir la liste des DT qui intersect la géometrie
@@ -344,48 +365,78 @@ class Province(Region):
                 list_cs += [cs for cs in dt.getListCS() if cs.contains(geom, proj)]
         return list_cs
         
-
-    # Méthode qui permet d'ajouter un objet Region a l'interieur de la Province
     def addDT(self, dt):
+        """ Méthode qui permet d'ajouter un objet Region a l'interieur de la Province """
         if dt.getCode() in self.dict_dt: return False
         self.dict_dt[dt.getCode()] = dt
         return True
     
-    # Méthode qui permet de retourner la DT selon un code
-    def getDT(self, code_dt):
-        if code_dt in self.dict_dt: return self.dict_dt[code_dt]
-        else: return None
-
-    # Méthode qui permet de retourner la DT selon un nom
-    def getDTByName(self, name_dt):
+    def getCS(self, value):
+        """ Permet de retourner l'objet CS selon un code ou un nom """
+        cs = None
         for dt in self.getListDT():
-            if dt.getName(True) == name_dt or dt.getName(False) == name_dt: return dt
+            cs = dt.getCS(value)
+            if cs is not None: break
+        return cs
+    
+    def getDT(self, value):
+        """ Permet de retourner l'objet DT selon un code ou un nom """
+        dt = None
+        # Vérifier si la valeur est un chiffre
+        if isinstance(value, int):
+            dt = self.getDTByCode(value)
+        # Vérifier si la valeur est un texte
+        elif isinstance (value, str):
+            dt = self.getDTByName(value)
+            if dt is None: dt = self.getDTByCode(value)
+        return dt
+    
+    def getDTByCode(self, code_dt):
+        """ Méthode qui permet de retourner la DT selon un code """
+        try:
+            code_dt = int(code_dt)
+            if int(code_dt) in self.dict_dt: return self.dict_dt[code_dt]
+            else: return None
+        except: return None
+    
+    def getCSByName(self, name_cs):
+        """ Méthode qui permet de retourner le CS selon un code """
+        for dt in self.getListDT():
+            cs = dt.getCSByName(name_cs)
+            if cs: return cs
+        return None
+    
+    def getDTByName(self, name_dt):
+        """ Méthode qui permet de retourner la DT selon un nom """
+        for dt in self.getListDT():
+            for type in ["court", "long", "complet"]:
+                if dt.getName(type=type) == name_dt: return dt
         return None
 
-    # Méthode qui permet de retourner une liste des codes de DT de la Province
     def getListCodeDT(self):
+        """ Méthode qui permet de retourner une liste des codes de DT de la Province """
         return list(self.dict_dt.keys())
-
-    # Méthode qui permet de retourner une liste des objet DT de la Province
+    
     def getListDT(self):
+        """ Méthode qui permet de retourner une liste des objet DT de la Province """
         return self.dict_dt.values()
         
-    #Retourne une list des noms des dt présents dans la province
-    def getListNameDT(self, complet=False):
-        return [dt.getName(complet) for dt in self.getListDT()]
+    def getListNameDT(self, type="court"):
+        """ Retourne une list des noms des dt présents dans la province """
+        return [dt.getName(type=type) for dt in self.getListDT()]
 
-    # Permet de vérifier si une DT est dans la Province
-    def isInDT(self, value):
-        for code_dt,  dt in self.dict_dt.items():
-            # Vérifier si la valeur est un chiffre
-            if isinstance(value, int):
-                if code_dt == value: return True
-            # Vérifier si la valeur est un texte
-            elif isinstance (value, str):
-                if dt.getName(True) == value or dt.getName(False) == value: return True
-            # Vérifier si la valeur est un objet DT
-            elif isinstance (value, DT):
-                if code_dt == value.getCode(): return True  
-        return False
+    def isInProvince(self, value):
+        """ Permet de vérifier si une DT est dans la Province """
+        # Vérifier si la valeur est un chiffre
+        if isinstance(value, int):
+            if self.getDTByCode(value) is not None: return True
+        # Vérifier si la valeur est un texte
+        elif isinstance (value, str):
+            if self.getDTByName(value) is not None: return True
+            elif self.getDT(value) is not None: return True
+        # Vérifier si la valeur est un objet DT
+        elif isinstance (value, DT):
+            if value.getCode() in self.getListCodeDT(): return True  
+        else: return False
         
 pass

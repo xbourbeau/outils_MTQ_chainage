@@ -96,6 +96,7 @@ class sourceParametre:
         categorie_config = "Config"
         self.plugin_dir = os.path.dirname(__file__)
         path_to_default_style_eccusson = os.path.realpath(os.path.join(self.plugin_dir, 'styles\styles_ecusson.qml'))
+        path_to_default_style_atlas = os.path.realpath(os.path.join(self.plugin_dir, 'styles\styles_atlas.qml'))
         path_to_default_style_chainage = os.path.realpath(os.path.join(self.plugin_dir, 'styles\point_de_chainage.qml'))
         
         text_on_map_font = QFont()
@@ -136,6 +137,8 @@ class sourceParametre:
             "dlg_param_last_pos": ParametreInt(categorie_config, "dlg_param_last_pos", default_value=2),
             # Paramètre: Dernière position de la fenêtre d'ajout d'entité 
             "dlg_add_feat_last_pos": ParametreInt(categorie_config, "dlg_add_feat_last_pos", default_value=2),
+            # Paramètre: Dernière position de la fenêtre de création d'atlas
+            "dlg_atlas_last_pos": ParametreInt(categorie_config, "dlg_atlas_last_pos", default_value=2),
             # Paramètre: Utiliser un raccourcis clavier pour le suivi du chainage
             "use_raccourcis_chainage": ParametreBool(categorie_config, "use_raccourcis_chainage", default_value=True),
             # Paramètre: Raccourci clavier du suivi de chainage
@@ -152,6 +155,8 @@ class sourceParametre:
             "layer_ecusson_field_classe": Parametre(categorie_config, "layer_ecusson_field_classe", default_value='classe'),
             # Paramètre: Chemin vers le fichier qml de style pour la couche des écussons
             "layer_ecusson_style": Parametre(categorie_config, "layer_ecusson_style", default_value=path_to_default_style_eccusson),
+            # Paramètre: Chemin vers le fichier qml de style pour la couche des page d'atlas
+            "layer_atlas_style": Parametre(categorie_config, "layer_atlas_style", default_value=path_to_default_style_atlas),
             # Paramètre: Chemin vers les écussons vide par défault
             "ecusson_path": Parametre(categorie_config, "ecusson_path", default_value=""),
             # Paramètre: Chemin vers le fichier qml de style pour la couche des points de chainage

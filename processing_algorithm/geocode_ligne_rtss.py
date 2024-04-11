@@ -34,6 +34,7 @@ from qgis.core import (QgsProcessing,
                        QgsProcessingParameterFeatureSink)
 
 from ..mtq.geocodage import geocodage
+from ..mtq.format import verifyFormatChainage
 
 class GeocodeLine(QgsProcessingAlgorithm):
 
@@ -165,7 +166,7 @@ class GeocodeLine(QgsProcessingAlgorithm):
                 self.tr('Chainage de début'),
                 'chainage_d',
                 self.tr(self.GEOCODE),
-                type=QgsProcessingParameterField.Numeric))
+                type=QgsProcessingParameterField.Numeric|QgsProcessingParameterField.String))
         
         # ------------------- colone chainage fin -------------------
         self.addParameter(
@@ -174,7 +175,7 @@ class GeocodeLine(QgsProcessingAlgorithm):
                 self.tr('Chainage de fin'),
                 'chainage_f',
                 self.tr(self.GEOCODE),
-                type=QgsProcessingParameterField.Numeric))
+                type=QgsProcessingParameterField.Numeric|QgsProcessingParameterField.String))
                 
         # ------------------- offset début -------------------
         self.addParameter(QgsProcessingParameterField(
@@ -198,31 +199,21 @@ class GeocodeLine(QgsProcessingAlgorithm):
         # We add a feature sink in which to store our processed features (this
         # usually takes the form of a newly created vector layer when the
         # algorithm is run in QGIS).
-        self.addParameter(
-            QgsProcessingParameterFeatureSink(
-                self.OUTPUT,
-                self.tr('Output layer')))
+        self.addParameter( QgsProcessingParameterFeatureSink( self.OUTPUT, self.tr('Output layer')))
 
     def processAlgorithm(self, parameters, context, feedback):
-        """
-        Here is where the processing itself takes place.
-        """
-
         # Retrieve the feature source and sink. The 'dest_id' variable is used
         # to uniquely identify the feature sink, and must be included in the
         # dictionary returned by the processAlgorithm function.
         source_rtss = self.parameterAsVectorLayer(parameters, self.INPUT_RTSS, context)
-        if not source_rtss:
-            raise QgsProcessingException(self.invalidSourceError(parameters, self.INPUT_RTSS))
+        if not source_rtss: raise QgsProcessingException(self.invalidSourceError(parameters, self.INPUT_RTSS))
         
         champ_rtss_1 = self.parameterAsString(parameters, self.RTSS, context)
-        
         champ_chainage_1 = self.parameterAsString(parameters, self.LONG, context)
         
         file_geocoder = self.parameterAsLayer(parameters, self.GEOCODE, context)
         # Verifier que le paramètre n'est pas vide
-        if not file_geocoder:
-            raise QgsProcessingException(self.invalidSourceError(parameters, self.GEOCODE))
+        if not file_geocoder: raise QgsProcessingException(self.invalidSourceError(parameters, self.GEOCODE))
         
         champ_rtss_2 = self.parameterAsString(parameters, self.RTSSFIELD, context)
         
@@ -241,14 +232,11 @@ class GeocodeLine(QgsProcessingAlgorithm):
             fields,
             QgsWkbTypes.LineString,
             source_rtss.sourceCrs())
-        if not sink:
-            raise QgsProcessingException(self.invalidSinkError(parameters, self.OUTPUT))
+        if not sink: raise QgsProcessingException(self.invalidSinkError(parameters, self.OUTPUT))
         
         # Send some information to the user
         feedback.pushInfo('CRS is {}'.format(source_rtss.sourceCrs().authid()))
-        
-        geocode = geocodage(source_rtss.getFeatures(), source_rtss.sourceCrs(),
-                            champ_rtss_1, champ_chainage_1)
+        geocode = geocodage(source_rtss.getFeatures(), source_rtss.sourceCrs(), champ_rtss_1, champ_chainage_1)
         # Compute the number of steps to display within the progress bar and
         # get features from source
         total = 100.0 / file_geocoder.featureCount() if file_geocoder.featureCount() else 0
@@ -257,36 +245,27 @@ class GeocodeLine(QgsProcessingAlgorithm):
         for current, feature in enumerate(file_geocoder.getFeatures()):
             # Stop the algorithm if cancel button has been clicked
             if feedback.isCanceled(): break
-            if champ_offset_d and champ_offset_f: 
-                offset_d = feature[champ_offset_d]
-                offset_f = feature[champ_offset_f]
-            elif champ_offset_d:
-                offset_d = feature[champ_offset_d]
-                offset_f = offset_d
-            else: 
-                offset_d = 0
-                offset_f = 0
+            if champ_offset_d and champ_offset_f: offset_d, offset_f = feature[champ_offset_d], feature[champ_offset_f]
+            elif champ_offset_d: offset_d, offset_f = feature[champ_offset_d], offset_d
+            else: offset_d, offset_f = 0, 0
             
             is_valide = True
-            chainage_d = feature[champ_chainage_d]
-            chainage_f = feature[champ_chainage_f]
+            chainage_d = verifyFormatChainage(feature[champ_chainage_d])
+            chainage_f = verifyFormatChainage(feature[champ_chainage_f])
             if chainage_d == chainage_f:
                 is_valide = False
                 geom = QgsGeometry()
                 feedback.pushWarning('L\'entité {} n\'a pas été géocodée: Le chainage de début et de fin sont les mêmes'.format(feature.id()))
                 
             else:
-                if chainage_f < chainage_d:
-                    geom = geocode.geocoder(feature[champ_rtss_2], chainage_f, chainage_d, offset=offset_f, offset_f=offset_d)
-                else:
-                    geom = geocode.geocoder(feature[champ_rtss_2], chainage_d, chainage_f, offset=offset_d, offset_f=offset_f)
+                if chainage_f < chainage_d: geom = geocode.geocoder(feature[champ_rtss_2], chainage_f, chainage_d, offset=offset_f, offset_f=offset_d)
+                else: geom = geocode.geocoder(feature[champ_rtss_2], chainage_d, chainage_f, offset=offset_d, offset_f=offset_f)
                 
                 if not geom:
                     # Send some information to the user
-                    feedback.pushWarning('L\'entité {} n\'a pas été géocodée: Le rtss {} n\'est pas dans la couche des rtss'.format(feature.id(), feature[champ_rtss_2]))
+                    feedback.pushWarning('L\'entité {} n\'a pas été géocodée: Le rtss {} ({}, {}) n\'est pas dans la couche des rtss'.format(feature.id(), feature[champ_rtss_2], chainage_d, chainage_f))
                     is_valide = False
-                else:
-                    feat_total += 1
+                else: feat_total += 1
                 
             feat = QgsFeature()
             feat.setGeometry(geom)
@@ -296,16 +275,9 @@ class GeocodeLine(QgsProcessingAlgorithm):
             # Add a feature in the sink
             sink.addFeature(feat, QgsFeatureSink.FastInsert)
             
-            
             # Update the progress bar
             feedback.setProgress(int(current * total))
         
         feedback.pushInfo('{} entitée géocodées'.format(feat_total))
-        # Return the results of the algorithm. In this case our only result is
-        # the feature sink which contains the processed features, but some
-        # algorithms may return multiple feature sinks, calculated numeric
-        # statistics, etc. These should all be included in the returned
-        # dictionary, with keys matching the feature corresponding parameter
-        # or output names.
         
         return {self.OUTPUT: dest_id}

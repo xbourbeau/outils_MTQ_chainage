@@ -34,6 +34,7 @@ from qgis.core import (QgsProcessing,
                        QgsProcessingParameterFeatureSink)
 
 from ..mtq.geocodage import geocodage
+from ..mtq.format import verifyFormatChainage
 
 class GeocodePoint(QgsProcessingAlgorithm):
 
@@ -162,7 +163,7 @@ class GeocodePoint(QgsProcessingAlgorithm):
                 self.tr('Chainage'),
                 'chainage',
                 self.tr(self.GEOCODE),
-                type=QgsProcessingParameterField.Numeric))
+                type=QgsProcessingParameterField.Numeric|QgsProcessingParameterField.String))
                 
         # ------------------- offset -------------------
         self.addParameter(QgsProcessingParameterField(
@@ -234,19 +235,16 @@ class GeocodePoint(QgsProcessingAlgorithm):
         for current, feature in enumerate(file_geocoder.getFeatures()):
             # Stop the algorithm if cancel button has been clicked
             if feedback.isCanceled(): break
-            if champ_offset:
-                offset = feature[champ_offset]
-            else:
-                offset = 0
+            if champ_offset: offset = feature[champ_offset]
+            else: offset = 0
             
-            geom = geocode.geocoder(feature[champ_rtss_2], feature[champ_chainage_2], offset=offset)
+            geom = geocode.geocoder(feature[champ_rtss_2], verifyFormatChainage(feature[champ_chainage_2]), offset=offset)
             is_valide = True
             if not geom:
                 # Send some information to the user
                 feedback.pushWarning('L\'entité {} n\'a pas été géocodée: Le rtss {} n\'est pas dans la couche des rtss'.format(feature.id(), feature[champ_rtss_2]))
                 is_valide = False
-            else:
-                feat_total += 1
+            else: feat_total += 1
                 
             feat = QgsFeature()
             feat.setGeometry(geom)
@@ -256,16 +254,9 @@ class GeocodePoint(QgsProcessingAlgorithm):
             # Add a feature in the sink
             sink.addFeature(feat, QgsFeatureSink.FastInsert)
             
-            
             # Update the progress bar
             feedback.setProgress(int(current * total))
         
         feedback.pushInfo('{} entitée géocodées'.format(feat_total))
-        # Return the results of the algorithm. In this case our only result is
-        # the feature sink which contains the processed features, but some
-        # algorithms may return multiple feature sinks, calculated numeric
-        # statistics, etc. These should all be included in the returned
-        # dictionary, with keys matching the feature corresponding parameter
-        # or output names.
         
         return {self.OUTPUT: dest_id}

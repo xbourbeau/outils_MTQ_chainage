@@ -74,12 +74,12 @@ class fenetreParametre(QDockWidget, FORM_CLASS):
         # Connections
         self.btn_enregistrer.clicked.connect(self.saveSettings)
         self.btn_annuler.clicked.connect(self.initialisePresentValues)
-        #self.btn_aide.clicked.connect(lambda: os.startfile("file://sstao00-adm005/TridentAnalyst/Plugin_chainage_mtq/Documentation/Index.html#section2"))
         self.btn_symblologie_ecusson.clicked.connect(lambda: self.choisirQML(self.txt_sybologie_ecusson))
         self.btn_symblologie_chainage.clicked.connect(lambda: self.choisirQML(self.txt_sybologie_chainage))
         self.cbx_layer_rtss.layerChanged.connect(self.setLayerCombobox)
         self.key_shortcut.keySequenceChanged.connect(self.checkKeyShortcut)
         self.key_shortcut_ecusson.keySequenceChanged.connect(self.checkKeyShortcut2)
+        self.dockLocationChanged.connect(lambda area: self.gestion_parametre.getParam("dlg_param_last_pos").setValue(area))
         
         self.first_init = True
         self.valide_key_chainage = False
@@ -98,15 +98,6 @@ class fenetreParametre(QDockWidget, FORM_CLASS):
 
 
     def closeEvent(self, event):
-        self.btn_enregistrer.clicked.disconnect(self.saveSettings)
-        self.btn_annuler.clicked.disconnect(self.initialisePresentValues)
-        #self.btn_aide.clicked.disconnect()
-        self.btn_symblologie_ecusson.clicked.disconnect()
-        self.btn_symblologie_chainage.clicked.disconnect()
-        self.cbx_layer_rtss.layerChanged.disconnect(self.setLayerCombobox)
-        self.key_shortcut.keySequenceChanged.disconnect(self.checkKeyShortcut)
-        self.key_shortcut_ecusson.keySequenceChanged.disconnect(self.checkKeyShortcut2)
-    
         self.closing_window.emit()
         event.accept()
     
@@ -121,7 +112,6 @@ class fenetreParametre(QDockWidget, FORM_CLASS):
     
     def initialisePresentValues(self):
         # Initialisé les valeurs selon les paramètres du plugin
-        
         # Set Layer comboBox 
         idx = self.cbx_layer_rtss.findText(self.gestion_parametre.getParam("layer_rtss").getValue())
         if idx != -1:
@@ -167,7 +157,6 @@ class fenetreParametre(QDockWidget, FORM_CLASS):
     
     # Enregistrer les paramètre dans un fichier text
     def saveSettings(self):
-        
         self.gestion_parametre.getParam("layer_rtss").setValue(self.cbx_layer_rtss.currentText())
         self.gestion_parametre.getParam("field_num_rtss").setValue(self.cbx_field_rtss.currentField())
         self.gestion_parametre.getParam("field_chainage_fin").setValue(self.cbx_field_chainage.currentField())

@@ -1,4 +1,76 @@
 # -*- coding: utf-8 -*-
+import datetime
+import os
+
+class ExporterVersIIT:
+
+    def __init__(self):
+        # Current date
+        self.date = datetime.datetime.today().strftime('%Y-%m-%d')
+        self.output_dir = r"C:\Users\xbourbeau\Desktop"
+        self.separateur = ";"
+        self.user_iit = "NBOXC"
+        
+        # Nom des fichiers à écrire
+        self.metadata_filename = "metadata.txt"
+        self.description_filename = "description.txt"
+        self.localisation_filename = "localisation.txt"
+        
+        self.trasactions = {"A": "Ajout", "M":"Modification descriptive", "G":"Modification géométrique", "S":"Suppression", "N":"Non modifié"}
+        self.methodes_releve = {
+            "01": "GPS Absolu",
+            "02": "Imagerie Verticale",
+            "03": "Imagerie Horizontale",
+            "04": "Photogrammétrie",
+            "05": "Arpentage par GPS",
+            "10": "GPS avec décalage par repport à la trace",
+            "11": "Imagerie Verticale avec décalage par repport à la trace",
+            "12": "Photogrammétrie avec décalage par repport à la trace",
+            "20": "Odomèetre electronique",
+            "21": "GPS, chainage avec décalage trace",
+            "22": "Imagerie verticale (vidéo terrestre) (par chainage - distance trace)"}
+            
+        self.precisions = {"01": "Moins de 1m", "02":"De 1 à 3m", "03": "Moins de 3m"}
+    
+    def help(self):
+        os.startfile("http://gid.mtq.min.intra/otcs/llisapi.dll?func=ll&objId=375590571&objAction=browse&viewType=1")
+    
+    def setTransaction(self, code):
+        if code in self.trasactions: self.code_transaction = code
+        else: self.code_transaction = None
+        return self.code_transaction
+    
+    def setMethodeReleve(self, code):
+        if code in self.methodes_releve: self.methode_releve = code
+        else: self.methode_releve = None
+        return self.methode_releve
+    
+    def setPrecision(self, code):
+        if code in self.precisions: self.precision = code
+        else: self.precision = None
+        return self.precision
+    
+    def writeMetadate(self, methode_releve=None, precision=None):
+        if methode_releve: self.setMethodeReleve(methode_releve)
+        if precision: self.setMethodeReleve(precision)
+        
+        if self.methode_releve and self.precision:
+            if os.path.exists(self.output_dir):
+                metadata = os.path.join(self.output_dir, self.metadata_filename)
+                with open(metadata, 'w') as meta:
+                    meta.write(self.methode_releve + self.separateur + self.precision)
+                return True
+        return False
+        
+    def writeDescription(self):
+        pass
+
+
+
+
+
+
+
 def getMRCByCode(code):
     if str(code) == '30':
         return "Le Granit"

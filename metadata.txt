@@ -14,7 +14,7 @@ about=L'outil de chainage est une extention de QGIS qui a pour but de faciliter 
     Pour ce faire, il utilise une couche vectorielle des RTSS présente dans le projet. Le plugin ajoute également des géotraitements et un module python de géocodage.
     
     Le plugin permet entre autres de :
-        &nbsp&nbsp&nbsp1) Suivre le chainage selon la position du curseur.
+        &nbsp&nbsp&nbsp1) Suivre et copier le chainage selon la position du curseur.
         &nbsp&nbsp&nbsp2) Géocoder des géométries selon leurs RTSS et chainage.
         &nbsp&nbsp&nbsp3) Rechercher un RTSS.
         &nbsp&nbsp&nbsp4) Ouvrir SIGO avec la vue courante.
@@ -31,8 +31,13 @@ repository=file://sstao00-adm005/TridentAnalyst/Plugin_chainage_mtq/Plugin
 hasProcessingProvider=yes
 # Uncomment the following line and add your changelog:
 changelog=
-   2.2.3 - Correction bug: Erreur sur la géometrie temporaire de l'outils de mesure dans la version 3.32 de QGIS
-   2.2.3 - Ajout: Un géotraitement de géocodage inverse a été ajouté 
+   2.2.3 - Correction bug: Erreur sur la géometrie temporaire de l'outils de mesure dans la version 3.32 et plus de QGIS.
+   2.2.3 - Ajout: Un géotraitement de géocodage inverse a été ajouté.
+   2.2.4 - Correction bug: La validation des rtss est ajusté pour accépter les rtss ayant des espaces suplémentaire et manquant les '0' du début.
+   2.2.4 - Ajout: Une action pour créer des nouvelles entités (ponctuelle ou linéaire) géocodées dans une couche en edition.
+   2.2.4 - Ajout: Une action permetant de générer des rectangles le long d'un rtss afin de produire des atlas.
+   2.2.4 - Ajout: Des options pour copier les valeurs courante on été ajouter au menu du clique droit lorsque le suivi du chainage est actif. (Par Fael Poirier)
+
 
 # Tags are comma separated with spaces allowed
 tags=python;chainage;mtq;rtss
