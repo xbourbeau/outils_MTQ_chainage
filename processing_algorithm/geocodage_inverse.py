@@ -17,8 +17,8 @@ from qgis.core import (QgsProcessing,
                        QgsProcessingParameterNumber,
                        QgsWkbTypes,
                        QgsProcessingParameterFeatureSink)
-from ..mtq.geocodage import geocodage
-from ..mtq.format import formaterChainage
+
+from ..mtq.core import Geocodage, Chainage
 
 # Fonction qui ajoute les champs requis en fonction des paramètres choisis et du type de géométrie
 def addFieldstoSink(data, field_list, offset, format_chainage, precision):
@@ -99,7 +99,7 @@ class GeocodageInverse(QgsProcessingAlgorithm):
             QgsProcessingParameterFeatureSource(
                 self.INPUT,
                 self.tr('Couche à traiter'),
-                [QgsProcessing.TypeVectorPoint,QgsProcessing.TypeVectorLine]
+                [QgsProcessing.TypeVectorPoint, QgsProcessing.TypeVectorLine]
             )
         )
         # Paramètre du champ contenant les numéros de RTSS s'il sont connu
@@ -214,10 +214,10 @@ class GeocodageInverse(QgsProcessingAlgorithm):
         feedback.pushInfo("")
         feedback.pushInfo("******************** Module de géocodage *******************************")
         # Définir le module de géocodage
-        geocode = geocodage.fromLayer(source_rtss, champ_rtss, champ_chainage, precision=precision)
+        geocode = Geocodage.fromLayer(source_rtss, champ_rtss, champ_chainage, precision=precision)
         feedback.pushInfo(str(geocode.getEpsg()))
         feedback.pushInfo(f"Nombre de RTSS: {len(geocode.getListRTSS())}")
-        feedback.pushInfo(f"Précision des chainages: {geocode.precision} (ex: {formaterChainage(10**(geocode.precision*-1))})")
+        feedback.pushInfo(f"Précision des chainages: {geocode.precision} (ex: {Chainage.valueFormater(10**(geocode.precision*-1))})")
         feedback.pushInfo("***************************************************")
         feedback.pushInfo("")
         
@@ -242,25 +242,25 @@ class GeocodageInverse(QgsProcessingAlgorithm):
             
             # Définir le RTSS par défault de l'entité
             if champ_input_rtss:
-                feat_rtss = geocode.getRTSS(str(feat[champ_input_rtss]))
+                rtss = None
+                feat_rtss = geocode.get(str(feat[champ_input_rtss]))
                 if feat_rtss is None: feedback.pushWarning(f"Le RTSS ({feat[champ_input_rtss]}) de l'entitée {feat.id()} n'est pas valide")
-                else: feat_rtss = feat_rtss.getRTSS()
-            else: feat_rtss = None
+                else: rtss = feat_rtss.getRTSS()
             
             try:
                 # Géocodage pour une couche de point
                 if source.wkbType() == QgsWkbTypes.Point:
                     # Géocodage inverse
-                    result = geocode.geocoderInversePoint(feat.geometry(), rtss=feat_rtss, get_offset=offset_val, formater_rtss=format_rtss, formater_chainage=format_chainage)
+                    result = geocode.geocoderInversePoint(feat.geometry(), rtss=rtss)
                     # Ajout des valeurs attributaires calculées
-                    atts.append(result['rtss'])
-                    atts.append(result['chainage'])
-                    if offset_val: atts.append(result['offset'])
+                    atts.append(result.getRTSS().value(format_rtss))
+                    atts.append(result.getChainage().value(format_chainage))
+                    if offset_val: atts.append(result.getOffset())
                     
                 # Géocodage pour une couche de ligne
                 elif source.wkbType() == QgsWkbTypes.LineString:
                     # Géocodage inverse
-                    result = geocode.geocoderInverseLineByExtremities(feat.geometry(), rtss=feat_rtss, get_offset=offset_val, formater_rtss=format_rtss, formater_chainage=format_chainage)
+                    result = geocode.geocoderInverseLineByExtremities(feat.geometry(), rtss=feat_rtss)
                     # Ajout des valeurs attributaires calculées
                     atts.append(result['start'][0]['rtss'])
                     atts.append(result['start'][0]['chainage'])

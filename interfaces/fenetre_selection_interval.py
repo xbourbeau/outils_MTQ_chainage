@@ -21,36 +21,70 @@
  *                                                                         *
  ***************************************************************************/
 """
-
 import os
-
-from qgis.PyQt import QtGui, QtWidgets, uic
+from qgis.PyQt import QtWidgets, uic
+from qgis.core import QgsProcessingFeatureSourceDefinition
 from qgis.PyQt.QtCore import pyqtSignal
+import processing
 
+from ..functions.addLayerToMap import addLayerToMap
+from ..functions.getIcon import getPixmap
 # Class pour la gestion des paramètre du plugin
-from ..gestion_parametres import sourceParametre
+from ..modules.PluginParametres import PluginParametres
 
-
-FORM_CLASS, _ = uic.loadUiType(os.path.join(
-    os.path.dirname(__file__), 'fenetre_selection_interval.ui'))
-
+FORM_CLASS, _ = uic.loadUiType(os.path.join(os.path.dirname(__file__), 'fenetre_selection_interval.ui'))
 
 class fenetreSelectionInterval(QtWidgets.QDialog, FORM_CLASS):
 
     closing_window = pyqtSignal()
 
-    def __init__(self, parent=None):
+    def __init__(self, canvas,  parent=None):
         """Constructor."""
+        self.canvas = canvas
         super(fenetreSelectionInterval, self).__init__(parent)
-        # Set up the user interface from Designer.
-        # After setupUI you can access any designer object by doing
-        # self.<objectname>, and you can use autoconnect slots - see
-        # http://doc.qt.io/qt-5/designer-using-a-ui-file.html
-        # #widgets-and-dialogs-with-auto-connect
         self.setupUi(self)
-        
-        self.gestion_parametre = sourceParametre()
-        precision = self.gestion_parametre.getParam("precision_chainage").getValue()
+        self.params = PluginParametres()
+        # Définir l'image du logo de l'outil
+        self.lbl_logo.setPixmap(getPixmap("chainage"))
+        self.lbl_logo.setScaledContents(True)
+
+        # Apppler la fonction lorsque l'interval est accepter par l'utilisateur
+        self.buttonBox.accepted.connect(self.execute)
+
+    def setInterfaceActive(self):
+        if self.isVisible(): self.raise_()
+        else: 
+            self.setPrecision()
+            self.show()
+
+    def closeEvent(self, event):
+        if self.isVisible():
+            self.closing_window.emit()
+            event.accept()
+
+    def execute(self):
+        """
+        Méthode qui fait appelle à un script pour générer les points de chaînage
+        le long des RTSS selectionnés et selon l'interval défini par l'utilisateur.
+        La méthode est appeller lorsque le bouton "ok" de la fenêtre du choix d'interval
+        est clické.
+        """
+        # L'interval défini dans la fenêtre par l'utilisateur
+        interval = self.spx_intervalle.value()
+        # Définir les paramètres du script
+        params = {'INPUT_RTSS': QgsProcessingFeatureSourceDefinition(self.params.getValue("layer_rtss"), True),
+                'INPUT_FIELD_LONG': self.params.getValue("field_chainage_fin"),
+                'INPUT_FIELD_RTSS': self.params.getValue("field_num_rtss"),
+                'INPUT_INTERVAL': interval,
+                'OUTPUT': f"memory:Chainage ({interval}m)"}
+        # Lancer le script "Générer des point de chaînage sur un RTSS"
+        result = processing.run("MTQ:generateChainagePointOnRTSS", params)
+        # La couche vectorielle (point) résultante du script 
+        addLayerToMap(self.canvas, result['OUTPUT'], style=self.params.getValue("layer_chainage_style"))
+        self.close()
+
+    def setPrecision(self):
+        precision = self.params.getValue("precision_chainage")
         single_step = 10
         if precision < 0: single_step = single_step ** abs(precision)
         minimum = 10 ** (precision * -1)
@@ -58,7 +92,3 @@ class fenetreSelectionInterval(QtWidgets.QDialog, FORM_CLASS):
         self.spx_intervalle.setDecimals(precision)
         self.spx_intervalle.setSingleStep(single_step)
         self.spx_intervalle.setMinimum(minimum)
-
-    def closeEvent(self, event):
-        self.closing_window.emit()
-        event.accept()

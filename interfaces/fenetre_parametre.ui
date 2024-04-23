@@ -15,7 +15,7 @@
   </property>
   <property name="minimumSize">
    <size>
-    <width>174</width>
+    <width>249</width>
     <height>160</height>
    </size>
   </property>
@@ -73,6 +73,19 @@
       <property name="bottomMargin">
        <number>6</number>
       </property>
+      <item>
+       <widget class="QPushButton" name="btn_close">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>25</height>
+         </size>
+        </property>
+        <property name="text">
+         <string>Fermer</string>
+        </property>
+       </widget>
+      </item>
       <item>
        <widget class="QPushButton" name="btn_annuler">
         <property name="enabled">
@@ -1587,6 +1600,22 @@ color:rgb(255, 0, 0)</string>
     <hint type="destinationlabel">
      <x>281</x>
      <y>869</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>btn_close</sender>
+   <signal>clicked()</signal>
+   <receiver>ParametreDockWidgetBase</receiver>
+   <slot>close()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>64</x>
+     <y>424</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>188</x>
+     <y>221</y>
     </hint>
    </hints>
   </connection>

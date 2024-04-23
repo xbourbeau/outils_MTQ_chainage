@@ -4,8 +4,7 @@ import os.path
 import pyplugin_installer
 from qgis.PyQt.QtWidgets import QPushButton
 # Class pour la gestion des paramètre du plugin
-from ..gestion_parametres import sourceParametre
-
+from .PluginParametres import PluginParametres
 
 class PluginUpdates:
 
@@ -18,13 +17,13 @@ class PluginUpdates:
         # La nouvelle version du plugin disponible
         self.new_version = None
         # Class qui gère l'enregistrement des paramètres
-        self.gestion_parametre = sourceParametre()
+        self.params = PluginParametres()
     
-    """ Méthode qui vérifie si une nouvelle version du plugin est disponnible """
     def checkForPluginUpdate(self):
+        """ Méthode qui vérifie si une nouvelle version du plugin est disponnible """
         try:
-            if self.gestion_parametre.getParam("suivi_plugin_update").getValue():
-                plugins_path = self.gestion_parametre.getParam("dossier_plugin_update").getValue()
+            if self.params.getValue("suivi_plugin_update"):
+                plugins_path = self.params.getValue("dossier_plugin_update")
                 # Vérifier que le chemin est valide
                 if os.path.exists(plugins_path):
                     # Inisialiser la nouvelle version avec la version courant
@@ -57,13 +56,8 @@ class PluginUpdates:
                         a = self.iface.messageBar().pushWidget(popWidget, 0)
         except: pass
         
-    
-    """ Méthode qui permet d'installer la nouvelle version du plugin """
     def installNewVersion(self):
+        """ Méthode qui permet d'installer la nouvelle version du plugin """
         self.iface.messageBar().popWidget(self.iface.messageBar().currentItem())
         pyplugin_installer.instance().installFromZipFile(self.new_plugin)
     
-    
-    
-    
-pass

@@ -21,14 +21,8 @@
  *                                                                         *
  ***************************************************************************/
 """
-
-from ..mtq.geocodage import geocodage, featRTSS
-from ..gestion_parametres import sourceParametre
-from ..mtq.fnt import reprojectGeometry
-from ..mtq.format import verifyFormatRTSS, verifyFormatChainage, formaterChainage, formaterRTSS
 import os
-from qgis.gui import QgsMapTool, QgsRubberBand, QgsVertexMarker
-from qgis.utils import iface
+from qgis.gui import QgsRubberBand, QgsVertexMarker
 from qgis.PyQt.QtGui import QColor
 from qgis.PyQt import uic, QtWidgets
 from qgis.core import QgsProject, QgsFieldProxyModel, QgsVectorLayer, QgsWkbTypes, QgsField, Qgis, QgsGeometry, QgsExpression, QgsVectorLayerUtils
@@ -36,6 +30,8 @@ from qgis.PyQt.QtCore import pyqtSignal
 from PyQt5.QtCore import Qt, QVariant
 from qgis.PyQt.QtWidgets import QDockWidget, QListWidgetItem, QMenu, QAction, QMessageBox, QApplication, QCompleter 
 
+from ..mtq.core import Geocodage, FeatRTSS, reprojectGeometry
+from ..modules.PluginParametres import PluginParametres
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(os.path.dirname(__file__), 'fenetre_add_feature.ui'))
 
@@ -44,7 +40,7 @@ class fenetreAddFeature(QDockWidget, FORM_CLASS):
 
     closing_window = pyqtSignal()
 
-    def __init__(self, iface, geocode, parent=None):
+    def __init__(self, iface, geocode:Geocodage, parent=None):
         # Référence de l'interface QGIS
         self.iface = iface
         # Référence de la carte 
@@ -58,7 +54,7 @@ class fenetreAddFeature(QDockWidget, FORM_CLASS):
         # Set up l'interface
         self.setupUi(self)
         # Class de gestion des paramètres
-        self.gestion_parametre = sourceParametre()
+        self.params = PluginParametres()
         # Répertoire du plugin
         self.plugin_dir = os.path.dirname(os.path.dirname(__file__))
         
@@ -111,7 +107,7 @@ class fenetreAddFeature(QDockWidget, FORM_CLASS):
         for push in self.add_att_list: push.clicked.connect(self.addFieldTracage)
         
         # Créer le completer
-        completer = QCompleter(self.geocode.getListRTSS(self.gestion_parametre.getParam("formater_rtss").getValue(), sorted=True))
+        completer = QCompleter(self.geocode.getListRTSS(self.params.getValue("formater_rtss"), sorted=True))
         completer.setCaseSensitivity(0)
         completer.setModelSorting(2)
         # Appliquer le Completer au LineEdit

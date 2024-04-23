@@ -21,109 +21,77 @@
  *                                                                         *
  ***************************************************************************/
 """
-
-
-from ..mtq.geocodage import geocodage, featRTSS, PointRTSS
-from ..gestion_parametres import sourceParametre
-from ..mtq.format import verifyFormatRTSS, verifyFormatChainage, formaterChainage, formaterRTSS
 import os
-from qgis.gui import QgsRubberBand
-from qgis.PyQt.QtGui import QColor, QIcon, QPixmap
+from qgis.gui import QgisInterface
 from qgis.PyQt import uic
-from qgis.core import QgsProject, QgsGeometry, QgsPointXY, QgsFeatureRequest, Qgis
+from qgis.core import QgsProject
 from qgis.PyQt.QtCore import pyqtSignal
-from PyQt5.QtCore import Qt, QVariant
-from qgis.PyQt.QtWidgets import QDockWidget, QTableWidgetItem, QTableWidget 
+from qgis.PyQt.QtWidgets import QDialog
+
+from ..modules.PluginParametres import PluginParametres
+from ..mtq.core import Geocodage
+from ..functions.getIcon import getPixmap
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(os.path.dirname(__file__), 'fenetre_create_atlas.ui'))
 
-
-class fenetreCreateAtlas(QDockWidget, FORM_CLASS):
+class fenetreCreateAtlas(QDialog, FORM_CLASS):
 
     closing_window = pyqtSignal()
     
-    def __init__(self, iface, geocode, parent=None):
+    def __init__(self, iface:QgisInterface, geocode:Geocodage, parent=None):
         # Référence de l'interface QGIS
         self.iface = iface
-        # Référence de la carte 
-        self.canvas = self.iface.mapCanvas()
         # Module de géocodage 
         self.geocode = geocode
         # Référence à la couche des RTSS
         self.layer_rtss = None
-        self.hauteur_lignes = 40
-        self.dict_selected_rtss = {}
-        self.request = QgsFeatureRequest()
-        self.request.setFlags(QgsFeatureRequest.NoGeometry)
         # Constructor
         super(fenetreCreateAtlas, self).__init__(parent)
         # Set up l'interface
         self.setupUi(self)
         # Class de gestion des paramètres
-        self.gestion_parametre = sourceParametre()
+        self.params = PluginParametres()
         # Répertoire du plugin
         self.plugin_dir = os.path.dirname(os.path.dirname(__file__))
-        self.list_of_chainage_widget = [self.lbl_chainagef, self.lbl_chainaged, self.spx_chain_d, self.spx_chain_f, self.spx_reset]
-        
         # Connexions
-        self.btn_fermer.clicked.connect(self.close)
-        self.rad_scale.toggled.connect(self.radioButtonScaleChecked)
-        self.spx_chain_d.valueChanged.connect(self.setChainageDebutInTable)
-        self.spx_chain_f.valueChanged.connect(self.setChainageFinInTable)
-        self.spx_chain_f.valueChanged.connect(self.updateGeometry)
-        self.spx_chain_d.valueChanged.connect(self.updateGeometry)
-        self.spx_reset.clicked.connect(self.resetChainageFinInTable)
-        self.tbl_rtss.itemSelectionChanged.connect(self.showChainageRTSS)
-        self.btn_arrow_up.clicked.connect(self.arrowUpPressed)
-        self.btn_arrow_down.clicked.connect(self.arrowDownPressed)
-        self.btn_remove.clicked.connect(self.removePressed)
+        self.gbx_scale.toggled.connect(self.useScale)
         self.btn_creer.clicked.connect(self.createAtlas)
-        self.dockLocationChanged.connect(lambda area: self.gestion_parametre.getParam("dlg_atlas_last_pos").setValue(area))
-        
-        # Icones des boutons de la fenêtre
-        self.btn_arrow_up.setIcon(QIcon(os.path.realpath(os.path.join(self.plugin_dir, 'icons/arrow_up.png'))))
-        self.btn_arrow_down.setIcon(QIcon(os.path.realpath(os.path.join(self.plugin_dir, 'icons/arrow_down.png'))))
-        self.btn_remove.setIcon(QIcon(os.path.realpath(os.path.join(self.plugin_dir, 'icons/remove_attribute.png'))))
         
         # Définir l'image du logo de l'outil
-        self.lbl_logo.setPixmap(QPixmap(os.path.realpath(os.path.join(self.plugin_dir, 'icons/atlas.png'))))
+        self.lbl_logo.setPixmap(getPixmap("atlas"))
         self.lbl_logo.setScaledContents(True)
     
-    """ --------------------------- Événement de fermeture de la fenêtre ---------------------------------------"""
     def closeEvent(self, event):
-        # Déconnexions
-        self.layer_rtss.selectionChanged.disconnect(self.updateTableSelectedRTSS)
-        for row in range(self.tbl_rtss.rowCount()): self.tbl_rtss.removeRow(row)
-        self.dict_selected_rtss = {}
-        # Retirer l'indicateur de géométrie sélectionné
-        self.canvas.scene().removeItem(self.selected_rtss_len)
-        # Emit signal que la fenêtre vas être fermé
-        self.closing_window.emit()
-        # Fermer la fenêtre
-        event.accept()
+        if self.isVisible():
+            # Emit signal que la fenêtre vas être fermé
+            self.closing_window.emit()
+            # Fermer la fenêtre
+            event.accept()
     
-    def setLayerRTSS(self, layer_id): self.layer_rtss = QgsProject.instance().mapLayer(layer_id)
+    def getPageSize(self, spinbox):
+        """ Permet de retourner une dimmentions de la page en mètres """
+        # Valeur de hauteur et de largeur si le mode échelle est coché
+        if self.gbx_scale.isChecked(): return (spinbox.value()/1000) * self.spx_scale.value()
+        # Valeur de hauteur et de largeur si le mode échelle est décoché
+        else: return spinbox.value()
+
+    def getPageHeight(self):
+        """ Permet de retourner la hauteur de la page en mètres """
+        return self.getPageSize(self.spx_haut)
     
-    def show(self):
+    def getPageWidth(self):
+        """ Permet de retourner la largeur de la page en mètres """
+        return self.getPageSize(self.spx_large)
+
+    def setLayer(self, layer_id): self.layer_rtss = QgsProject.instance().mapLayer(layer_id)
+    
+    def setInterfaceActive(self):
         if self.isVisible(): self.raise_()
-        elif self.layer_rtss is not None:
-            # Géométrie temporaire qui montre la longueur du RTSS sélectionné
-            self.selected_rtss_len = QgsRubberBand(self.canvas)
-            self.selected_rtss_len.setColor(QColor(0, 0, 255, 180))
-            self.selected_rtss_len.setWidth(3)
-            self.selected_rtss_len.hide()
-            self.formater_rtss = self.gestion_parametre.getParam("formater_rtss").getValue()
-            self.formater_chainage = self.gestion_parametre.getParam("formater_chainage").getValue()
-            # Désactiver la modification des valeurs de chainage par défaut (en cas d'absence de RTSS sélectionné)
-            self.showChainageRTSS()
-            self.layer_rtss.selectionChanged.connect(self.updateTableSelectedRTSS)
-            # Ajout des RTSS sélectionnés à la table au démarrage
-            self.updateTableSelectedRTSS(self.layer_rtss.selectedFeatureIds())
-            self.iface.addTabifiedDockWidget(self.gestion_parametre.getParam("dlg_atlas_last_pos").getValue(), self, raiseTab=True)
-            
-    
-    """ --------------------------- Sélection du mode échelle de la carte ---------------------------------------"""
-    def radioButtonScaleChecked(self, is_checked):
+        else: 
+            self.show()
+
+    def useScale(self, is_checked):
+        """ Sélection du mode échelle de la carte """
         # Activer l'option d'ajustement selon l'échelle lorsque coché
         if is_checked: suffix, tooltip = " mm", "la carte"
         else: suffix, tooltip = " m", "la mise en page"
@@ -135,204 +103,24 @@ class fenetreCreateAtlas(QDockWidget, FORM_CLASS):
         self.spx_large.setSuffix(suffix)
         self.spx_haut.setToolTip("Largeur de la page dans " + tooltip)
     
-    """ --------------------------- Ajout des RTSS sélectionnés à la liste des RTSS de la fenêtre ---------------------------------------"""
-    def updateTableSelectedRTSS(self, ids):
-        if ids == []: return self.close()
-        list_rtss = []
-        self.request.setFilterFids(ids)
-        for feat in self.layer_rtss.getFeatures(self.request):
-            feat_rtss = self.geocode.getRTSS(feat[self.gestion_parametre.getParam("field_num_rtss").getValue()])
-            list_rtss.append(feat_rtss.getRTSS(formater=self.formater_rtss))
-            if feat.id() in self.dict_selected_rtss.values(): continue
-            # Nombre de lignes à ajouter dans la table
-            row = self.tbl_rtss.rowCount()
-            # Ajout des lignes dans la table
-            self.tbl_rtss.insertRow(row)
-            # Paramétrage de la hauteur des lignes dans la table
-            self.tbl_rtss.setRowHeight(row, self.hauteur_lignes)
-            # Ajout des numéros de RTSS sélectionnés dans la table de la fenêtre
-            self.tbl_rtss.setItem(row, 0, QTableWidgetItem(feat_rtss.getRTSS(formater=self.formater_rtss)))
-            # Ajout des chainages de début des RTSS sélectionnés dans la table de la fenêtre
-            self.tbl_rtss.setItem(row, 1, QTableWidgetItem(str(feat_rtss.getChainageDebut(formater=self.formater_chainage))))
-            # Ajout des chainages de fin des RTSS sélectionnés dans la table de la fenêtre
-            self.tbl_rtss.setItem(row, 2, QTableWidgetItem(str(feat_rtss.getChainageFin(formater=self.formater_chainage))))
-            self.dict_selected_rtss[feat_rtss.getRTSS(formater=self.formater_rtss)] = feat.id()
-        
-        # Faire une liste des RTSS de la table qui ne sont plus dans la sélection
-        rows_to_remove = [row for row in range(self.tbl_rtss.rowCount()) if self.tbl_rtss.item(row, 0).text() not in list_rtss]
-        # Supprimer les lignes qui ne sont plus dans la sélection
-        for row in reversed(rows_to_remove): self.tbl_rtss.removeRow(row)
-        
-        deselected_rtss = [key for key, value in self.dict_selected_rtss.items() if value not in ids]
-        for key in deselected_rtss: self.dict_selected_rtss.pop(key)
-        
-    
-    def updateGeometry(self):
-        # Réinitialiser la géométrie
-        self.selected_rtss_len.reset()
-        # Pour chaque ligne sélectionnée du tableau
-        for item in self.tbl_rtss.selectedItems():
-            # Trouver le RTSS sélectionné dans la couche
-            feat_rtss = self.geocode.getRTSS(self.tbl_rtss.item(item.row(), 0).text())
-            self.selected_rtss_len.setToGeometry(feat_rtss.getLineFromChainage(self.tbl_rtss.item(item.row(),1).text(), self.tbl_rtss.item(item.row(),2).text()))
-            # Afficher la géométrie temporaire
-            self.selected_rtss_len.show()
-            
-    """ --------------------------- Permet de montrer les RTSS sélectionnées dans la table en prenant en compte les valeurs de chainage de la table ---------------------------------------"""
-    def showChainageRTSS(self):
-        # Lignes sélectionnées dans la table
-        if self.tbl_rtss.selectedItems():
-            # Activer la modification des chainages
-            for w in self.list_of_chainage_widget: w.setEnabled(True)
-            # Pour chaque ligne sélectionnée du tableau
-            for item in self.tbl_rtss.selectedItems():
-                # Trouver le RTSS sélectionné dans la couche
-                feat_rtss = self.geocode.getRTSS(self.tbl_rtss.item(item.row(), 0).text())
-                self.spx_chain_f.setValue(verifyFormatChainage(self.tbl_rtss.item(item.row(), 2).text()))
-                self.spx_chain_d.setValue(verifyFormatChainage(self.tbl_rtss.item(item.row(), 1).text()))
-                self.spx_chain_f.setMaximum(feat_rtss.getChainageFin())
-                self.spx_chain_d.setMaximum(feat_rtss.getChainageFin())
-        # Désactiver la modification des chainages s'il n'y a pas de lignes sélectionnées
-        else: 
-            for w in self.list_of_chainage_widget: w.setEnabled(False)
-    
-    """ --------------------------- Permet de modifier la valeur de chainage de début des RTSS sélectionnées dans la table ---------------------------------------"""
-    def setChainageDebutInTable(self):
-        # Pour les éléments sélectionnés de la table
-        for item in self.tbl_rtss.selectedItems():
-            # Formater les chainages si l'option est activée
-            if self.formater_chainage: self.tbl_rtss.item(item.row(), 1).setText(formaterChainage(self.spx_chain_d.value()))
-            # Retourner les chainages normalement si l'option de formatage est décochée
-            else: self.tbl_rtss.item(item.row(), 1).setText(str(self.spx_chain_d.value()))
-            # Lorsque la valeur de chainage de début choisie est plus grande ou égale que la valeur de chainage max du RTSS
-            if self.spx_chain_d.value() >= verifyFormatChainage(self.tbl_rtss.item(item.row(), 2).text()):
-                # La couleur de la cellule devient rouge
-                self.tbl_rtss.item(item.row(),1).setBackground(QColor("red"))
-                # Le bouton de création d'atlas devient inactif
-                self.btn_creer.setEnabled(False)
-            else: 
-                # La couleur de la cellule devient blanche
-                self.tbl_rtss.item(item.row(),1).setBackground(QColor("white"))
-                # Le bouton de création d'atlas devient actif
-                self.btn_creer.setEnabled(True)  
-    
-    """ --------------------------- Permet de modifier la valeur de chainage de fin des RTSS sélectionnées dans la table ---------------------------------------"""
-    def setChainageFinInTable(self):
-        # Pour les éléments sélectionnés de la table
-        for item in self.tbl_rtss.selectedItems():
-            # Lorsqu'une valeur de chainage de fin est choisie
-            if self.spx_chain_f.value() != 0:
-                # Formater les chainages si l'option est activée
-                if self.formater_chainage: self.tbl_rtss.item(item.row(),2).setText(formaterChainage(self.spx_chain_f.value()))
-                # Retourner les chainages normalement si l'option est décochée
-                else: self.tbl_rtss.item(item.row(), 2).setText(str(self.spx_chain_f.value()))
-            # Lorsque la valeur de chainage de début choisie est plus grande ou égale que la valeur de chainage max du RTSS
-            if self.spx_chain_d.value() >= verifyFormatChainage(self.tbl_rtss.item(item.row(), 2).text()):
-                # La couleur de la cellule devient rouge
-                self.tbl_rtss.item(item.row(),1).setBackground(QColor("red"))
-                # Le bouton de création d'atlas devient inactif
-                self.btn_creer.setEnabled(False)
-            else: 
-                # La couleur de la cellule devient blanche
-                self.tbl_rtss.item(item.row(),1).setBackground(QColor("white"))
-                # Le bouton de création d'atlas devient actif
-                self.btn_creer.setEnabled(True)
-    """ --------------------------- Permet de réinitialiser la valeur de chainage de fin des RTSS sélectionnées dans la table ---------------------------------------"""
-    def resetChainageFinInTable(self):
-        for item in self.tbl_rtss.selectedItems(): feat_rtss = self.geocode.getRTSS(self.tbl_rtss.item(item.row(), 0).text())
-        # Réinitialiser le spinbox du chainage de fin
-        self.spx_chain_d.setValue(feat_rtss.getChainageDebut())
-        self.spx_chain_f.setValue(feat_rtss.getChainageFin())
-        
-    """ --------------------------- Permet de déplacer un ou des RTSS sélectionnées dans la table vers le haut ---------------------------------------"""
-    def arrowUpPressed(self):
-        # Référence des lignes sélectionnées
-        selected_rows = sorted(set(item.row() for item in self.tbl_rtss.selectedItems()))
-        for row in selected_rows:
-            # Lorsque la ligne n'est pas la première de la table
-            if row > 0:
-                # Ajout de la ligne une position plus haute
-                self.tbl_rtss.insertRow(row - 1)
-                # Hauteur de la nouvelle ligne
-                self.tbl_rtss.setRowHeight(row - 1, self.hauteur_lignes)
-                for col in range(self.tbl_rtss.columnCount()):
-                    # Cellules de l'ancienne ligne 
-                    item = self.tbl_rtss.takeItem(row + 1, col)
-                    # Ajout des cellules de l'ancienne ligne à la nouvelle
-                    self.tbl_rtss.setItem(row - 1, col, item)
-                # Supprimer l'ancienne ligne
-                self.tbl_rtss.removeRow(row + 1)
-                # Sélectionner la nouvelle ligne
-                self.tbl_rtss.selectRow(row - 1)
-                self.tbl_rtss.setFocus()
-            # Rsélectionner la ligne si celle-ci est la première de la table
-            elif row == 0:
-                self.tbl_rtss.selectRow(row-1)
-                self.tbl_rtss.setFocus()
-    
-    """ --------------------------- Permet de déplacer un ou des RTSS sélectionnées dans la table vers le bas ---------------------------------------"""
-    def arrowDownPressed(self):
-        # Référence des lignes sélectionnées
-        selected_rows = sorted(set(item.row() for item in self.tbl_rtss.selectedItems()))
-        for row in reversed(selected_rows):
-            # Lorsque la ligne n'est pas la dernière de la table
-            if 0 <= row < self.tbl_rtss.rowCount() - 1:
-                # Ajout de la ligne une position plus basse
-                self.tbl_rtss.insertRow(row + 2)
-                # Hauteur de la nouvelle ligne
-                self.tbl_rtss.setRowHeight(row + 2, self.hauteur_lignes)
-                for col in range(self.tbl_rtss.columnCount()):
-                    # Cellules de l'ancienne ligne
-                    item = self.tbl_rtss.takeItem(row, col)
-                    # Ajout des cellules de l'ancienne ligne à la nouvelle
-                    self.tbl_rtss.setItem(row + 2, col, item)
-                # Supprimer l'ancienne ligne
-                self.tbl_rtss.removeRow(row)
-                # Sélectionner la nouvelle ligne
-                self.tbl_rtss.selectRow(row + 1)
-                self.tbl_rtss.setFocus()
-            # Rsélectionner la ligne si celle-ci est la dernière de la table
-            else: 
-                self.tbl_rtss.selectRow(row+1)
-                self.tbl_rtss.setFocus()
-    
-    """ --------------------------- Déselection des RTSS de la couche à partir des lignes sélectionnées de la table ---------------------------------------"""
-    def removePressed(self):
-        # Référence des lignes sélectionnées
-        selected_rows_rtss = []
-        for row in range(self.tbl_rtss.rowCount()):
-            if self.tbl_rtss.item(row, 0) not in self.tbl_rtss.selectedItems(): 
-                selected_rows_rtss.append(self.dict_selected_rtss[self.tbl_rtss.item(row, 0).text()])
-        self.layer_rtss.selectByIds(selected_rows_rtss, Qgis.SelectBehavior.SetSelection)
-    
-    """ --------------------------- Création de l'atlas ---------------------------------------"""
     def createAtlas(self):
-        # Listes des chainages de début et de fin des RTSS de la table
-        list_start, list_end = [], []
-        for row in range(self.tbl_rtss.rowCount()):
-            # Obtention des valeurs de chainages de début et de fin des RTSS de la table
-            list_start.append(PointRTSS(self.tbl_rtss.item(row,0).text(), self.tbl_rtss.item(row,1).text()))
-            list_end.append(PointRTSS(self.tbl_rtss.item(row,0).text(), self.tbl_rtss.item(row,2).text()))
-        # Valeur de hauteur et de largeur si le mode échelle est coché
-        if self.rad_scale.isChecked():
-            width = (self.spx_large.value()/1000) * self.spx_scale.value()
-            height = (self.spx_haut.value()/1000) * self.spx_scale.value()
-        # Valeur de hauteur et de largeur si le mode échelle est décoché
-        else: width, height = self.spx_large.value(), self.spx_haut.value() 
+        # Listes des LineRTSS représentant les RTSS selectionnées
+        list_rtss = []
+        for feat in self.layer_rtss.selectedFeatures():
+            feat_rtss = self.geocode.get(feat[self.params.getValue("field_num_rtss")])
+            list_rtss.append(feat_rtss.asLineRTSS())
         
-        # Valeur de superposition des pages d'atlas
-        overlap = self.spx_overlap.value()
-        # Valeur de décalage du début des pages d'atlas
-        start_offset = self.spx_start_offset.value()
-        # Valeur des marges verticales des pages d'atlas
-        vertical_margin = self.spx_vert_marg.value()
         # Création des géométries des pages d'atlas
-        atlas_layer = self.geocode.getAtlasLayer(list_start, width, height, list_end, overlap, start_offset, vertical_margin)
+        atlas_layer = self.geocode.getAtlasLayer(
+            list_locs=list_rtss,
+            width=self.getPageWidth(),
+            height=self.getPageHeight(),
+            overlap=self.spx_overlap.value(),
+            start_offset=self.spx_start_offset.value(),
+            vertical_margin=self.spx_vert_marg.value())
         # Appliquer le style
-        atlas_layer.loadNamedStyle(self.gestion_parametre.getParam("layer_atlas_style").getValue())
+        atlas_layer.loadNamedStyle(self.params.getValue("layer_atlas_style"))
         # Ajout de la couche des pages d'atlas au projet
         QgsProject.instance().addMapLayer(atlas_layer)
+        self.close()
         
-        
-        
-pass

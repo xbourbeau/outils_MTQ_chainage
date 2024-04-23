@@ -23,34 +23,68 @@
 """
 
 import os
-
-from qgis.PyQt import QtGui, QtWidgets, uic
+from qgis.PyQt import QtWidgets, uic
+from qgis.core import QgsProcessingFeatureSourceDefinition
 from qgis.PyQt.QtCore import pyqtSignal
+import processing
 
+from ..functions.addLayerToMap import addLayerToMap
 # Class pour la gestion des paramètre du plugin
-from ..gestion_parametres import sourceParametre
+from ..modules.PluginParametres import PluginParametres
 
 
-FORM_CLASS, _ = uic.loadUiType(os.path.join(
-    os.path.dirname(__file__), 'fenetre_transect.ui'))
+FORM_CLASS, _ = uic.loadUiType(os.path.join(os.path.dirname(__file__), 'fenetre_transect.ui'))
 
 
 class fenetreTransect(QtWidgets.QDialog, FORM_CLASS):
 
     closing_window = pyqtSignal()
 
-    def __init__(self, parent=None):
+    def __init__(self, canvas, parent=None):
         """Constructor."""
+        self.canvas = canvas
         super(fenetreTransect, self).__init__(parent)
-        # Set up the user interface from Designer.
-        # After setupUI you can access any designer object by doing
-        # self.<objectname>, and you can use autoconnect slots - see
-        # http://doc.qt.io/qt-5/designer-using-a-ui-file.html
-        # #widgets-and-dialogs-with-auto-connect
         self.setupUi(self)
         
-        self.gestion_parametre = sourceParametre()
-        precision = self.gestion_parametre.getParam("precision_chainage").getValue()
+        self.params = PluginParametres()
+        # Apppler la fonction lorsque l'interval est accepter par l'utilisateur
+        self.buttonBox.accepted.connect(self.execute)
+
+    def setInterfaceActive(self):
+        if self.isVisible(): self.raise_()
+        else: 
+            self.setPrecision()
+            self.show()
+
+    def closeEvent(self, event):
+        if self.isVisible():
+            self.closing_window.emit()
+            event.accept()
+
+    def execute(self):
+        distance_droite = self.spx_dist_droite.value()
+        distance_gauche = self.spx_dist_gauche.value()
+        # L'interval défini dans la fenêtre par l'utilisateur
+        interval = self.spx_intervalle.value()
+        inverse = not self.chk_inverser.isChecked()
+        
+        # Définir les paramètres du script
+        params = {'INPUT_RTSS': QgsProcessingFeatureSourceDefinition(self.params.getValue("layer_rtss"), True),
+                'LONG': self.params.getValue("field_chainage_fin"),
+                'RTSS': self.params.getValue("field_num_rtss"),
+                'INPUT_INTERVAL': interval,
+                'INPUT_LINE_LENGTH_DROITE': distance_droite,
+                'INPUT_LINE_LENGTH_GAUCHE': distance_gauche,
+                'INVERSE':inverse,
+                'OUTPUT': f"memory:Transects"}
+        # Lancer le script "Générer des point de chaînage sur un RTSS"
+        result = processing.run("MTQ:generateTransect", params)
+        # La couche vectorielle (point) résultante du script 
+        addLayerToMap(self.canvas, result['OUTPUT'])
+        self.close()
+
+    def setPrecision(self):
+        precision = self.params.getValue("precision_chainage")
         single_step = 10
         if precision < 0: single_step = single_step ** abs(precision)
         minimum = 10 ** (precision * -1)
@@ -58,7 +92,3 @@ class fenetreTransect(QtWidgets.QDialog, FORM_CLASS):
         self.spx_intervalle.setDecimals(precision)
         self.spx_intervalle.setSingleStep(single_step)
         self.spx_intervalle.setMinimum(minimum)
-
-    def closeEvent(self, event):
-        self.closing_window.emit()
-        event.accept()

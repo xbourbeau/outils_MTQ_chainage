@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
-
 from ..interfaces.fenetre_add_feature import fenetreAddFeature
-from ..gestion_parametres import sourceParametre
-from qgis.core import QgsProject, QgsGeometry, QgsApplication, Qgis
-from qgis.gui import QgsMapTool, QgsMapToolEdit, QgsRubberBand, QgsVertexMarker
-from PyQt5.QtCore import Qt, pyqtSignal, QPoint
-from qgis.PyQt.QtWidgets import QMenu, QMessageBox, QToolButton
-from qgis.PyQt.QtGui import QColor
+from ..modules.PluginParametres import PluginParametres
+from qgis.core import QgsGeometry, QgsApplication, Qgis
+from qgis.gui import QgsMapTool, QgsMapToolEdit
+from PyQt5.QtCore import Qt, pyqtSignal
+from qgis.PyQt.QtWidgets import QMenu
 
 class MtqMapToolTracerGeometry(QgsMapToolEdit):
 
@@ -26,13 +24,13 @@ class MtqMapToolTracerGeometry(QgsMapToolEdit):
         # Créer un instance de l'outil d'edition sur la carte
         QgsMapToolEdit.__init__(self, self.canvas)
         
+        # Référence aux paramètres
+        self.params = PluginParametres()
         # Connecter le bouton Annuler au reset
         self.dlg.btn_annuler.clicked.connect(self.reset)
         # Garder en mémoire la position de la fenêtre
-        self.dlg.dockLocationChanged.connect(lambda area: self.gestion_parametre.getParam("dlg_add_feat_last_pos").setValue(area))
+        self.dlg.dockLocationChanged.connect(lambda area: self.params.setValue("dlg_add_feat_last_pos", area))
         
-        # Référence aux paramètres
-        self.gestion_parametre = sourceParametre()
         # Valeur de précision
         self.precision = 0
         # Dernier RTSS qui a clignoté
@@ -53,7 +51,7 @@ class MtqMapToolTracerGeometry(QgsMapToolEdit):
             print([geom_p, geom_l, geom_s])
             self.dlg.setGeometries([geom_p, geom_l, geom_s])
             # show the dockwidget
-            self.iface.addTabifiedDockWidget(self.gestion_parametre.getParam("dlg_add_feat_last_pos").getValue(), self.dlg, raiseTab=True)
+            self.iface.addTabifiedDockWidget(self.params.getValue("dlg_add_feat_last_pos"), self.dlg, raiseTab=True)
             # Afficher la fenêtre
             self.dlg.show()
             
@@ -73,7 +71,6 @@ class MtqMapToolTracerGeometry(QgsMapToolEdit):
         self.dlg.gbx_trace_poly.setEnabled(False)
     
     def updateEditingLayer(self, layer):
-        print(layer)
         self.dlg.updateCurrentLayer(layer)
     
     """

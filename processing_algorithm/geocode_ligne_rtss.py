@@ -33,8 +33,7 @@ from qgis.core import (QgsProcessing,
                        QgsProcessingParameterFile,
                        QgsProcessingParameterFeatureSink)
 
-from ..mtq.geocodage import geocodage
-from ..mtq.format import verifyFormatChainage
+from ..mtq.core import Geocodage, Chainage
 
 class GeocodeLine(QgsProcessingAlgorithm):
 
