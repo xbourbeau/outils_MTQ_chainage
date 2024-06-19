@@ -235,7 +235,7 @@ class GeocodeLine(QgsProcessingAlgorithm):
         
         # Send some information to the user
         feedback.pushInfo('CRS is {}'.format(source_rtss.sourceCrs().authid()))
-        geocode = geocodage(source_rtss.getFeatures(), source_rtss.sourceCrs(), champ_rtss_1, champ_chainage_1)
+        geocode = Geocodage.fromLayer(source_rtss, nom_champ_rtss=champ_rtss_1, nom_champ_long=champ_chainage_1)
         # Compute the number of steps to display within the progress bar and
         # get features from source
         total = 100.0 / file_geocoder.featureCount() if file_geocoder.featureCount() else 0
@@ -249,22 +249,20 @@ class GeocodeLine(QgsProcessingAlgorithm):
             else: offset_d, offset_f = 0, 0
             
             is_valide = True
-            chainage_d = verifyFormatChainage(feature[champ_chainage_d])
-            chainage_f = verifyFormatChainage(feature[champ_chainage_f])
-            if chainage_d == chainage_f:
+            chainage_d = Chainage.verifyFormatChainage(feature[champ_chainage_d])
+            chainage_f = Chainage.verifyFormatChainage(feature[champ_chainage_f])
+            #if chainage_d == chainage_f:
+            #    is_valide = False
+            #    geom = QgsGeometry()
+            #    feedback.pushWarning('L\'entité {} n\'a pas été géocodée: Le chainage de début et de fin sont les mêmes'.format(feature.id()))
+            line_rtss = geocode.createLine(feature[champ_rtss_2], [chainage_d, chainage_f], [offset_d, offset_f])
+            geom = geocode.geocoderLine(line_rtss)
+            
+            if not geom:
+                # Send some information to the user
+                feedback.pushWarning('L\'entité {} n\'a pas été géocodée: Le rtss {} ({}, {}) n\'est pas dans la couche des rtss'.format(feature.id(), feature[champ_rtss_2], chainage_d, chainage_f))
                 is_valide = False
-                geom = QgsGeometry()
-                feedback.pushWarning('L\'entité {} n\'a pas été géocodée: Le chainage de début et de fin sont les mêmes'.format(feature.id()))
-                
-            else:
-                if chainage_f < chainage_d: geom = geocode.geocoder(feature[champ_rtss_2], chainage_f, chainage_d, offset=offset_f, offset_f=offset_d)
-                else: geom = geocode.geocoder(feature[champ_rtss_2], chainage_d, chainage_f, offset=offset_d, offset_f=offset_f)
-                
-                if not geom:
-                    # Send some information to the user
-                    feedback.pushWarning('L\'entité {} n\'a pas été géocodée: Le rtss {} ({}, {}) n\'est pas dans la couche des rtss'.format(feature.id(), feature[champ_rtss_2], chainage_d, chainage_f))
-                    is_valide = False
-                else: feat_total += 1
+            else: feat_total += 1
                 
             feat = QgsFeature()
             feat.setGeometry(geom)

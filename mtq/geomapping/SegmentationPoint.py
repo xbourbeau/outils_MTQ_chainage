@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 from typing import Union
 import uuid
+import copy
+from qgis.core import QgsGeometry
 
 # Librairie MTQ
 from .RTSS import RTSS
@@ -35,10 +37,37 @@ class SegmentationPoint(PointRTSS):
         self.dict_attributs.update(attributs)
         PointRTSS.__init__(self, rtss, chainage)
     
+    @classmethod
+    def fromPointRTSS(cls, point_rtss:PointRTSS, elements:list[LineSegmentationElement]=[], attributs={}):
+        """
+        Initialisation d'un objet SegmentationPoint à partir d'un PointRTSS.
+
+        Args:
+            - point_rtss (PointRTSS): Le point de segmentation
+            - elements (dict): Liste des éléments contenu dans le point
+            - attributs (dict): Attributs pouvant caractériser le point de segmentation
+        """
+        return cls(point_rtss.getRTSS(), point_rtss.getChainage(), elements, attributs)
+    
     def __str__(self):  return f"{self.getRTSS()}, {self.getChainage()}: {self.dict_elements}"
         
     def __repr__(self): return f"SegmentationPoint {self.getRTSS()} ({self.getChainage()}): {self.dict_elements}"
     
+    def __deepcopy__(self, memo):
+        new_obj = self.__class__.__new__(self.__class__)
+
+        # Add the new object to the memo dictionary to avoid infinite recursion
+        memo[id(self)] = new_obj
+
+        # Deep copy all the attributes
+        for slot in self.__slots__:
+            v = getattr(self, slot)
+            # Use the copy method for QgsGeometry objects
+            if isinstance(v, QgsGeometry): setattr(new_obj, slot, QgsGeometry(v))
+            else: setattr(new_obj, slot, copy.deepcopy(v, memo))
+
+        return new_obj
+
     def copy(self): 
         return SegmentationPoint(
                 rtss=self.getRTSS(),
@@ -100,9 +129,18 @@ class SegmentationPoint(PointRTSS):
         """ Méthode qui permet de retirer un élément du dictionnaire """
         if element_id in self.dict_elements: self.dict_elements.pop(element_id)
 
+    def setElementId(self, elem:LineSegmentationElement, new_id):
+        """ Permet de mettre à jour l'identifiant d'un élément """
+        # Retirer l'élément du dictionnaire
+        self.dict_elements.pop(elem.id())
+        # Changer l'identifiant de l'élément
+        elem.setId(new_id)
+        # Réinsérer l'élément dans le dictionnaire
+        self.addElement(elem)
+
     def setElements(self, elements:list[LineSegmentationElement]):
         """ Méthode pour initialiser les éléments asocier au point """
-        self.dict_elements = {}
+        self.dict_elements:dict[int,LineSegmentationElement] = {}
         self.addElements(elements)
     
     def updateAttribut(self, name, new_val):

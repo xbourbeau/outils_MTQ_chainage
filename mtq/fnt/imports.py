@@ -6,3 +6,4 @@ from .offsetPoint import *
 from .openSIGO import *
 from .pageFormat import *
 from .reprojections import *
+from .format import *

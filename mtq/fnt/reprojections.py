@@ -1,6 +1,31 @@
 # -*- coding: utf-8 -*-
 from qgis.core import QgsProject, QgsCoordinateReferenceSystem, QgsCoordinateTransform
-import os
+
+def reprojectExtent(extent, org_epsg, dest_epsg):
+    """
+    Fonction qui permet de reprojeter un étendu dans un autres système de coordonnée
+    
+    Args:
+        - feat (QgsRectangle) = L'extent à reprojeté
+        - org_epsg (int) = Code EPSG du CRS de l'entitée
+        - dest_epsg (int) = Code EPSG du CRS de l'entitée résultante
+        
+    Return:
+        - reproject_extent (QgsRectangle) = L'extent reprojeté
+    """
+    # Instancier les CRS à partir des codes EPSG
+    crsDest = QgsCoordinateReferenceSystem(dest_epsg)
+    crsSrc = QgsCoordinateReferenceSystem(org_epsg)
+    # Vérifier si les CRS sont différent
+    if org_epsg != dest_epsg:
+        # Instancier la méthode de transformation entre les deux CRS
+        crs_transform = QgsCoordinateTransform(crsSrc, crsDest, QgsProject.instance().transformContext())
+        # Reprojeter l'entitée
+        reproject_extent = crs_transform.transformBoundingBox(extent)
+    # Sinon les entitées n'on pas besoin d'être reprojetés
+    else: reproject_extent = extent
+    # Retourner l'entitée résultante
+    return reproject_extent
 
 def reprojectGeometry(geom, org_epsg, dest_epsg):
     """

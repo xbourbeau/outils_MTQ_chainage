@@ -51,6 +51,7 @@ class PluginParametres(GestionParametre):
         path_to_eccusson_backgroud = os.path.realpath(os.path.join(self.plugin_dir, 'styles'))
         path_to_default_style_atlas = os.path.realpath(os.path.join(self.plugin_dir, 'styles\styles_atlas.qml'))
         path_to_default_style_chainage = os.path.realpath(os.path.join(self.plugin_dir, 'styles\point_de_chainage.qml'))
+        path_to_default_style_transect = os.path.realpath(os.path.join(self.plugin_dir, 'styles\styles_transect.qml'))
         # Définir la valueur de police par défault 
         text_on_map_font = QFont()
         text_on_map_font.setPointSize(9)
@@ -142,12 +143,12 @@ class PluginParametres(GestionParametre):
                 categorie=categorie_option,
                 setting_name="show_distance_on_map",
                 default_value=False),
-            # Paramètre: Dernière position de la fenêtre des paramètres
-            "dlg_param_last_pos": ParametreInt(
+            # Paramètre: Afficher la valeur de context dans le tooltip
+            "show_context_on_map": ParametreBool(
                 plugin_name=plugin_name,
-                categorie=categorie_config,
-                setting_name="dlg_param_last_pos",
-                default_value=2),
+                categorie=categorie_option,
+                setting_name="show_context_on_map",
+                default_value=False),
             # Paramètre: Dernière position de la fenêtre d'ajout d'entité 
             "dlg_add_feat_last_pos": ParametreInt(
                 plugin_name=plugin_name,
@@ -208,6 +209,18 @@ class PluginParametres(GestionParametre):
                 categorie=categorie_config,
                 setting_name="layer_atlas_style",
                 default_value=path_to_default_style_atlas),
+            # Paramètre: Utiliser un raccourcis clavier pour la mesure de distance
+            "use_raccourcis_distance": ParametreBool(
+                plugin_name=plugin_name,
+                categorie=categorie_config,
+                setting_name="use_raccourcis_distance",
+                default_value=False),
+            # Paramètre: Raccourci clavier pour la mesure de distance
+            "raccourcis_clavier_distance": Parametre(
+                plugin_name=plugin_name,
+                categorie=categorie_config,
+                setting_name="raccourcis_clavier_distance",
+                default_value='D'),
             # Paramètre: Chemin vers les écussons vide par défault
             "ecusson_path": Parametre(
                 plugin_name=plugin_name,
@@ -220,6 +233,12 @@ class PluginParametres(GestionParametre):
                 categorie=categorie_config,
                 setting_name="layer_chainage_style",
                 default_value=path_to_default_style_chainage),
+            # Paramètre: Chemin vers le fichier qml de style pour la couche des transects
+            "layer_transect_style": Parametre(
+                plugin_name=plugin_name,
+                categorie=categorie_config,
+                setting_name="layer_transect_style",
+                default_value=path_to_default_style_transect),
             # Paramètre: Suivre les mise à jour du plugin
             "suivi_plugin_update": ParametreBool(
                 plugin_name=plugin_name,
@@ -232,6 +251,96 @@ class PluginParametres(GestionParametre):
                 categorie=categorie_config,
                 setting_name="mesure_line_color",
                 default_value="#e4741e"),
+            # Paramètre: Garder le marqueur de suivi du chainage sur la carte
+            "keep_marker_suivi_chainage": ParametreBool(
+                plugin_name=plugin_name,
+                categorie=categorie_option,
+                setting_name="keep_marker_suivi_chainage",
+                default_value=False),
+            # Paramètre: Précision utilisé pour de l'outil de mesure
+            "precision_mesure": ParametreInt(
+                plugin_name=plugin_name,
+                categorie=categorie_option,
+                setting_name="precision_mesure",
+                default_value=1),
+            # Paramètre: Précision utilisé pour la distance du RTSS afficher sur la carte
+            "precision_distance": ParametreInt(
+                plugin_name=plugin_name,
+                categorie=categorie_option,
+                setting_name="precision_distance",
+                default_value=1),
+            # Paramètre: Raccourci clavier pour l'accrochage parralèle de numérisation
+            "raccourcis_clavier_parralele": Parametre(
+                plugin_name=plugin_name,
+                categorie=categorie_config,
+                setting_name="raccourcis_clavier_parralele",
+                default_value='P'),
+            # Paramètre: Raccourci clavier pour l'accrochage perpendiculaire de numérisation
+            "raccourcis_clavier_perpendiculaire": Parametre(
+                plugin_name=plugin_name,
+                categorie=categorie_config,
+                setting_name="raccourcis_clavier_perpendiculaire",
+                default_value='O'),
+            # Paramètre: Affichier les options de copies des informations générale dans le menu
+            "show_copie_menu_info": ParametreBool(
+                plugin_name=plugin_name,
+                categorie=categorie_option,
+                setting_name="show_copie_menu_info",
+                default_value=True),
+            # Paramètre: Affichier les options de copies des valeurs non-formater dans le menu
+            "show_copie_menu_non_formater": ParametreBool(
+                plugin_name=plugin_name,
+                categorie=categorie_option,
+                setting_name="show_copie_menu_non_formater",
+                default_value=True),
+            # Paramètre: Affichier les options de copies des valeurs formater dans le menu
+            "show_copie_menu_formater": ParametreBool(
+                plugin_name=plugin_name,
+                categorie=categorie_option,
+                setting_name="show_copie_menu_formater",
+                default_value=True),
+            # Paramètre: Permet de dire si le marqueur devrait être a la position exacte ou au chainage arrondi
+            "pos_marqueur_arrondi": ParametreBool(
+                plugin_name=plugin_name,
+                categorie=categorie_option,
+                setting_name="pos_marqueur_arrondi",
+                default_value=True),
+            # Paramètre: Nom de la couche de context
+            "context_layer": Parametre(
+                plugin_name=plugin_name,
+                categorie=categorie_layers,
+                setting_name="context_layer",
+                default_value=""),
+            # Paramètre: Nom du champ du numéro de route dans la couche de context
+            "field_context_route": Parametre(
+                plugin_name=plugin_name,
+                categorie=categorie_layers,
+                setting_name="field_context_route",
+                default_value=""),
+            # Paramètre: Nom du champ de valeur dans la couche de context
+            "field_context_value": Parametre(
+                plugin_name=plugin_name,
+                categorie=categorie_layers,
+                setting_name="field_context_value",
+                default_value=""),
+            # Paramètre: Distance des intervalle de point pour l'interpolation de la couche lors de l'analyse du réseau segmenté
+            "intervalle_interpolation": ParametreInt(
+                plugin_name=plugin_name,
+                categorie=categorie_option,
+                setting_name="intervalle_interpolation",
+                default_value=20),
+            # Paramètre: Distance maximal pour l'interpolation de la couche lors de l'analyse du réseau segmenté
+            "dist_interpolation": ParametreInt(
+                plugin_name=plugin_name,
+                categorie=categorie_option,
+                setting_name="dist_interpolation",
+                default_value=10),
+            # Paramètre: Charger les expressions personaliser du plugin
+            "load_custom_expressions": ParametreBool(
+                plugin_name=plugin_name,
+                categorie=categorie_config,
+                setting_name="load_custom_expressions",
+                default_value=True),
             # Paramètre: Chemin vers le répertoire des fichier ZIP des versions du plugin
             "dossier_plugin_update": Parametre(
                 plugin_name=plugin_name,
@@ -297,7 +406,7 @@ class PluginParametres(GestionParametre):
             "Creation de geometrie": ParametreAction(
                 plugin_name=plugin_name,
                 nom="Creation de geometrie",
-                icon=self.setIcon("create_point.png"),
+                icon=self.setIcon("create_line.png"),
                 setting_name="creer_geometrie_is_visible",
                 visible_by_default=True),
 
@@ -314,6 +423,13 @@ class PluginParametres(GestionParametre):
                 icon=self.setIcon("svn.png"),
                 setting_name="open_svn_is_visible",
                 visible_by_default=False),
+            
+            "Geocodage inverse": ParametreAction(
+                plugin_name=plugin_name,
+                nom="Geocodage inverse",
+                icon=self.setIcon("geocodage_inverse.png"),
+                setting_name="geocodage_inverse_is_visible",
+                visible_by_default=False),
 
             "Aide": ParametreAction(
                 plugin_name=plugin_name,
@@ -328,6 +444,13 @@ class PluginParametres(GestionParametre):
 
     def setIcon(self, icon_name):
         return os.path.join(self.plugin_dir, f"icons/{icon_name}")
+    
+    def showContextMenu(self):
+        """ Permet de verifier si un menu pour les options de copier doit être ajouté """
+        return any([
+            self.getValue("show_copie_menu_info"),
+            self.getValue("show_copie_menu_non_formater"),
+            self.getValue("show_copie_menu_formater")])
         
 
     

@@ -33,7 +33,7 @@ from qgis.core import (QgsProcessing,
                        QgsProcessingParameterFile,
                        QgsProcessingParameterFeatureSink)
 
-from ..mtq.core import Geocodage, Chainage
+from ..mtq.core import Geocodage, Chainage, PointRTSS
 
 class GeocodePoint(QgsProcessingAlgorithm):
 
@@ -224,8 +224,7 @@ class GeocodePoint(QgsProcessingAlgorithm):
         # Send some information to the user
         feedback.pushInfo('CRS is {}'.format(source_rtss.sourceCrs().authid()))
         
-        geocode = geocodage(source_rtss.getFeatures(), source_rtss.sourceCrs(),
-                            champ_rtss_1, champ_chainage_1)
+        geocode = Geocodage.fromLayer(source_rtss, nom_champ_rtss=champ_rtss_1, nom_champ_long=champ_chainage_1)
         # Compute the number of steps to display within the progress bar and
         # get features from source
         total = 100.0 / file_geocoder.featureCount() if file_geocoder.featureCount() else 0
@@ -236,8 +235,8 @@ class GeocodePoint(QgsProcessingAlgorithm):
             if feedback.isCanceled(): break
             if champ_offset: offset = feature[champ_offset]
             else: offset = 0
-            
-            geom = geocode.geocoder(feature[champ_rtss_2], verifyFormatChainage(feature[champ_chainage_2]), offset=offset)
+            point = PointRTSS(feature[champ_rtss_2], feature[champ_chainage_2], offset=offset)
+            geom = geocode.geocoderPoint(point)
             is_valide = True
             if not geom:
                 # Send some information to the user

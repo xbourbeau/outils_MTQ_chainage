@@ -38,8 +38,8 @@ class Provider(QgsProcessingProvider):
     def loadAlgorithms(self, *args, **kwargs):
         self.addAlgorithm(generateChainagePointOnRTSS())
         self.addAlgorithm(GeocodageInverse())
-        self.addAlgorithm(GeocodePoint())
-        self.addAlgorithm(GeocodeLine())
+        #self.addAlgorithm(GeocodePoint())
+        #self.addAlgorithm(GeocodeLine())
         self.addAlgorithm(generateRTSSProfilFromMNT())
         self.addAlgorithm(generatePerpendicularLines())
         self.addAlgorithm(generateTransect())

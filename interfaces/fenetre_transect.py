@@ -49,6 +49,9 @@ class fenetreTransect(QtWidgets.QDialog, FORM_CLASS):
         self.params = PluginParametres()
         # Apppler la fonction lorsque l'interval est accepter par l'utilisateur
         self.buttonBox.accepted.connect(self.execute)
+        self.chk_inverser.stateChanged.connect(self.updateDirection)
+        self.updateDirection(self.chk_inverser.isChecked())
+        
 
     def setInterfaceActive(self):
         if self.isVisible(): self.raise_()
@@ -60,6 +63,10 @@ class fenetreTransect(QtWidgets.QDialog, FORM_CLASS):
         if self.isVisible():
             self.closing_window.emit()
             event.accept()
+
+    def updateDirection(self, is_check):
+        if is_check: self.lbl_direction.setText("Gauche -> Droite")
+        else: self.lbl_direction.setText("Gauche <- Droite")
 
     def execute(self):
         distance_droite = self.spx_dist_droite.value()
@@ -80,7 +87,7 @@ class fenetreTransect(QtWidgets.QDialog, FORM_CLASS):
         # Lancer le script "Générer des point de chaînage sur un RTSS"
         result = processing.run("MTQ:generateTransect", params)
         # La couche vectorielle (point) résultante du script 
-        addLayerToMap(self.canvas, result['OUTPUT'])
+        addLayerToMap(self.canvas, result['OUTPUT'], style=self.params.getValue("layer_transect_style"))
         self.close()
 
     def setPrecision(self):

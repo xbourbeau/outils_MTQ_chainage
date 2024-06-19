@@ -8,6 +8,7 @@ from ..fnt.offsetPoint import offsetPoint
 
 # Importer la librairie pour des opérations trigo
 import math
+import copy
 from typing import Union
 
 # Librairie MTQ
@@ -70,15 +71,35 @@ class FeatRTSS(RTSS):
             return rtss
         else: return cls(None, None, None)
     
-    def __str__ (self): return f"{self.num_rtss} ({self.chainage_d}, {self.chainage_f})"
+    def __str__ (self): return f"{self.num_rts} ({self.chainage_d}, {self.chainage_f})"
     
-    def __repr__ (self): return f"FeatRTSS {self.num_rtss} ({self.chainage_d}, {self.chainage_f})"
+    def __repr__ (self): return f"FeatRTSS {self.num_rts} ({self.chainage_d}, {self.chainage_f})"
     
     def __contains__(self, key): return self.chainage_d <= key and self.chainage_f >= key
 
-    def asLineRTSS(self):
-        """ Permet de retourner un objet LineRTSS représantant le RTSS """
-        return self.createLine([self.chainageDebut(), self.chainageFin()])
+    def __deepcopy__(self, memo):
+        new_obj = self.__class__.__new__(self.__class__)
+
+        # Add the new object to the memo dictionary to avoid infinite recursion
+        memo[id(self)] = new_obj
+
+        # Deep copy all the attributes
+        for slot in self.__slots__:
+            v = getattr(self, slot)
+            # Use the copy method for QgsGeometry objects
+            if isinstance(v, QgsGeometry): setattr(new_obj, slot, QgsGeometry(v))
+            else: setattr(new_obj, slot, copy.deepcopy(v, memo))
+
+        return new_obj
+
+    def asLineRTSS(self, offset=0):
+        """
+        Permet de retourner un objet LineRTSS représantant le RTSS
+        
+        Args:
+            - offset (float): Un offset du RTSS. Défault = 0
+        """
+        return self.createLine([self.chainageDebut(), self.chainageFin()], offsets=[offset])
 
     def chainageDebut(self)->Chainage:
         """ Renvoie le chainage de début du RTSS """
@@ -159,9 +180,9 @@ class FeatRTSS(RTSS):
         
         Return (QgsGeometry): La géometry géocoder sur le RTSS
         """
-        if isinstance(input, PointRTSS): return self.geocoderPoint(obj_rtss)
-        elif isinstance(input, LineRTSS): return self.geocoderLine(obj_rtss)
-        elif isinstance(input, PolygonRTSS): return self.geocoderPolygon(obj_rtss)
+        if isinstance(obj_rtss, PointRTSS): return self.geocoderPoint(obj_rtss)
+        elif isinstance(obj_rtss, LineRTSS): return self.geocoderLine(obj_rtss)
+        elif isinstance(obj_rtss, PolygonRTSS): return self.geocoderPolygon(obj_rtss)
 
     def geocoderInverse(self, geometry:QgsGeometry):
         """
@@ -173,6 +194,7 @@ class FeatRTSS(RTSS):
         
         Return (PointRTSS, LineRTSS, PolygonRTSS): L'objet RTSS
         """
+        geometry.convertToSingleType()
         if geometry.wkbType() == 1: return self.geocoderInversePoint(geometry)
         elif geometry.wkbType() == 2: return self.geocoderInverseLine(geometry)
         elif geometry.wkbType() == 3: return self.geocoderInversePolygon(geometry)
@@ -186,7 +208,7 @@ class FeatRTSS(RTSS):
         
         Return (LineRTSS): L'objet LineRTSS équivalent a la géometry
         """
-        
+        geometry.convertToSingleType()
         list_geom_point = geometry.asPolyline()
         # Géocodage inverse de l'extremitées
         point_d = self.geocoderInversePoint(QgsGeometry.fromPointXY(list_geom_point[0]))
@@ -206,6 +228,7 @@ class FeatRTSS(RTSS):
         
         Return (PointRTSS): L'objet PointRTSS équivalent a la géometry
         """
+        geometry.convertToSingleType()
         geometry = FeatRTSS.verifyFormatPoint(geometry)
         # Définir le offset du point
         offset = self.getDistanceFromPoint(geometry)
@@ -223,11 +246,13 @@ class FeatRTSS(RTSS):
         
         Return (PolygonRTSS): L'objet PolygonRTSS équivalent a la géometry
         """
-        # TODO: Développer la méthode
         # TODO: Défine interpolate_on_rtss with a random point
-        interpolate_on_rtss = True
+        list_point_rtss = []
+        for point in geometry.vertices():
+            # Géocodage inverse de l'extremitées
+            list_point_rtss.append(self.geocoderInversePoint(QgsGeometry.fromPointXY(QgsPointXY(point))))
         
-        return PolygonRTSS([])
+        return PolygonRTSS(list_point_rtss)
 
     def geocoderLine(self, line:LineRTSS, on_rtss=False):
         """
@@ -245,62 +270,98 @@ class FeatRTSS(RTSS):
         if not self.isLineOnRTSS(line): 
             raise Exception("La ligne doit etre entierement sur le RTSS")
         # Géocoder le premier point de la ligne
-        last_line_point = self.geocoderPoint(line.startPoint(), on_rtss=on_rtss).asPoint()
-        # Longueur total de la ligne à géocoder
-        length = line.length()
+        start_point_geom = self.geocoderPoint(line.startPoint(), on_rtss=on_rtss)
+        line.startPoint().setGeometry(start_point_geom)
         # Liste des points de la ligne géocodée
-        line_points = [last_line_point]
-        # Le suivi de la mesure de la distance de la ligne le long du RTSS
-        dist_along_line = 0 
+        line_points = [start_point_geom.asPoint()]
         # Parcourir les points de la ligne à partir du deuxième point
-        for idx, line_point in enumerate(line[1:]):
+        for idx, line_point in enumerate(line.getPoints()[1:]):
+            point_geom = self.geocoderPoint(line_point, on_rtss=on_rtss)
             # Géocoder le point de la ligne 
-            line_point_geocoder = self.geocoderPoint(line_point, on_rtss=on_rtss).asPoint()
-            # Interpoler les vertex du rtss entre le dernier point et le point courant
-            if line.interpolate():
-                # Indicateur que la section de ligne est dans le sense inverse du chainage
-                is_reverse = line_point.getChainage() < line[idx].getChainage()
-                # Définir le vertex le plus proche du dernier point 
-                # OPTIMISATION: Le last vertex et caluler 2 fois quand il y a plus que 2 points dans la ligne
-                last_vertex = self.geometry().closestVertex(last_line_point)[2 if is_reverse else 3]
-                # Définir le vertex le plus proche du point courant 
-                vertex = self.geometry().closestVertex(line_point_geocoder)[3 if is_reverse else 2]
-                # Définir l'incrémentation du range pour parcourir les vertex
-                increment = -1 if is_reverse else 1
-                # Parcourir les vertex entre le dernier point et le point courant
-                for i in range(last_vertex, vertex + increment, increment):
-                    # Définir la coordonnée du vertex courant
-                    vertex_point = QgsPointXY(self.geometry().vertexAt(i))
-                    # Vérifier si la ligne à un offset de défini
-                    if line.hasOffset() and not on_rtss:
-                        # Incrémenter la distance de la ligne le long du RTSS
-                        dist_along_line += vertex_point.distance(last_line_point)
-                        # Conserver le vertex comme étant le dernier point utilisé
-                        last_line_point = vertex_point
-                        # Définir le offset au vertex courant
-                        offset = interpolateOffsetOnLine(
-                            dist=dist_along_line,
-                            longeur=length,
-                            offset_d=line.startOffset(),
-                            offset_f=line.endOffset())
-                        # Appliquer un offset au point du vertex
-                        vertex_point = offsetPoint(
-                            point=vertex_point,
-                            offset=offset,
-                            angle=self.geometry().angleAtVertex(i))
-                    # Ajouter le vertex à la ligne géocoder
-                    line_points.append(vertex_point)
-                # Conserver le point géocoder comme étant le dernier point utiliser de la ligne
-                last_line_point = line_point_geocoder
-            # Ajouter le point à la liste des points de la ligne 
-            line_points.append(line_point_geocoder)
-                
+            line[idx+1].setGeometry(point_geom)
+            # Ajouter les points des vertex entre les deux dernier PointRTSS de la ligne
+            line_points.extend(self.geocoderLineFromExtremities(line[idx], line[idx+1], on_rtss=on_rtss))
+            # Ajouter le dernier points à la liste
+            line_points.append(point_geom.asPoint())
+        
         # Créer la géometrie de la ligne à partir de la liste des vertex
         line_geom = QgsGeometry().fromPolylineXY(line_points)
         # Retirer des vertex qui serait doublé
         line_geom.removeDuplicateNodes()
         # Retourner la géometrie de la ligne
         return line_geom
+    
+    def getVertexBetweenPoints(self, start_point:QgsGeometry, end_point:QgsGeometry, is_reverse=False):
+        # Définir l'incrémentation du range pour parcourir les vertex
+        increment = -1 if is_reverse else 1
+        # Définir le vertex le plus proche du premier point 
+        start_vertex = self.geometry().closestVertex(start_point.asPoint())[1]
+        # Définir le vertex le plus proche du dernier point
+        end_vertex = self.geometry().closestVertex(end_point.asPoint())[1]
+        # Liste des distances le long de la ligne pour les deux points
+        dists = [self.geometry().lineLocatePoint(start_point), self.geometry().lineLocatePoint(end_point)]
+        # Définir les distances Min/Max
+        dist_min, dist_max = min(dists), max(dists)
+        # Liste des vertex entre les points
+        list_vertex_idx = []
+        # Parcourir les vertex entre les points vertex le plus proche des points
+        for vertex_idx in range(start_vertex, end_vertex+increment, increment):
+            # Vérifier que le vertex est bien entre les points avec la distance 
+            if vertex_idx == start_vertex or vertex_idx == end_vertex:
+                dist_vertex = self.geometry().lineLocatePoint(QgsGeometry.fromPoint(self.geometry().vertexAt(vertex_idx)))
+                if dist_vertex <= dist_min or dist_vertex >= dist_max: continue
+            # Ajouter le vertex à la liste
+            list_vertex_idx.append(vertex_idx)
+        # Retourner la liste des vertexs
+        return list_vertex_idx
+
+    def geocoderLineFromExtremities(self, start_point:PointRTSS, end_point:PointRTSS, on_rtss=False):
+        # Vérifier que le début et la fin sont sur un seule RTSS
+        if start_point.getRTSS() != end_point.getRTSS():
+            raise Exception("La ligne doit etre entierement sur le RTSS")
+        # Liste des points de la ligne géocodée
+        line_points = []
+        # Longueur entre les deux points de la ligne
+        length = abs(float(start_point.getChainage() - end_point.getChainage()))
+        # Indicateur que la section de ligne est dans le sense inverse du chainage
+        is_reverse = start_point.getChainage() > end_point.getChainage()
+        # Vérifier si le offset des vertex devrait être interpoler
+        interpolate_offset = not on_rtss and start_point.getOffset() != end_point.getOffset()
+        # Définir le chainage avec le premier point si le offset est le même
+        if not interpolate_offset: offset = start_point.getOffset()
+        # Définir le offset à 0 si c'est sur le RTSS
+        if on_rtss: offset = 0
+        # Le suivi de la mesure de la distance de la ligne le long du RTSS
+        dist_along_line = 0
+
+        # Définir le premier vertex comme étant le point de début sur le RTSS
+        previous_vertex = self.geocoderPointFromChainage(start_point.getChainage()).asPoint()
+        # Parcourir les vertex entre le dernier point et le point courant
+        for vertex_idx in self.getVertexBetweenPoints(start_point.getGeometry(), end_point.getGeometry(), is_reverse):
+            # Définir la coordonnée du vertex courant
+            vertex_point = QgsPointXY(self.geometry().vertexAt(vertex_idx))
+            # Vérifier si la ligne à un offset de défini
+            if interpolate_offset:
+                # Incrémenter la distance de la ligne le long du RTSS
+                dist_along_line += float(self.getChainageFromLong(vertex_point.distance(previous_vertex)))
+                # Conserver le vertex comme étant le dernier point utilisé
+                previous_vertex = vertex_point
+                # Définir le offset au vertex courant
+                offset = interpolateOffsetOnLine(
+                    dist=dist_along_line,
+                    longeur=length,
+                    offset_d=start_point.getOffset(),
+                    offset_f=end_point.getOffset())
+            # Appliquer un offset au point du vertex
+            if offset != 0: vertex_point = offsetPoint(
+                point=vertex_point,
+                offset=offset,
+                angle=self.geometry().angleAtVertex(vertex_idx))
+            # Ajouter le vertex à la ligne géocoder
+            line_points.append(vertex_point)
+
+        # Retourner la liste des points de la ligne
+        return line_points
 
     def geocoderLineFromChainage(self, chainages:list[Chainage], offsets:list=[0], interpolate_on_rtss=True):
         """
@@ -482,9 +543,9 @@ class FeatRTSS(RTSS):
         # Retourner la longueur geometrique max si le chainage est plus grande que le chainage de fin 
         if chainage >= self.chainage_f: return self.length()
         # Retourner le chainage de début du RTSS si le chainage est plus petit que le chainage de début du RTSS
-        elif chainage <= self.chainage_d: return self.chainage_d
+        elif chainage <= self.chainage_d: return float(self.chainage_d)
         # Sinon corriger le chainage pour obtenir la longueur géometrique
-        else: return (chainage * self.length()) / self.chainage_f.value()
+        else: return float((chainage * self.length()) / self.chainage_f.value())
     
     def getChainageFromLong(self, longueur:Union[int, float]):
         """ 
@@ -566,7 +627,7 @@ class FeatRTSS(RTSS):
         long_f = self.getLongFromChainage(chainage_f)
         long = self.getLongFromChainage(chainage)
         # Retourner le offset de la ligne à la position du chainage
-        return interpolateOffsetOnLine(long_f-long, long_f-long_d, offset_d, offset_f)
+        return interpolateOffsetOnLine(long_d+long, long_f-long_d, offset_d, offset_f)
     
     def isChainageOnRTSS(self, chainage:Union[int, float, Chainage])->bool:
         """ Méthode qui permet de vérifier si le chainage est valide pour le RTSS """
@@ -581,8 +642,8 @@ class FeatRTSS(RTSS):
             - partial (bool): Indique si la ligne peux être partiellement sur le RTSS
         """
         if not line.isValide(): return False
-        if partial: return self.num_rtss in line.listRTSS()
-        else: return line.hasOneRTSS() and line.startPoint().getRTSS() == self.num_rtss
+        if partial: return self.num_rts in line.listRTSS()
+        else: return line.hasOneRTSS() and line.startPoint().getRTSS() == self.num_rts
 
     def length(self, in_chainage=False)->float:
         """

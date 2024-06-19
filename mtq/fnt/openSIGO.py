@@ -4,8 +4,9 @@ from qgis.gui import QgisInterface
 import os
 import math
 from .reprojections import reprojectGeometry
+from ..layers.LayerManager import LayerManager
 
-def openSIGO(iface:QgisInterface, layers=None):
+def openSIGO(iface:QgisInterface, layers:LayerManager=None):
     """
     Fonction qui permet d'ouvrir SIGO selon l'étendue de la carte.
 
@@ -22,14 +23,14 @@ def openSIGO(iface:QgisInterface, layers=None):
     if center_point.x() != 0.0 or center_point.y() != 0.0:
         layers_wms = {}
         if layers:
-            for layer_name in layers.getLayersName():
-                if layers.getDataProvider(layer_name) == "wfs":
-                    if layers.isLayerInProject(layer_name, use_name=False, use_source=True):
-                        url = layers.getLayerSource(layer_name)["url"]
-                        type_name = layers.getLayerSource(layer_name)["typename"]
-                        if "ms:" in type_name: type_name = type_name.replace("ms:", "")
-                        if url in layers_wms: layers_wms[url].append(type_name)
-                        else: layers_wms[url] = [type_name]
+            for layer_name in layers:
+                layer = layers.get(layer_name)
+                if layer.dataProvider().lower() != "wfs": continue
+                if not layers.isLayerInProject(layer_name, use_name=False, use_source=True): continue
+                type_name = layer.typename()
+                if "ms:" in type_name: type_name = type_name.replace("ms:", "")
+                if layer.url() in layers_wms: layers_wms[layer.url()].append(type_name)
+                else: layers_wms[layer.url()] = [type_name]
         if layers_wms:
             urls, wms_layers = "wmsUrl=", "wmsLayers="
             for url, layers in layers_wms.items():

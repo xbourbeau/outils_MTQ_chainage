@@ -1,27 +1,36 @@
 # -*- coding: utf-8 -*-
 import bisect
+import copy
 from typing import Union, Dict
-from .imports import *
 
 # Importer les objects du module core de QGIS 
 from qgis.core import QgsGeometry
 
+from .FeatRTSS import FeatRTSS
+from .Chainage import Chainage
+from .RTSS import RTSS
+from .SegmentationPoint import SegmentationPoint
+from .LineSegmentationElement import LineSegmentationElement
+
+
 class LinearReferencing(FeatRTSS):
     """ Représente un objet FeatRTSS sur lequel il y a une segmentation linéaire. """
 
-    __slots__ = ("num_rts", "chainage_d", "chainage_f", "attributs", "geom", "segmentation_points")
+    __slots__ = ("num_rts", "chainage_d", "chainage_f", "attributs", "geom", "segmentation_points", "keep_offset")
     
     def __init__(self,
                  num_rtss:Union[RTSS, str], 
                  chainage_f:Union[Chainage, str, float, int],
                  geometry:QgsGeometry,
                  list_segmentation_points=[], 
+                 keep_offset=False,
                  **kwarg):
         # Dictionnaire des segmentations sur le RTSS. La clé est la valeur du chainage et la 
         self.segmentation_points:Dict[Chainage, SegmentationPoint] = {}
         FeatRTSS.__init__(self, num_rtss, chainage_f, geometry, **kwarg)
         # Ajouter les segmentations existantes
         self.addSegmentations(list_segmentation_points)
+        self.setKeepOffset(keep_offset)
     
     @classmethod
     def fromFeatRTSS(cls, feat_rtss:FeatRTSS, list_segmentation_points=[]):
@@ -37,6 +46,21 @@ class LinearReferencing(FeatRTSS):
     def __contains__(self, key): return Chainage(key) in self.segmentation_points
 
     def __len__(self): return len(self.segmentation_points)
+
+    def __deepcopy__(self, memo):
+        new_obj = self.__class__.__new__(self.__class__)
+
+        # Add the new object to the memo dictionary to avoid infinite recursion
+        memo[id(self)] = new_obj
+
+        # Deep copy all the attributes
+        for slot in self.__slots__:
+            v = getattr(self, slot)
+            # Use the copy method for QgsGeometry objects
+            if isinstance(v, QgsGeometry): setattr(new_obj, slot, QgsGeometry(v))
+            else: setattr(new_obj, slot, copy.deepcopy(v, memo))
+
+        return new_obj
 
     # TODO: Séparer la méthode pour ajouter un élément et ajouter un élement avec chainage début et fin
     def addElement(self, element:LineSegmentationElement, chainage_debut, chainage_fin, copy_elements=True):
@@ -81,7 +105,9 @@ class LinearReferencing(FeatRTSS):
             # Définir la segmentation précédant 
             previous_segmentation = self.getPreviousSegmentation(segmentation_point)
             # Copier les éléements de la segmentation précédante
-            if previous_segmentation: segmentation_point.setElements(previous_segmentation.getElements())
+            if previous_segmentation: segmentation_point.setElements(copy.deepcopy(previous_segmentation.getElements()))
+        
+        self.updateElementsOffsets(segmentation_point, update_current=copy_elements)
     
     def addSegmentationFromChainage(self, chainage, copy_elements=False):
         """ Méthode qui permet d'ajouter un point de segmentation sur le RTSS à partir d'un chainage. """
@@ -115,21 +141,18 @@ class LinearReferencing(FeatRTSS):
         """ Méthode qui permet de créer un objet SegmentationPoint associer au RTSS """
         return SegmentationPoint(self.getRTSS(), chainage, list_elements, attributs)
 
-    # TODO: Adapter la méthode pour pouvoir géocoder un élément par identifant
-    def geocoderElement(self, chainage, offsets:list=[0], interpolate_on_rtss=True):
+    def geocoderElement(self, segmentation_point:SegmentationPoint, elem:LineSegmentationElement, interpolate_on_rtss=True):
         """
         Permet de géocoder une element linéaire d'une segmentation
         
         Args:
-            - chainage (Chainage): Le chainage pour le getSegmentation
-            - offsets (list): Liste des offsets des points de la ligne (1 offset == parralel)
+            - segmentation_point (SegmentationPoint): Le point de segmentation
+            - elem (LineSegmentationElement): L'élément à géocoder
             - interpolate_on_rtss (bool): Interpoler la trace du RTSS entre les points
         """
-        segmentation_point = self.getSegmentation(chainage)
-        next_chainage = self.getNextChainage(segmentation_point)
         return self.geocoderLineFromChainage(
-            chainages=[segmentation_point.getChainage(), next_chainage],
-            offsets=offsets,
+            chainages=[segmentation_point.getChainage(), self.getNextChainage(segmentation_point)],
+            offsets=[elem.getOffsetDebut(), elem.getOffsetFin()],
             interpolate_on_rtss=interpolate_on_rtss)
 
     def geocoderSegmentation(self, chainage):
@@ -166,7 +189,7 @@ class LinearReferencing(FeatRTSS):
         # Retourner rien si une distance max est défini et le point le plus proche est plus loin que la distance
         if last_dist > dist_max and dist_max != -1: return None
         return last_point
-    
+
     def getListChainage(self, start=None, end=None):
         """
         Méthode qui permet de retourner une liste de toutes les chainages des segmentations 
@@ -254,7 +277,7 @@ class LinearReferencing(FeatRTSS):
     
     def getSegmentation(self, chainage):
         """
-        Méthode qui permet de retourner un point de segmentation du RTSS sois par un SegmentationPoint ou un chainage
+        Méthode qui permet de retourner un point de segmentation du RTSS a partir d'un chainage
         
         Args:
             - value (str/real): La valeur à rechercher
@@ -273,10 +296,10 @@ class LinearReferencing(FeatRTSS):
             if index <= 0 or index == len(chainages): return None
             # Retourner le point de segmentation à l'index
             segmentation_point = self[chainages[index - 1]]
-
-        # Retourner None si le point de segmentation avant est une fin
-        if segmentation_point.isEmpty(): return None
-        else: return segmentation_point
+            # Retourner None si le point de segmentation avant est une fin
+            if segmentation_point.isEmpty(): return None
+        
+        return segmentation_point
     
     def getSegmentations(self, reverse=False):
         """ Permet de retourner un iterateur sur les points de segmentations """
@@ -312,6 +335,8 @@ class LinearReferencing(FeatRTSS):
         """ Permet de vérifier qu'un SegmentationPoint est unique sur le RTSS """
         return not segmentation_point.getChainage() in self
 
+    def keepOffset(self): return self.keep_offset
+
     def moveSegmentation(self, segmentation_point:SegmentationPoint, new_chainage):
         """ 
         Méthode qui permet de déplacer une segmentation à un chainage différent
@@ -326,12 +351,48 @@ class LinearReferencing(FeatRTSS):
         # Modifier le chainage de la segmentation pour le nouveau chainage
         new_segmentation_point.setChainage(new_chainage)
         # Retirer la segmentation
-        self.removeSegmentation(segmentation_point.getChainage())
+        self.removeSegmentation(segmentation_point)
         # Ajouter la nouvelle segmentation
         self.addSegmentation(new_segmentation_point)
         return True
-    
-    def removeSegmentation (self, segmentation_point:SegmentationPoint, check_end=False):
+
+    def updateElementsOffsets(self, segmentation_point:SegmentationPoint, update_current=True, update_previous=True):
+        """
+        Permet de mettre à jour les offsets des éléments touchée par la modification
+        d'un point de segmentation.
+
+        Args:
+            segmentation_point (SegmentationPoint): Le point de segmentation modifiée
+            update_current (bool, optional): Mettre a jour les offsets des éléments du SegmentationPoint. Defaults to True.
+            update_previous (bool, optional): Mettre a jour les offsets des éléments du point précédant. Defaults to True.
+        """
+        if self.keepOffset(): return None
+        # Définir la segmentation précédant 
+        previous_segmentation = self.getPreviousSegmentation(segmentation_point, check_end=True)
+        next_chainage = self.getNextChainage(segmentation_point, check_end=False)
+
+        if update_previous:
+            for elem in previous_segmentation.getElements():
+                if elem.isParallel(): continue
+                new_offset = self.interpolateOffsetAtChainage(
+                    chainage=segmentation_point.getChainage(),
+                    chainage_d=previous_segmentation.getChainage(),
+                    chainage_f=next_chainage,
+                    offset_d=elem.getOffsetDebut(),
+                    offset_f=elem.getOffsetFin())
+                elem.setOffsetFin(new_offset)
+        if update_current:  
+            for elem in segmentation_point.getElements():
+                if elem.isParallel(): continue
+                new_offset = self.interpolateOffsetAtChainage(
+                    chainage=segmentation_point.getChainage(),
+                    chainage_d=previous_segmentation.getChainage(),
+                    chainage_f=next_chainage,
+                    offset_d=elem.getOffsetDebut(),
+                    offset_f=elem.getOffsetFin())
+                elem.setOffsetDebut(new_offset)
+
+    def removeSegmentation(self, segmentation_point:SegmentationPoint, check_end=False):
         """
         Méthode qui permet de supprimer une segmentation du RTSS
         
@@ -343,5 +404,22 @@ class LinearReferencing(FeatRTSS):
             check_end and segmentation_point.isEmpty() and
             not self.hasNextSegmentation(segmentation_point, check_end=False)): return False
         
-        return self.segmentation_points.pop(segmentation_point.getChainage(), False) is not False
+        previous_segmentation = self.getPreviousSegmentation(segmentation_point, check_end=True)
+        self.segmentation_points.pop(segmentation_point.getChainage(), False)
         
+        # Update offsets
+        if previous_segmentation and not self.keepOffset():
+            for elem in previous_segmentation.getElements():
+                if elem.isParallel(): continue
+                new_offset = self.interpolateOffsetAtChainage(
+                    chainage=self.getNextChainage(previous_segmentation),
+                    chainage_d=previous_segmentation.getChainage(),
+                    chainage_f=segmentation_point.getChainage(),
+                    offset_d=elem.getOffsetDebut(),
+                    offset_f=elem.getOffsetFin())
+                elem.setOffsetFin(new_offset)
+
+        return True
+        
+    def setKeepOffset(self, keep_offset:bool):
+        self.keep_offset = keep_offset 

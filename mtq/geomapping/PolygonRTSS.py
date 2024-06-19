@@ -43,12 +43,37 @@ class PolygonRTSS:
 
     def __getitem__(self, index): return self.points[index]
 
+    def addPoint(self, point:PointRTSS):
+        """
+        Permet d'ajouter un PointRTSS au polygone 
+
+        Args:
+            - point (PointRTSS): Le point à ajouter
+        """
+        self.points.append(point)
+
     def createMidleLine(self):
         """
         Méthode qui permet de retourner la ligne de centre d'un polygon 
         """
         # TODO: Développer la méthode
         pass
+
+    def getChainageDebut(self):
+        """ Permet de retourner le chainage le plus petit """
+        return min([pt.getChainage() for pt in self.points])
+    
+    def getChainageFin(self):
+        """ Permet de retourner le chainage le plus grand """
+        return max([pt.getChainage() for pt in self.points])
+    
+    def getOffsetMax(self):
+        """ Permet de retourner le offset le plus petit """
+        return max([pt.getOffset() for pt in self.points])
+
+    def getOffsetMin(self):
+        """ Permet de retourner le offset le plus grand """
+        return min([pt.getOffset() for pt in self.points])
 
     def getPoints(self):
         """ Permet de retourner la liste des PointRTSS du polygon """
@@ -85,6 +110,15 @@ class PolygonRTSS:
     def setInterpolation(self, interpolate_on_rtss):
         """ Permet de définir si le polygon doit être interpolé sur le RTSS """
         self.interpolate_on_rtss = interpolate_on_rtss
+
+    def setEnd(self, point:PointRTSS):
+        """
+        Méthode qui permet de définir le dernier point du polygon
+
+        Args:
+            - point(PointRTSS) = Le point à définir comme le dernier
+        """
+        self.points[-1] = point
 
     def setPoints(self, points:list[PointRTSS]):
         """ 

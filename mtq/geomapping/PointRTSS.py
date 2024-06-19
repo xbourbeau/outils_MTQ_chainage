@@ -26,7 +26,7 @@ class PointRTSS:
         self.setOffset(offset)
         self.setGeometry(None)
     
-    def __str__ (self): return f"{self.rtss}, {self.chainage}, {self.offset}"
+    def __str__ (self): return f"PointRTSS {self.rtss}: {self.chainage}, {self.offset}m"
     
     def __repr__ (self): return f"PointRTSS {self.rtss}: {self.chainage} ({self.offset}m)"
 
@@ -60,10 +60,10 @@ class PointRTSS:
         """
         if "formater" in kwargs or "zero" in kwargs: return self.rtss.value(**kwargs)
         return self.rtss
-    
+
     def hasOffset(self):
         """ Permet de vérifier si le point à un offset """
-        return self.offset != 1
+        return self.offset != 0
 
     def setChainage(self, chainage):
         self.chainage = Chainage(chainage)

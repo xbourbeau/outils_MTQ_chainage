@@ -3,12 +3,14 @@
 from qgis.core import (QgsGeometry, QgsPointXY, QgsVectorLayer, QgsField,
                         QgsCoordinateReferenceSystem, QgsSpatialIndex, QgsFeature, QgsWkbTypes, QgsFeatureIterator)
 from qgis.PyQt.QtCore import QVariant
+from collections import Counter
 # Importer les fonction de formatage du module
 from ..fnt.format import verifyFormatPoint
 from ..fnt.layer import validateLayer
 
 # Importer la librairie pour des opérations trigo
 import numpy as np
+import copy
 from typing import Union, Dict
 from scipy.stats import linregress
 
@@ -18,6 +20,7 @@ from .Chainage import Chainage
 from .LineRTSS import LineRTSS
 from .RTSS import RTSS
 from .PointRTSS import PointRTSS
+from .PolygonRTSS import PolygonRTSS
 
 from ..param import (DEFAULT_NOM_COUCHE_RTSS, DEFAULT_NOM_CHAMP_RTSS,
                      DEFAULT_NOM_CHAMP_DEBUT_CHAINAGE, DEFAULT_NOM_CHAMP_FIN_CHAINAGE)
@@ -51,6 +54,7 @@ class Geocodage:
         self.nom_champ_rtss = nom_champ_rtss
         self.nom_champ_long = nom_champ_long
         self.nom_champ_chainage_d = nom_champ_chainage_d
+        self.spatial_index = None
         self.setPrecision(precision)
         # Référence des RTSS
         self.dict_rtss:Dict[RTSS, FeatRTSS] = {}
@@ -148,6 +152,21 @@ class Geocodage:
 
     def __contains__(self, key): return RTSS(key) in self.dict_rtss
 
+    def __deepcopy__(self, memo):
+        new_obj = self.__class__.__new__(self.__class__)
+
+        # Add the new object to the memo dictionary to avoid infinite recursion
+        memo[id(self)] = new_obj
+
+        # Deep copy all the attributes
+        for k, v in self.__dict__.items():
+            # Use the copy method for QgsGeometry objects
+            if isinstance(v, QgsCoordinateReferenceSystem): setattr(new_obj, k, QgsCoordinateReferenceSystem(v))
+            elif isinstance(v, QgsSpatialIndex): setattr(new_obj, k, QgsSpatialIndex(v))
+            else: setattr(new_obj, k, copy.deepcopy(v, memo))
+
+        return new_obj
+
     def createLine(self, rtss, chainages:list, offsets:list=[0]):
         """ Permet de créer un objet LineRTSS sur un RTSS """
         feat_rtss = self.get(rtss)
@@ -157,8 +176,13 @@ class Geocodage:
         """ Permet de créer un objet PointRTSS sur un RTSS """
         feat_rtss = self.get(rtss)
         return feat_rtss.createPoint(chainage=chainage, offset=offset)
+    
+    def createPolygon(self, rtss, chainages:list, offsets:list):
+        """ Permet de créer un objet PolygonRTSS sur un RTSS """
+        feat_rtss = self.get(rtss)
+        return feat_rtss.createPolygon(chainages=chainages, offsets=offsets)
 
-    def get(self, rtss:Union[RTSS, str]):
+    def get(self, rtss:Union[RTSS, str]) -> FeatRTSS:
         """ 
         Fonction qui retourne l'instance de la class FeatRTSS pour un RTSS.
         Retourne une valeur vide si le RTSS n'existe pas.
@@ -169,7 +193,9 @@ class Geocodage:
         Return (FeatRTSS): L'objet FeatRTSS du RTSS
         """ 
         # Retourner la classe featRTSS si le RTSS existe dans le dictionnaire
-        return self[rtss]
+        try: rtss = RTSS(rtss)
+        except: pass
+        return self.dict_rtss.get(rtss, None)
 
     def getAtlasLayer(self, list_locs:list[LineRTSS], width, height, overlap=20, start_offset=10, vertical_margin=10, chainage_exact=False):
         """
@@ -373,7 +399,17 @@ class Geocodage:
         # Retourner la liste de toutes les featRTSS
         return list(self.dict_rtss.values())
     
-    def geocoder(self, rtss:Union[RTSS, str], chainages:list, offsets:list=[0], interpolate_on_rtss=True):
+    def geocoder(self, object_rtss:Union[PointRTSS,LineRTSS,PolygonRTSS], on_rtss=False):
+        feat_rtss = self.get(object_rtss.getRTSS())
+        # Retourner la géometries géocoder sur le RTSS
+        if isinstance(object_rtss, PointRTSS):
+            return feat_rtss.geocoderPoint(object_rtss, on_rtss=on_rtss)
+        if isinstance(object_rtss, LineRTSS):
+            return feat_rtss.geocoderLine(object_rtss, on_rtss=on_rtss)
+        if isinstance(object_rtss, PolygonRTSS):
+            return feat_rtss.geocoderPolygon(object_rtss)
+
+    def geocoderFromChainages(self, rtss:Union[RTSS, str], chainages:list, offsets:list=[0], interpolate_on_rtss=True):
         """
         Permet de géocoder une géometry selon une liste de chainage.
             Point: Contient un chainage
@@ -412,16 +448,30 @@ class Geocodage:
         # Retourner la géometries géocoder sur le RTSS
         return feat_rtss.geocoderPoint(point, on_rtss=on_rtss)
     
+    def geocoderPolygon(self, polygon:PolygonRTSS):
+        """
+        Permet de géocoder une LineRTSS en QgsGeometry sur sont RTSS.
+
+        Args:
+            - polygon(PolygonRTSS): Le polygon à géocoder
+        
+        Return (QgsGeometry): La géometrie du polygon géocoder
+        """
+        # TODO: Faire en sorte qu'on puisse géocoder un polygon sur plus d'un RTSS
+        for rtss in polygon.listRTSS():
+            feat_rtss = self.get(rtss)
+            # Retourner la géometries géocoder sur le RTSS
+            return feat_rtss.geocoderPolygon(polygon)
+
     def geocoderLine(self, line:LineRTSS, on_rtss=False):
         """
         Permet de géocoder une LineRTSS en QgsGeometry sur sont RTSS.
 
         Args:
-            - point(PointRTSS): Le point à géocoder
-            - interpolate_on_rtss(bool): Interpoler la trace du rtss entre les points de la ligne
+            - line(LineRTSS): La ligne à géocoder
             - on_rtss(bool): Permet d'overide la valeur de offset en géocodant le point sur le RTSS 
         
-        Return (QgsGeometry): La géometrie du point géocoder
+        Return (QgsGeometry): La géometrie de la ligne géocoder
         """
         # TODO: Faire en sorte qu'on puisse géocoder une ligne sur plus d'un RTSS
         for rtss in line.listRTSS():
@@ -429,7 +479,7 @@ class Geocodage:
             # Retourner la géometries géocoder sur le RTSS
             return feat_rtss.geocoderLine(line, on_rtss=on_rtss)
     
-    def geocoderInverse(self, geometry, rtss=None):
+    def geocoderInverse(self, geometry:QgsGeometry, rtss=None):
         """
         Méthode qui associe un RTSS/chainage à une géometrie ponctuelle ou linéaire. Un RTSS peux être spécifié
         s'il est connue. Sinon le RTSS le plus proche est selectionnée. Pour selectionnée le RTSS le plus proche,
@@ -439,19 +489,15 @@ class Geocodage:
             - geometry (QgsGeometry): La géometrie à trouvé un RTSS/chainage (ponctuelle ou linéaire)
             - rtss(str): Le numéro du RTSS. Peut être formater ex: (0001002155000D ou 00010-02-155-000D)
         
-        Return (dict): {'rtss':RTSS, 'chainage_d':Chainage de début, 'chainage_f':Chainage de fin}
+        Return (PointRTSS/LineRTSS): L'objet RTSS représentant la géometrie
         """
-        # Aller chercher directement le featRTSS si un RTSS est défini et est dans la dictionnaire de référence
-        if rtss: feat_rtss = self.get(rtss)
-        # Sinon appeller la fonction pour avoir le RTSS le plus proche de la géometrie
-        else: feat_rtss = self.nearestRTSS(geometry)
-        
-        # Liste des chainages les plus proche de chacun des vertex de la ligne en entrée 
-        list_chainage = [self.roundChainage(feat_rtss.getChainageFromPoint(QgsPointXY(vertex)))
-                         for vertex in geometry.vertices()]
-        
-        if len(list_chainage) == 1: return feat_rtss.createPoint(list_chainage[0])
-        else: return feat_rtss.createLine(list_chainage)
+        # Type de geometry (1 = Point et 2 = Ligne)
+        geometry.convertToSingleType()
+        geometry_type = geometry.wkbType()
+
+        if geometry_type == 1: return self.geocoderInversePoint(geometry, rtss=rtss)
+        elif geometry_type == 2: return self.geocoderInverseLine(geometry, rtss=rtss)
+        elif geometry_type == 3: return self.geocoderInversePolygon(geometry, rtss=rtss)
     
     def geocoderInversePoint(self, geom_point:Union[QgsGeometry, QgsPointXY], rtss=None):
         """
@@ -469,84 +515,79 @@ class Geocodage:
         if rtss: feat_rtss = self.get(rtss)
         # Sinon appeller la fonction pour avoir le RTSS le plus proche de la géometrie
         else: feat_rtss = self.nearestRTSSFromPoint(geom_point)
-        # Définir le offset du point
-        offset = feat_rtss.getDistanceFromPoint(geom_point)
-        # Trouver le chainage du point sur le RTSS
-        chainage = feat_rtss.getChainageFromPoint(geom_point)
-        # Retourner une liste des informations trouvé
-        return feat_rtss.createPoint(self.roundChainage(chainage), offset=offset)
+        return feat_rtss.geocoderInversePoint(geom_point)
     
-    # TODO: Ajuster au nouveau objets de obj.py
-    def geocoderInverseLineByExtremities(self, geom_line, rtss=None, get_offset=False, concatenante=False, formater_rtss=False, formater_chainage=False):
+    def geocoderInverseLine(self, geom_line:QgsGeometry, rtss=None, methode=1):
+        """
+        Convertir une geometry en objet LineRTSS
+
+        Args:
+            - geom_line (QgsGeometry) = La géometrie linéaire
+            - rtss (RTSS) = Indiquer un RTSS spécifique
+            - methode (int) (1 = by Extremities) (2 = by Vertex)
+        
+        Return: LineRTSS = L'objet LineRTSS qui représente le mieux la géometrie
+        """
+        if methode == 2: return self.geocoderInverseLineByVertex(geom_line, rtss)
+        else: return self.geocoderInverseLineByExtremities(geom_line, rtss)
+
+    def geocoderInverseLineByExtremities(self, geom_line:QgsGeometry, rtss=None):
         """
         Méthode qui permet de trouver le RTSS, chainage et offset des extremitées d'une ligne.
 
         Args:
             - geom_line (QgsGeometry): La géometry du point à analyser
             - rtss (str): Numéro de RTSS du point à analyser
-            - get_offset (bool): Retourner le offset
-            - concatenante (bool): Retourner seulement 1 résultat
-            - formater_rtss (bool): Formater les RTSS résultant
-            - formater_chainage (bool): Formater les chainages résultant
         
-        Return:
-            - [concatenante = True] dict: {"start": [{"rtss": numéro du rtss début, "chainage": chainage de début, "offset": la distance du RTSS}, ...], "end":...}
-            - [concatenante = False] dict: {"start": {"rtss": numéro du rtss, "chainage": chainage du point, "offset": la distance du RTSS}, "end":...}
+        Return: LineRTSS = L'objet LineRTSS qui représente le mieux la géometrie
         """
         # Dictionnaire des resultats des extremitées
-        results = {}
+        list_points = []
         # Parcourir les deux extremitées de la géometrie linéaire
-        for extrem, idx1, idx2 in [["start", 0, 1], ["end", -1, -2]]:
+        for extrem in (0, -1):
             # Géocodage inverse de l'extremitées
-            result = self.geocoderInversePoint(
-                QgsGeometry.fromPointXY(geom_line.asPolyline()[idx1]), rtss=rtss, get_offset=get_offset,
-                concatenante=True, formater_rtss=formater_rtss, formater_chainage=formater_chainage)
-            # Vérifier s'il y a plus d'un RTSS à la même distance de l'extremitées
-            if len(result) > 1 and not concatenante: 
-                # Géocodage inverse du point précédant l'extremitées
-                result_rtss = self.geocoderInversePoint(QgsGeometry.fromPointXY(geom_line.asPolyline()[idx2]), rtss=rtss, get_offset=False, concatenante=False, formater_rtss=formater_rtss)
-                # S'assurer que le RTSS du point précédant est dans les resultats de l'extremitées
-                if result_rtss["rtss"] in [r["rtss"] for r in result]:
-                    # Refaire le géocodage inverse de l'extremitées avec le RTSS spécifique
-                    result = [self.geocoderInversePoint(
-                        QgsGeometry.fromPointXY(geom_line.asPolyline()[idx1]), rtss=result_rtss["rtss"], get_offset=get_offset,
-                        concatenante=False, formater_rtss=formater_rtss, formater_chainage=formater_chainage)]
-                # Sinon on peux rien faire... 
-                else: result = [result[0]]
-            # Ajouter le resultat
-            results[extrem] = result
-        
-        return results
+            list_points.append(self.geocoderInversePoint(
+                QgsGeometry.fromPointXY(geom_line.asPolyline()[extrem]), rtss=rtss))
+        # Retourner la ligne RTSS qui représente la geometrie
+        return LineRTSS(list_points)
     
-    # TODO: Ajuster au nouveau objets de obj.py
-    def geocoderInverseLineByVertex(self, geom_line, rtss=None, get_offset=False, concatenante=False, formater_rtss=False, formater_chainage=False):
+    def geocoderInverseLineByVertex(self, geom_line:QgsGeometry, rtss=None):
         """
         Méthode qui permet de trouver le RTSS, chainage et offset pour chaque vertex d'une ligne.
 
         Args:
             - geom_line (QgsGeometry): La géometry du point à analyser
             - rtss (str): Numéro de RTSS du point à analyser
-            - get_offset (bool): Retourner le offset
-            - concatenante (bool): Retourner seulement 1 résultat
-            - formater_rtss (bool): Formater les RTSS résultant
-            - formater_chainage (bool): Formater les chainages résultant
         
-        Return:
-            - [concatenante = True] list: [[{"rtss": numéro du rtss début, "chainage": chainage de début, "offset": la distance du RTSS}, ...], ...]
-            - [concatenante = False] dict: [{"rtss": numéro du rtss, "chainage": chainage du point, "offset": la distance du RTSS}, ...]
+        Return: LineRTSS = L'objet LineRTSS qui représente le mieux la géometrie
         """
-        list_values = []
+        list_points = []
         for vertex in geom_line.vertices():
             # Ajouter la valeur RTSS, chainage et offset du vertex
-            list_values.append(self.geocoderInversePoint(
-                QgsGeometry.fromPointXY(QgsPointXY(vertex.x(), vertex.y())),
-                rtss=rtss,
-                get_offset=get_offset,
-                concatenante=concatenante,
-                formater_rtss=formater_rtss,
-                formater_chainage=formater_chainage))
-        # Dictionnaire avec les résultat des RTSS, chainage_d et chainage_f
-        return list_values
+            list_points.append(self.geocoderInversePoint(
+                QgsGeometry.fromPointXY(QgsPointXY(vertex)), rtss=rtss))
+        # Retourner la ligne RTSS qui représente la geometrie
+        return LineRTSS(list_points)
+
+    def geocoderInversePolygon(self, geom_poly:QgsGeometry, rtss=None):
+        """
+        Convertir une geometry en objet PolygonRTSS
+
+        Args:
+            - geom_line (QgsGeometry) = La géometrie du polygon
+            - rtss (RTSS) = Indiquer un RTSS spécifique
+        
+        Return: PolygonRTSS = L'objet PolygonRTSS qui représente le mieux la géometrie
+        """
+        # Aller chercher directement le featRTSS si un RTSS est défini et est dans la dictionnaire de référence
+        if rtss: feat_rtss = self.get(rtss)
+        # Sinon appeller la fonction pour avoir le RTSS le plus proche de la géometrie
+        else: 
+            rtss = Counter([self.nearestRTSSFromPoint(QgsGeometry.fromPointXY(QgsPointXY(point))).value()
+                    for point in geom_poly.vertices()])
+            feat_rtss = self.get(rtss.most_common(1)[0][0])
+        
+        return feat_rtss.geocoderInversePolygon(geom_poly)
 
     def isEmpty(self): 
         """ 

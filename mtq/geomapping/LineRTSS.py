@@ -42,7 +42,16 @@ class LineRTSS:
 
     def __iter__ (self): return self.points.__iter__()
 
-    def __getitem__(self, index): return self.points[index]
+    def __getitem__(self, index)->PointRTSS: return self.points[index]
+
+    def addPoint(self, point:PointRTSS):
+        """
+        Permet d'ajouter un PointRTSS à la ligne 
+
+        Args:
+            - point (PointRTSS): Le point à ajouter
+        """
+        self.points.append(point)
 
     def distanceAtVertex(self, vertex: Union[int, PointRTSS]):
         if isinstance(vertex, int): vertex = self.getVertex(vertex)
@@ -57,10 +66,15 @@ class LineRTSS:
             # Arrêter le calcule
             if vertex == last_point: break
             # TODO: Ajuster le calcule pour prendre en compte les offsets dans le calcule des distances
-            if str(point.getRTSS()) == str(last_point.getRTSS()): longueur += abs(last_point.getChainage() - point.getChainage())
+            if str(point.getRTSS()) == str(last_point.getRTSS()): longueur += abs(float(last_point.getChainage()) - float(point.getChainage()))
             # Conserver le dernier point parcouru
             last_point = point
         return longueur
+
+    def endChainage(self):
+        """ Permet de retourner le chainage de fin de la ligne """
+        if self.isEmpty(): return None
+        else: return self.points[-1].getChainage()
 
     def endOffset(self):
         """ Permet de retourner le offset de fin de la ligne """
@@ -103,8 +117,15 @@ class LineRTSS:
         """ Permet de retourner un indicateur de si la ligne est vide """
         return self.points == []
     
+    def isParallel(self, precision=None):
+        """ Permet de vérifier si la ligne est parallel a la trace """
+        if not self.isValide(): return None
+        if precision is None: return len(set([pt.getOffset() for pt in self.points])) == 1
+        else: return len(set([round(pt.getOffset(),precision)  for pt in self.points])) == 1
+
     def isValide(self):
         """ Permet de retourner un indicateur de si la ligne est valide donc contient plus de 1 point """
+        # BUG Doit vérifier que les point ne soient pas pareille
         return len(self.points) > 1
 
     def interpolate(self):
@@ -179,6 +200,11 @@ class LineRTSS:
             - point(PointRTSS) = Le point à définir comme le premier
         """
         self.points[0] = point
+
+    def startChainage(self):
+        """ Permet de retourner le chainage de début de la ligne """
+        if self.isEmpty(): return None
+        else: return self.points[0].getChainage()
 
     def startOffset(self):
         """ Permet de retourner le offset de début de la ligne """

@@ -25,41 +25,43 @@
 from qgis.PyQt.QtGui import QIcon, QKeySequence
 from qgis.PyQt.QtWidgets import QAction, QCompleter, QToolButton, QMenu
 from qgis.core import (QgsProject, QgsPointXY, QgsApplication, QgsCoordinateTransform,
-                       QgsRectangle, Qgis)
+                       QgsRectangle, Qgis, QgsExpression)
 from qgis.gui import QgsMapMouseEvent, QgisInterface
 
 # Import General
 import os
-import re
 
 # Import from Plugin
 from .provider import Provider
 
 # Import Interfaces
 from .interfaces.fenetre_parametre import fenetreParametre
-from .interfaces.fenetre_add_feature import fenetreAddFeature
 from .interfaces.fenetre_selection_interval import fenetreSelectionInterval
 from .interfaces.fenetre_transect import fenetreTransect
 from .interfaces.fenetre_create_atlas import fenetreCreateAtlas
+from .interfaces.fenetre_geocodage_inverse import fenetreGeocodageInverse
 
 from .maptool.mtq_maptool_distance_rtss import MtqMapToolLongueurRTSS
 from .maptool.mtq_maptool_new_ecusson import MtqMapToolNewEcusson
 from .maptool.mtq_maptool_open_svn import MtqMapToolOpenSVN
-from .maptool.mtq_maptool_tracer_geometry import MtqMapToolTracerGeometry
+from .maptool.mtq_maptool_creer_geometry import MtqMapToolCreerGeometry
 
 from .modules.PluginUpdates import PluginUpdates
 from .modules.ToolbarWidjet import ToolbarWidjet
 from .modules.TemporaryGeometry import TemporaryGeometry
 from .modules.PluginParametres import PluginParametres
 
-from .mtq.geomapping.imports import Geocodage, Chainage, RTSS
-from .mtq.fnt.layer import validateLayer
-from .mtq.fnt.openSIGO import openSIGO
+from .tasks.TaskGenerateReseauSegementation import TaskGenerateReseauSegementation
+
+from .mtq.core import Geocodage, Chainage, PointRTSS, ReseauSegmenter
+from .mtq.functions import openSIGO, validateLayer
 from .mtq.utils import Utilitaire as Utils
 
 from .functions.getVisibleFeatures import getVisibleFeatures
 from .functions.getToolTipPosition import getToolTipPosition
 from .functions.getIcon import getIcon
+
+from .expressions.expression_geocodage import *
 
 class MtqPluginChainage:
     """ QGIS Plugin Implementation."""
@@ -71,7 +73,7 @@ class MtqPluginChainage:
         self.plugin_dir = os.path.dirname(__file__)
 
         # ******  À CHANGER LORS DE NOUVELLE MISE À JOUR **********
-        version = "3.2.4"
+        version = "3.3.1"
         self.documentation = "file://sstao00-adm005/TridentAnalyst/Plugin_chainage_mtq/Documentation/Index.html"
         # *********************************************************
 
@@ -110,6 +112,8 @@ class MtqPluginChainage:
             nom_champ_long=self.params.getValue("field_chainage_fin"),
             nom_champ_chainage_d=self.params.getValue("field_chainage_debut"),
             precision=self.params.getValue("precision_chainage"))
+        # Réseau segmenter 
+        self.reseau_context = ReseauSegmenter(self.geocode)
         
         # Reférence à la carte
         self.canvas = self.iface.mapCanvas()
@@ -197,6 +201,8 @@ class MtqPluginChainage:
             parent=self.iface.mainWindow())
         dlg_params.plugin_actif.connect(self.setPluginActive)
         dlg_params.plugin_inactif.connect(self.setPluginInactive)
+        dlg_params.generate_index.connect(self.generateContextLayerIndex)
+        dlg_params.delete_index.connect(self.deleteContextLayerIndex)
         self.plugin_dlg.append(dlg_params)
         
         # ------------------ Action du suivi du RTSS/chainage ------------------
@@ -220,7 +226,7 @@ class MtqPluginChainage:
         # ------------------ Widjet LineEdit chainage -----------------
         self.txt_chainage = ToolbarWidjet.createLineEdit()
         self.add_widjet(self.txt_chainage, font=font_rep, height=20, width=60)
-        self.txt_chainage.returnPressed.connect(self.zoomToFeat)
+        self.txt_chainage.returnPressed.connect(self.zoomToFeatChainage)
         self.suivi_chainage_is_connected = False
         # ------------------ Widjet LineEdit distance ------------------
         self.txt_distance = ToolbarWidjet.createLineEdit(read_only=True)
@@ -336,10 +342,10 @@ class MtqPluginChainage:
         self.maptools_needing_layer.append(tool_add_ecusson)
             
         # ------------------ Action de création de geometrie ------------------
-        tool_create_feat = MtqMapToolTracerGeometry(self.iface, self.geocode)
+        tool_create_feat = MtqMapToolCreerGeometry(self.iface, self.geocode)
         self.action_create_geometrie = self.add_action(
             name="Creation de geometrie",
-            help_str="Numérisation d'une entitées par RTSS/chainage",
+            help_str="Numérisation par RTSS/chainage",
             callback=lambda active: self.canvas.setMapTool(tool_create_feat) if active else tool_create_feat.action().setChecked(True),
             parent=self.iface.mainWindow(),
             isCheckable=True,
@@ -348,6 +354,18 @@ class MtqPluginChainage:
         # Définir l'action de l'outils
         tool_create_feat.setAction(self.action_create_geometrie)
         self.maptools_needing_layer.append(tool_create_feat)
+
+        # ------------------ Action de géocodage inverse ------------------
+        dlg_geocodage_inverse = fenetreGeocodageInverse(self.iface, self.geocode, self.reseau_context)
+        action_geocodage_inverse = self.add_action(
+            name="Geocodage inverse",
+            help_str="Géocoder les RTSS/chainage d'une couche",
+            callback=dlg_geocodage_inverse.setInterfaceActive,
+            parent=self.iface.mainWindow(),
+            isCheckable=False,
+            add_to_active_plugin=True,
+            add_to_menu=False)
+        self.plugin_active_dlg.append(dlg_geocodage_inverse)
         
         # ------------------ Ouvrir une fenêtre SVN ------------------
         tool_open_svn = MtqMapToolOpenSVN(self.canvas, self.geocode)
@@ -382,8 +400,7 @@ class MtqPluginChainage:
         for widjet in self.plugin_active_actions: widjet.setEnabled(False)
         
         self.setPluginActive()
-    #--------------------------------------------------------------------------
-    
+ 
     def unload(self):
         """ Removes the plugin menu item and icon from QGIS GUI."""
         # Retirer les scripts
@@ -393,7 +410,6 @@ class MtqPluginChainage:
         except: pass
         # Fermer toute les fenêtres du plugin
         for dlg in self.plugin_dlg: dlg.close()
-
         # Retirer les Qaction du menu et de la barre d'outils 
         for action in self.actions:
             self.iface.removePluginMenu(self.menu_name, action)
@@ -405,23 +421,9 @@ class MtqPluginChainage:
         self.canvas.scene().removeItem(self.mouse_text)
         # remove the toolbar
         del self.toolbar_chaine
-    
-    def openFenetreCreateFeature(self):
-        if not self.dlg_add_feat:
-            # Instance de la fenêtre
-            self.dlg_add_feat = fenetreAddFeature(self.iface, self.layer_rtss, self.geocode)
-            self.dlg_add_feat.closing_window.connect(self.closeFenetreCreateFeature)
-            self.dlg_add_feat.dockLocationChanged.connect(lambda area: self.params.setValue("dlg_add_feat_last_pos", value=area))
-            
-            # show the dockwidget
-            self.iface.addTabifiedDockWidget(self.params.getValue("dlg_add_feat_last_pos"), self.dlg_add_feat, raiseTab=True)
-            # Afficher la fenêtre
-            self.dlg_add_feat.show()
-        else: self.dlg_add_feat.raise_()
-
-    def closeFenetreCreateFeature(self):
-        if self.dlg_add_feat: self.dlg_add_feat.close()
-        self.dlg_add_feat = None      
+        # Éffacer la couche de contexte
+        del self.reseau_context
+        del self.geocode
     
     def setPluginActive(self):
         """ 
@@ -441,6 +443,7 @@ class MtqPluginChainage:
             self.layer_rtss.willBeDeleted.connect(self.setPluginInactive)
             if self.params.getValue("use_only_on_visible"): self.layer_rtss.repaintRequested.connect(self.updateGeocode)
             if self.action_create_geometrie: self.iface.currentLayerChanged.connect(self.updateActionIcon)
+            if self.params.showContextMenu(): self.canvas.contextMenuAboutToShow.connect(self.populateContextMenu)
         # Afficher le message
         except: return Utils.criticalMessage(
             self.iface, "Oups! Un problème est survenu avec les connections aux signaux...")
@@ -471,7 +474,9 @@ class MtqPluginChainage:
         if not self.updateTransformContext(): return None
         # Définir l'icon de l'outil de création d'entitée
         if not self.updateActionIcon(): return None
-
+        # Load customs expressions using the plugin
+        try: self.loadCustomExpressions()
+        except: Utils.warningMessage(self.iface, "Les expressions du plugin n'ont pas pu être chargé!")
         # Indicateur que le plugin est actif
         self.plugin_is_active = True
 
@@ -482,22 +487,27 @@ class MtqPluginChainage:
         """
         if not self.plugin_is_active: return None
         self.plugin_is_active = False
+        
         # Vérifier si le suivi du chainage est connecter
         if self.suivi_chainage_is_connected:
             # Déconnecter le suivi du chainage
             self.tracingChainage.setChecked(False)
             self.actionChainage(False)
-        
         try:
             # Déconnecter la couche des RTSS
             self.layer_rtss.selectionChanged.disconnect(self.afficherActionWithSelection)
             self.layer_rtss.willBeDeleted.disconnect(self.setPluginInactive)
             if self.params.getValue("use_only_on_visible"): self.layer_rtss.repaintRequested.disconnect(self.updateGeocode)
+            if self.params.showContextMenu(): self.canvas.contextMenuAboutToShow.disconnect(self.populateContextMenu)
         except: pass
         if self.action_create_geometrie: self.iface.currentLayerChanged.disconnect(self.updateActionIcon)
         # Déconnecter le canvas
         self.canvas.destinationCrsChanged.disconnect(self.updateTransformContext)
-            
+
+        # Unload customs expressions using the plugin 
+        try: self.unloadCustomExpressions()
+        except: pass
+
         # Disable current maptool if it's a custom plugin maptool
         if self.canvas.mapTool(): 
             if self.canvas.mapTool().action() in self.plugin_active_actions: 
@@ -508,6 +518,28 @@ class MtqPluginChainage:
         for widjet in self.plugin_active_actions: widjet.setEnabled(False)
         # Fermer toutes les fenêtres s'il sont ouverte
         for dlg in self.plugin_active_dlg: dlg.close()
+
+    def unloadCustomExpressions(self):
+        if self.params.getValue("load_custom_expressions"):
+            QgsExpression.unregisterFunction('get_rtss')
+            QgsExpression.unregisterFunction('get_rtss_formater')
+            QgsExpression.unregisterFunction('get_chainage')
+            QgsExpression.unregisterFunction('get_chainage_formater')
+            QgsExpression.unregisterFunction('get_distance_to_rtss')
+            QgsExpression.unregisterFunction('geocoder_line')
+            QgsExpression.unregisterFunction('geocoder_point')
+            QgsExpression.unregisterFunction('geocoder_polygon')
+
+    def loadCustomExpressions(self):
+        if self.params.getValue("load_custom_expressions"):
+            QgsExpression.registerFunction(get_rtss)
+            QgsExpression.registerFunction(get_rtss_formater) 
+            QgsExpression.registerFunction(get_chainage) 
+            QgsExpression.registerFunction(get_chainage_formater) 
+            QgsExpression.registerFunction(get_distance_to_rtss)
+            QgsExpression.registerFunction(geocoder_line) 
+            QgsExpression.registerFunction(geocoder_point)
+            QgsExpression.registerFunction(geocoder_polygon) 
 
     def setLayerRTSS(self):
         try:
@@ -571,16 +603,67 @@ class MtqPluginChainage:
         if active and self.plugin_is_active:
             self.suivi_chainage_is_connected = True
             self.canvas.xyCoordinates.connect(self.updateSuiviDuChainage)
-            self.canvas.contextMenuAboutToShow.connect(self.populateContextMenu)
             self.updateGeocode()
         elif self.suivi_chainage_is_connected:
             self.suivi_chainage_is_connected = False
             self.canvas.xyCoordinates.disconnect(self.updateSuiviDuChainage)
-            self.canvas.contextMenuAboutToShow.disconnect(self.populateContextMenu)
             # Retirer de la carte les géometries temporaire
-            self.vertex_marker_snap.hide()
+            if not self.params.getValue("keep_marker_suivi_chainage"): self.vertex_marker_snap.hide()
             self.mouse_text.hide()
     
+    def setReseauSegementation(self):
+        """ Permet de définir le module du réseau segmenté à partir de la tache terminer """
+        self.reseau_context.setModuleGeocodage(self.task_generate_reseau.geocode)
+        self.reseau_context.setReseau(self.task_generate_reseau.getReseau())
+        self.task_generate_reseau = None
+        Utils.succesMessage(self.iface, "Le réseau a été généré avec succès!", subject="Réseau segmentation linéaire: ")
+
+    def generateContextLayerIndex(self):
+        """ Permet de créer et exécuter la tache de génération du réseau segmenté """
+        try:
+            field_value = self.params.getValue("field_context_value")
+            field_rtss = self.params.getValue("field_context_route")
+            layer_name = self.params.getValue("context_layer")
+            # Valider si la couche de context est valide
+            layer_context = validateLayer(layer_name, fields_name=[field_value], geom_type=1)
+            # Retourner False si la couche de context n'est pas valide
+            if layer_context is None: return False
+            # Définir le champs des numéros de routes
+            if not validateLayer(layer_name, fields_name=[field_value, field_rtss], geom_type=1) is None:
+                field_rtss = [field_rtss]
+            else: field_rtss = []
+            #self.reseau_context.setModuleGeocodage(self.geocode)
+            # Créer la tâche
+            self.task_generate_reseau = TaskGenerateReseauSegementation(
+                geocode=self.geocode,
+                layer_context=layer_context,
+                field_value=field_value,
+                field_rtss=field_rtss,
+                interval=self.params.getValue("intervalle_interpolation"),
+                dist_max=self.params.getValue("dist_interpolation"))
+            self.task_generate_reseau.taskCompleted.connect(self.setReseauSegementation)
+            QgsApplication.taskManager().addTask(self.task_generate_reseau)
+            Utils.InfoMessage(self.iface, "Débuter la tâche de génération du réseau...", subject="Réseau segmentation linéaire: ")
+        except Exception as error:
+            Utils.criticalMessage(
+                iface=self.iface,
+                message="Oups! Un problème est survenu en créant le module du réseau de segmentation linéaire pour la couche de context",
+                subject="Réseau segmentation linéaire: ")
+            return False
+
+    def deleteContextLayerIndex(self):
+        if self.reseau_context.isEmpty(): return None
+        self.reseau_context.clear()
+        Utils.succesMessage(self.iface, "Le réseau à été supprimer", subject="Réseau segmentation linéaire: ")
+
+    def getElementFromReseau(self, point_rtss:PointRTSS):
+        if self.reseau_context.isEmpty(): return None
+        try:
+            elems = self.reseau_context.getElementsFromPointRTSS(point_rtss)
+            if elems != []: return elems[0].getAttribut(self.params.getValue("field_context_value"))
+        except: pass
+        return None
+
     def updateSuiviDuChainage(self, point_on_map:QgsPointXY):
         try:
             message = "Oups! Un problème est survenu dans la reprojection..."
@@ -591,8 +674,17 @@ class MtqPluginChainage:
             message = "Oups! Un problème est survenu dans le géocodage de la position de la souris..."
             # Get le point sur le rtss et chainage le plus proche du cursor
             point_rtss = self.geocode.geocoderInversePoint(point)
-            message = "Oups! Un problème est survenu dans la reprojection..."
+            # Définir le numéro du RTSS
+            num_rtss = point_rtss.getRTSS(formater=self.params.getValue("formater_rtss"))
+            # Définir le chainage arrondi 
+            chainage = point_rtss.getChainage(
+                formater=self.params.getValue("formater_chainage"),
+                precision=self.params.getValue("precision_chainage"))
+            # Changer la position du marqueur pour le chainage arrondi
+            if self.params.getValue("pos_marqueur_arrondi"): point_rtss.setChainage(chainage)
+            # Géocoder le point sur le RTSS
             point_on_rtss = self.geocode.geocoderPoint(point_rtss, on_rtss=True).asPoint()
+            message = "Oups! Un problème est survenu dans la reprojection..."
             # Reprojecter le point sur le rtss si nécéssaire
             if self.need_reprojection: point_on_rtss = self.crs_reverse_transform.transform(point_on_rtss)
             message = "Oups! Le point n'a pas pu être placer..."
@@ -601,17 +693,22 @@ class MtqPluginChainage:
             self.vertex_marker_snap.show()
             
             message = "Oups! Un problème est avec le tooltip..."
-            num_rtss = point_rtss.getRTSS(formater=self.params.getValue("formater_rtss"))
-            chainage = str(point_rtss.getChainage(formater=self.params.getValue("formater_chainage")))
-            dist = str(round(point_rtss.getOffset(), 1)) + ' m'
+            # Définir le format en fonction de la précision
+            precision = self.params.getValue("precision_distance")
+            number_format = "{:.%if} m" % (precision if precision >= 0 else 0)
+            dist = number_format.format(round(point_rtss.getOffset(), precision))
+            
+            val_context = self.getElementFromReseau(point_rtss)
             # Liste des textes possible à afficher sur la carte
-            text_a_afficher = [["show_rtss_on_map", num_rtss], ["show_chainage_on_map", chainage], ["show_distance_on_map", dist]]
+            text_a_afficher = [["show_rtss_on_map", num_rtss],
+                               ["show_chainage_on_map", chainage],
+                               ["show_distance_on_map", dist],
+                               ["show_context_on_map", val_context]]
             # Liste des textes à afficher sur la carte selon les paramètres
-            text_a_afficher = [val for param_name, val in text_a_afficher if self.params.getValue(param_name)]
+            text_a_afficher = [str(val) for param_name, val in text_a_afficher if self.params.getValue(param_name) and val != None]
             # Vérifier s'il y a des text à afficher
             if text_a_afficher:
                 # Définir le text a afficher sur la carte
-                #self.mouse_text.setHtml('<p style="background-color:rgba(200, 200, 200, 0.5)"><i>{}</i></p>'.format('<br>'.join(text_a_afficher)))
                 self.mouse_text.setHtml(self.html_tooltip.format('<br>'.join(text_a_afficher)))
                 # Postion du chainage sur la carte en pixel
                 pos = self.canvas.getCoordinateTransform().transform(point_on_rtss)
@@ -624,7 +721,6 @@ class MtqPluginChainage:
                 self.mouse_text.show()
             # Sinon cacher le text
             else: self.mouse_text.hide()
-            
         except:
             # Indiquer à l'utilisateur que l'entité à bien été ajouter
             widget = self.iface.messageBar().createMessage(message)
@@ -637,57 +733,70 @@ class MtqPluginChainage:
         self.txt_chainage.setText(chainage)
         self.txt_rtss.setText(num_rtss)
              
-    def populateContextMenu(self, menu: QMenu, event: QgsMapMouseEvent):
+    def populateContextMenu(self, menu:QMenu, event:QgsMapMouseEvent):
         """
         Méthode que permet d'ajouter des options au menu du clique droit dans la carte
         """
+        # Reproject le point du cursor
+        if self.need_reprojection: point = self.crs_transform.transform(event.mapPoint())
+        else: point = event.mapPoint()
+        # Get le point sur le rtss et chainage le plus proche du cursor
+        point_rtss = self.geocode.geocoderInversePoint(point)
+        feat_rtss = self.geocode.get(point_rtss.getRTSS())
+        # Définir les valeurs de RTSS/chainage
+        rtss, chainage, dist = point_rtss.getRTSS(), point_rtss.getChainage(), point_rtss.getOffset()
         # Ajouter un sous menu pour copier les informations du RTSS
         subMenu = menu.addMenu('Copier les informations du RTSS')
-        # Définir les valeurs de RTSS/chainage
-        rtss = RTSS(self.txt_rtss.text())
-        chainage = Chainage(self.txt_chainage.text())
 
-        # Ajouter une section au sous menu
-        subMenu.addSection("Valeurs: ")
-        # Ajouter les actions de copie des valeurs
-        action_copier_rtss = subMenu.addAction(
-            f'RTSS ({rtss.value()})')
-        actionaction_copier_chainage = subMenu.addAction(
-            f'Chaînage ({chainage.value()})')
-        # Ajouter la distance trace si disponible
-        tr = re.search(r'\d*\.\d*', self.mouse_text.toPlainText())
-        if tr is not None:
-            distance_trace = str(tr.group(0))
-            actionTrace = subMenu.addAction(f'Copier la distance trace ({distance_trace})')
-            actionTrace.triggered.connect(
-                lambda *args: QgsApplication.clipboard().setText(distance_trace))
-        action_copier_tout = subMenu.addAction(
-            f'Numéro du RTSS et chaînage ({rtss} {chainage})')
-
-        # Ajouter une section au sous menu
-        subMenu.addSection("Valeurs formatté: ")
-        # Ajouter les actions de copie des valeurs formatté
-        action_copier_rtss_formater = subMenu.addAction(
-            f'RTSS ({rtss.valueFormater()})')
-        action_copier_chainage_formater = subMenu.addAction(
-            f'Chaînage ({chainage.valueFormater()})')
-        action_copier_tout_formater = subMenu.addAction(
-            f'RTSS et chaînage ({rtss.valueFormater()} {chainage.valueFormater()})')
+        if feat_rtss and self.params.getValue("show_copie_menu_info"):
+            # Ajouter une section au sous menu
+            subMenu.addSection("Info sur RTSS: ")
+            # Ajouter les actions de copie des valeurs
+            action_copier_chainage_fin = subMenu.addAction(
+                f'Chainage de fin ({feat_rtss.chainageFin()})')
+            # Connecter les actions au copie du press papier
+            if feat_rtss: action_copier_chainage_fin.triggered.connect(
+                lambda *args: QgsApplication.clipboard().setText(str(feat_rtss.chainageFin())))
         
-        # Connecter les actions au copie du press papier
-        action_copier_rtss_formater.triggered.connect(
-            lambda *args: QgsApplication.clipboard().setText(rtss.valueFormater()))
-        action_copier_rtss.triggered.connect(
-            lambda *args: QgsApplication.clipboard().setText(rtss.value()))
-        action_copier_chainage_formater.triggered.connect(
-            lambda *args: QgsApplication.clipboard().setText(chainage.valueFormater()))
-        actionaction_copier_chainage.triggered.connect(
-            lambda *args: QgsApplication.clipboard().setText(str(chainage.value())))
-        action_copier_tout.triggered.connect(
-            lambda *args: QgsApplication.clipboard().setText(f'{rtss.value()} {chainage.value()}'))
-        action_copier_tout_formater.triggered.connect(
-            lambda *args: QgsApplication.clipboard().setText(f'{rtss.valueFormater()} {chainage.valueFormater()}'))
-    
+        if self.params.getValue("show_copie_menu_non_formater"):
+            # Ajouter une section au sous menu
+            subMenu.addSection("Valeurs: ")
+            # Ajouter les actions de copie des valeurs
+            action_copier_rtss = subMenu.addAction(
+                f'RTSS ({rtss.value()})')
+            actionaction_copier_chainage = subMenu.addAction(
+                f'Chaînage ({chainage.value()})')
+            actionTrace = subMenu.addAction(f'Copier la distance trace ({dist})')
+            actionTrace.triggered.connect(
+                lambda *args: QgsApplication.clipboard().setText(dist))
+            action_copier_tout = subMenu.addAction(
+                f'Numéro du RTSS et chaînage ({rtss.value()} {chainage.value()})')
+            action_copier_rtss.triggered.connect(
+                lambda *args: QgsApplication.clipboard().setText(rtss.value()))
+            actionaction_copier_chainage.triggered.connect(
+                lambda *args: QgsApplication.clipboard().setText(str(chainage.value())))
+            action_copier_tout.triggered.connect(
+                lambda *args: QgsApplication.clipboard().setText(f'{rtss.value()} {chainage.value()}'))
+
+        if self.params.getValue("show_copie_menu_formater"):
+            # Ajouter une section au sous menu
+            subMenu.addSection("Valeurs formatté: ")
+            # Ajouter les actions de copie des valeurs formatté
+            action_copier_rtss_formater = subMenu.addAction(
+                f'RTSS ({rtss.valueFormater()})')
+            action_copier_rtss_formater.triggered.connect(
+                lambda *args: QgsApplication.clipboard().setText(rtss.valueFormater()))
+            
+            action_copier_chainage_formater = subMenu.addAction(
+                f'Chaînage ({chainage.valueFormater()})')
+            action_copier_chainage_formater.triggered.connect(
+                lambda *args: QgsApplication.clipboard().setText(chainage.valueFormater()))
+            
+            action_copier_tout_formater = subMenu.addAction(
+                f'RTSS et chaînage ({rtss.valueFormater()} {chainage.valueFormater()})')
+            action_copier_tout_formater.triggered.connect(
+                lambda *args: QgsApplication.clipboard().setText(f'{rtss.valueFormater()} {chainage.valueFormater()}'))
+            
     def setRaccourciChainage(self):
         """
         Permet de définir le raccourci de suivi du chainage selon les paramètres du plugin
@@ -756,7 +865,7 @@ class MtqPluginChainage:
                 # Only for vector layers.
                 if layer.type() == 0:
                     # Only for line and points
-                    if layer.geometryType() == 0 or layer.geometryType() == 1:
+                    if layer.geometryType() in (0, 1, 2):
                         if layer.isEditable(): self.action_create_geometrie.setEnabled(True)
                         #if self.tool_create_feat.isActive(): self.tool_create_feat.updateEditingLayer(layer)
                         # disconnect, will be reconnected
@@ -769,7 +878,8 @@ class MtqPluginChainage:
                         layer.editingStopped.connect(self.updateActionIcon)
                         # Change icon
                         if layer.geometryType() == 0: self.action_create_geometrie.setIcon(getIcon("create_point"))
-                        else: self.action_create_geometrie.setIcon(getIcon("create_line"))
+                        elif layer.geometryType() == 1: self.action_create_geometrie.setIcon(getIcon("create_line"))
+                        elif layer.geometryType() == 2: self.action_create_geometrie.setIcon(getIcon("create_polygon"))
             return True
         except Exception as e: 
             Utils.warningMessage(
@@ -811,6 +921,7 @@ class MtqPluginChainage:
                 class_fonct=field_class_fonct)
             # Définir la précision
             self.geocode.setPrecision(self.params.getValue("precision_chainage"))
+            
         except Exception as error:
             Utils.criticalMessage(
                 iface=self.iface,
@@ -847,27 +958,25 @@ class MtqPluginChainage:
             subject="Update transform context")
         return False
 
-    def zoomToFeat(self):
+    def zoomToFeat(self, use_chainage=None):
         """
         Zoom sur les entitées de la couche du ComboBox dont leur valeur pour le
         champ de recherche configurer est égale à la valeur rentrer dans le LineEdit. 
         """  
         try:
-            # Numéro du RTSS et Chainage
-            chainage = Chainage.verifyFormatChainage(self.txt_chainage.text())
             flash_geom = []
             extent = QgsRectangle()
             # Parcourir les objets featRTSS pour le numéro de route cherché
             for feat_rtss in self.geocode.getRTSSFromText(self.txt_rtss.text()):
                 # Zoom sur le RTSS ou une partie dépendament du chainage
-                if chainage:
-                    # Portion du RTSS autour du chainage
-                    geom = feat_rtss.geocoderPointFromChainage(chainage)
-                    flash_geom.append(geom)
-                    extent.combineExtentWith(geom.buffer(100, 5).boundingBox())
-                else:
+                if use_chainage is None:
                     extent.combineExtentWith(feat_rtss.geometry().boundingBox()) 
                     flash_geom.append(feat_rtss.geometry())
+                else:
+                    # Portion du RTSS autour du chainage
+                    geom = feat_rtss.geocoderPointFromChainage(use_chainage)
+                    flash_geom.append(geom)
+                    extent.combineExtentWith(geom.buffer(100, 5).boundingBox())
         # Afficher le message
         except: Utils.warningMessage(self.iface, "Oups! Un problème est survenu avec la recherche...")
         try:
@@ -883,3 +992,7 @@ class MtqPluginChainage:
         # Afficher le message
         except: Utils.warningMessage(self.iface, "Oups! Un problème est survenu avec le repérange dans la carte...")
         
+    def zoomToFeatChainage(self):
+        # Numéro du RTSS et Chainage
+        chainage = Chainage.verifyFormatChainage(self.txt_chainage.text())
+        self.zoomToFeat(chainage)

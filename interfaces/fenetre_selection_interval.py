@@ -24,6 +24,7 @@
 import os
 from qgis.PyQt import QtWidgets, uic
 from qgis.core import QgsProcessingFeatureSourceDefinition
+from qgis.gui import QgsMapCanvas
 from qgis.PyQt.QtCore import pyqtSignal
 import processing
 
@@ -38,7 +39,7 @@ class fenetreSelectionInterval(QtWidgets.QDialog, FORM_CLASS):
 
     closing_window = pyqtSignal()
 
-    def __init__(self, canvas,  parent=None):
+    def __init__(self, canvas:QgsMapCanvas, parent=None):
         """Constructor."""
         self.canvas = canvas
         super(fenetreSelectionInterval, self).__init__(parent)
@@ -71,6 +72,7 @@ class fenetreSelectionInterval(QtWidgets.QDialog, FORM_CLASS):
         """
         # L'interval défini dans la fenêtre par l'utilisateur
         interval = self.spx_intervalle.value()
+        
         # Définir les paramètres du script
         params = {'INPUT_RTSS': QgsProcessingFeatureSourceDefinition(self.params.getValue("layer_rtss"), True),
                 'INPUT_FIELD_LONG': self.params.getValue("field_chainage_fin"),

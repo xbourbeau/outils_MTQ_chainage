@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
-import os
 import webbrowser
 
-from qgis.core import QgsGeometry, QgsApplication
+from qgis.core import QgsApplication
 from qgis.gui import QgsMapTool, QgsMapCanvas
 
-from ..mtq.core import reprojectGeometry, Geocodage
+from ..mtq.core import  Geocodage
+from ..mtq.functions import reprojectGeometry
 
 class MtqMapToolOpenSVN(QgsMapTool):  
     def __init__(self, canvas:QgsMapCanvas, geocode:Geocodage):

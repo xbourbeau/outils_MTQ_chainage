@@ -11,17 +11,17 @@ class RTSS:
     selon la définition du ministère.
     Ex. 00112-01-200-000C
     """
-    __slots__ = ("num_rtss", "attributs")
+    __slots__ = ("num_rts", "attributs")
 
-    def __init__(self, num_rtss:str, **kwargs):
+    def __init__(self, num_rts:str, **kwargs):
         """
         Constructeur de l'objet RTSS
 
         Args:
-            - num_rtss (str/int): Le rtss à définir
+            - num_rts (str/int): Le rtss à définir
             - kwargs (dict): Attributs du RTSS
         """
-        self.set(num_rtss)
+        self.set(num_rts)
         self.attributs = kwargs
 
     def __str__ (self): return self.value()
@@ -74,10 +74,14 @@ class RTSS:
         """ Permet de retrourner une liste des valeurs des attributs du RTSS """
         return list(self.attributs.values())
 
-    def getRTS(self, formater=False)->str:
+    def getChausse(self)->str:
+        """ Permet de retourner le dernier caractère du rtss sois C, D, G ou 0 """
+        return self.num_rts[-1]
+
+    def getRTS(self, formater=False, zero=True)->str:
         """ Permet de retourner seulement la route, tronçon et section """
         jointure = "-" if formater else ""
-        return jointure.join(self.listSections(sous_section=False))
+        return jointure.join(self.listSections(sous_section=False, zero=zero))
 
     def getRoute(self, as_int=False, zero=True):
         """ 
@@ -88,10 +92,10 @@ class RTSS:
             - as_int (bool): retourner le numéro sous forme de chiffre
             - zero (bool): Conserver les zéro au début du numéro de route
         """
-        if as_int: return int(self.num_rtss[:5])
+        if as_int: return int(self.num_rts[:5])
         else: 
-            if zero: return self.num_rtss[:5]
-            else: return str(int(self.num_rtss[:5]))
+            if zero: return self.num_rts[:5]
+            else: return str(int(self.num_rts[:5]))
     
     def getTroncon(self, as_int=False):
         """ 
@@ -101,8 +105,8 @@ class RTSS:
         Args:
             - as_int (bool): retourner le numéro sous forme de chiffre
         """
-        if as_int: return int(self.num_rtss[5:7])
-        else: return self.num_rtss[5:7]
+        if as_int: return int(self.num_rts[5:7])
+        else: return self.num_rts[5:7]
         
     def getSection(self, as_int=False):
         """ 
@@ -112,15 +116,15 @@ class RTSS:
         Args:
             - as_int (bool): retourner le numéro sous forme de chiffre
         """
-        if as_int: return int(self.num_rtss[7:10])
-        else: return self.num_rtss[7:10]
+        if as_int: return int(self.num_rts[7:10])
+        else: return self.num_rts[7:10]
         
     def getSousSection(self)->str:
         """ 
         Méthode qui renvoie la sous-section du RTSS
         Ex: 00116-01-120-000C => 000C
         """
-        return self.num_rtss[10:]
+        return self.num_rts[10:]
 
     def hasPartOf(self, value):
         """ Permet de vérifier si la valeur est dans le numéro de RTSS """
@@ -170,7 +174,7 @@ class RTSS:
         if "-" in value: value = value.replace('-', '')
         if len(value) >= 11:  value = value.rjust(14, '0')
         if len(value) != 14: raise ValueError("Le numero du RTSS est invalide, il doit contenir 14 caracteres")
-        self.num_rtss = value
+        self.num_rts = value
     
     def setAttribut(self, name, value):
         """
@@ -199,7 +203,7 @@ class RTSS:
             - zero (bool): Conserver les zéro au début
         """
         if formater: return "-".join(self.listSections(zero=zero))
-        elif zero: return self.num_rtss 
+        elif zero: return self.num_rts 
         else: return "".join(self.listSections(zero=zero))
     
     def valueFormater(self)->str:

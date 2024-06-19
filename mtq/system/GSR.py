@@ -4,7 +4,7 @@ from qgis.PyQt.QtCore import QVariant
 import pyodbc
 import pandas as pd
 
-class PanneauGSR:
+class GSR:
     """ Objet qui permet de ce connecter à la Base de données GSR et de retourner des panneaux """
     def __init__(self, dt='90', dsn='GSR'):
         self.dt = dt

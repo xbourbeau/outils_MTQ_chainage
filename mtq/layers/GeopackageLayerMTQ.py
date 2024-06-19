@@ -10,7 +10,7 @@ class GeopackageLayerMTQ(LayerMTQ):
     __slots__ = ("layer_id", "layer_name", "layer_provider", "layer_tags",
                  "key_field_name", "key_field_type", "dt_field_name", "dt_field_type",
                  "cs_field_name", "cs_field_type", "layer_styles", "default_style",
-                 "layer_requests", "layer_source", "geopackage")
+                 "layer_requests", "layer_source", "geopackage", "search_fields")
 
     def __init__(self,
                  id,
@@ -23,6 +23,7 @@ class GeopackageLayerMTQ(LayerMTQ):
                  dt_field_type:str="",
                  cs_field_name:str="",
                  cs_field_type:str="",
+                 search_fields:str="",
                  default_style:str=None,
                  request:Dict[str, str]={},
                  styles:Dict[str, str]={},
@@ -45,6 +46,7 @@ class GeopackageLayerMTQ(LayerMTQ):
             dt_field_type=dt_field_type,
             cs_field_name=cs_field_name,
             cs_field_type=cs_field_type,
+            search_fields=search_fields,
             default_style=default_style,
             styles=styles,
             request=request,
@@ -63,7 +65,8 @@ class GeopackageLayerMTQ(LayerMTQ):
         # Liste des conditions à ajouter pour le datasource
         where = []
         # Vérifier si une condition à été spécifié
-        if "where_clause" in kwargs: where.append(self.createRequest(kwargs["where_clause"]))
+        if "where_clause" in kwargs:
+            if kwargs["where_clause"]: where.append(self.createRequest(kwargs["where_clause"]))
         # Vérifier si une DT est spécifié
         if kwargs.get("dt", False) and self.dt_field_name != "":
             # Ajouter une requete pour filtrer par DT
@@ -75,11 +78,11 @@ class GeopackageLayerMTQ(LayerMTQ):
         # Vérifier si des ID sont spécifié
         if "ids" in kwargs and self.key_field_name != "":
             # Ajouter une requete pour filtrer par ID
-            where.append(self.createRequestId(list_id=kwargs["ids"]))
+            if kwargs["ids"]: where.append(self.createRequestId(list_id=kwargs["ids"]))
         # Vérifier si un étendu est spécifié
         if "extent" in kwargs:
             # Ajouter une requete pour filtrer l'étendue
-            where.append(self.createRequestExtent(extent=kwargs["extent"]))
+            if kwargs["extent"]: where.append(self.createRequestExtent(extent=kwargs["extent"]))
 
         # Retourner le DataSource de la couche
         if where == []: return self.source()

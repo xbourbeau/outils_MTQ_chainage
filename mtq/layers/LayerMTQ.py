@@ -8,7 +8,7 @@ from qgis.core import QgsVectorLayer, QgsApplication, QgsProject
 from qgis.gui import QgisInterface
 from ..param import (
     C_ALIAS, C_DEFAULT_STYLE, C_CS, C_DT, C_ID_NAME, C_ID_TYPE, C_TYPE_DT,
-    C_NAME, C_PROV, C_REQUESTS, C_SOURCE, C_STYLES, C_TAG, C_TYPE_CS)
+    C_NAME, C_PROV, C_REQUESTS, C_SOURCE, C_STYLES, C_TAG, C_TYPE_CS, C_SEARCH_FIELDS)
 from ..region.imports import *
 from .LoadLayer import LoadLayer
 
@@ -18,7 +18,7 @@ class LayerMTQ:
     __slots__ = ("layer_id", "layer_name", "layer_provider", "layer_tags",
                  "key_field_name", "key_field_type", "dt_field_name", "dt_field_type",
                  "cs_field_name", "cs_field_type", "layer_styles", "default_style",
-                 "layer_requests", "layer_source")
+                 "layer_requests", "layer_source", "search_fields")
 
     def __init__(self,
                  id,
@@ -31,6 +31,7 @@ class LayerMTQ:
                  dt_field_type:str="",
                  cs_field_name:str="",
                  cs_field_type:str="",
+                 search_fields:str="",
                  default_style:str=None,
                  request:Dict[str, str]={},
                  styles:Dict[str, str]={},
@@ -57,6 +58,8 @@ class LayerMTQ:
         self.setCSField(cs_field_name, cs_field_type)
         # Set the layer tags
         self.layer_tags = tags
+        # Set les champs de recherches
+        self.setSearchField(search_fields)
         # Set the layer styles
         self.setStyles(styles, default_style)
         # Set the layer requests
@@ -80,6 +83,7 @@ class LayerMTQ:
             dt_field_type=layer_info[C_TYPE_DT],
             cs_field_name=layer_info[C_CS],
             cs_field_type=layer_info[C_TYPE_CS],
+            search_fields=str(layer_info[C_SEARCH_FIELDS]),
             default_style=layer_info[C_DEFAULT_STYLE],
             request=literal_eval(layer_info[C_REQUESTS]),
             styles=literal_eval(layer_info[C_STYLES]),
@@ -89,13 +93,6 @@ class LayerMTQ:
     def __str__ (self): return f"LayerMTQ ({self.name()})"
     
     def __repr__ (self): return f"LayerMTQ ({self.name()})"
-
-    def addLayerToMap(self, iface:QgisInterface, task:LoadLayer, style:str=None):
-        # Ajouter la couche au projet
-        map_layer = QgsProject.instance().addMapLayer(task.getLayer())
-        # Définir un style si spécifié
-        if style: map_layer.loadNamedStyle(style)
-        if iface: iface.layerTreeView().refreshLayerSymbology(map_layer.id())
 
     def addTag(self, tag:str):
         """ Permet d'ajouter un tag à la listes des tags de la couche """
@@ -116,30 +113,30 @@ class LayerMTQ:
     def createRequestCS(self, cs:CS):
         """ Permet de créer un clause WHERE SQL pour filtrer selon un objet CS """
         # Vérifier si une DT est spécifié
-        if self.cs_field_name != "":
-            if self.cs_field_type == "code": cs_value = cs.code(as_string=True)
-            else: cs_value = cs.name(type=self.cs_field_type)
-            # Mettre la valeur du nom dans la requete selon le type
-            return f"{self.cs_field_name} LIKE '{cs_value}'"
-        return None
+        if self.cs_field_name == "": return None
+        if self.cs_field_type == "code": cs_value = cs.code(as_string=True)
+        else: cs_value = cs.name(type=self.cs_field_type)
+        # Mettre la valeur du nom dans la requete selon le type
+        return f"{self.cs_field_name} LIKE '{cs_value}'"
 
     def createRequestDT(self, dt:DT):
         """ Permet de créer un clause WHERE SQL pour filtrer selon un objet DT """
         # Vérifier si une DT est spécifié
-        if self.dt_field_name != "":
-            if self.dt_field_type == "code": dt_value = dt.code(as_string=True)
-            else: dt_value = dt.name(type=self.dt_field_type)
-            # Mettre la valeur du nom dans la requete selon le type
-            return f"{self.dt_field_name} LIKE '{dt_value}'"
-        return None
+        if self.dt_field_name == "": return None
+        if self.dt_field_type == "code": dt_value = dt.code(as_string=True)
+        else: dt_value = dt.name(type=self.dt_field_type)
+        # Mettre la valeur du nom dans la requete selon le type
+        return f"{self.dt_field_name} LIKE '{dt_value}'"
 
     def createRequestId(self, list_id:list):
         """ Permet de créer un clause WHERE SQL pour filtrer selon une liste d'identifiant """
-        if self.key_field_name != "":
-            if self.key_field_type == "str": ids = ','.join([f"'{id}'" for id in list_id])
-            else: ids = ','.join([str(id) for id in list_id])
-            return f"{self.key_field_name} in ({ids})"
-        return None
+        if self.key_field_name == "": return None
+        if not list_id: return None
+
+        if self.key_field_type == "str": ids = ','.join([f"'{id}'" for id in list_id])
+        else: ids = ','.join([str(id) for id in list_id])
+        return f"{self.key_field_name} in ({ids})"
+        
 
     def dataProvider(self):
         """ Permet de retourner le provider de la couche """
@@ -157,7 +154,8 @@ class LayerMTQ:
         # Liste des conditions à ajouter pour le datasource
         where = []
         # Vérifier si une condition à été spécifié
-        if "where_clause" in kwargs: where.append(self.createRequest(kwargs["where_clause"]))
+        if "where_clause" in kwargs:
+            if kwargs["where_clause"]: where.append(self.createRequest(kwargs["where_clause"]))
         # Vérifier si une DT est spécifié
         if kwargs.get("dt", False) and self.dt_field_name != "":
             # Ajouter une requete pour filtrer par DT
@@ -169,7 +167,7 @@ class LayerMTQ:
         # Vérifier si des ID sont spécifié
         if "ids" in kwargs and self.key_field_name != "":
             # Ajouter une requete pour filtrer par ID
-            where.append(self.createRequestId(list_id=kwargs["ids"]))
+            if kwargs["ids"]: where.append(self.createRequestId(list_id=kwargs["ids"]))
         # Retourner le DataSource de la couche
         if where == []: return self.source()
         else: return "{}|subset={}".format(self.source(), " AND ".join(where)) 
@@ -295,6 +293,10 @@ class LayerMTQ:
         # Définir le dictionnaire des styles
         self.layer_requests = requests
 
+    def setSearchField(self, field:str):
+        if field == "": self.search_fields = []
+        else: self.search_fields = field.split(";")
+
     def setSource(self, source:str):
         """ Permet de définir la source de la couche """
         if os.path.exists(source): self.layer_source = source
@@ -308,6 +310,7 @@ class LayerMTQ:
             - styles (dict): Un dictionnaire de style pour la couche
             - default_style (str): Un style à utiliser par défault
         """
+        print(styles)
         # Définir le dictionnaire des styles
         self.layer_styles = styles
         # Définir le style par défault s'il est dans le dictionnaire
@@ -325,12 +328,14 @@ class LayerMTQ:
         return self.layer_styles
 
     def show(self, iface:QgisInterface=None, use_style=True, **kwargs):
-        task_load_layer = self.getLoadTask(**kwargs)
-        if use_style is True: style = self.getStyle(use_style)
+        if not use_style is False: style = self.getStyle(use_style)
         else: style = None
-        # Ajouter la tâche
-        task_load_layer.taskCompleted.connect(lambda: self.addLayerToMap(iface, task_load_layer, style))
-        QgsApplication.taskManager().addTask(task_load_layer)
+
+        # Ajouter la couche au projet
+        map_layer = QgsProject.instance().addMapLayer(self.asVectorLayer(**kwargs))
+        # Définir un style si spécifié
+        if style: map_layer.loadNamedStyle(style)
+        if iface: iface.layerTreeView().refreshLayerSymbology(map_layer.id())
 
     def source(self):
         """ Permet de retourner la source de la couche """

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from qgis.gui import QgsVertexMarker, QgsMapCanvas, QgsRubberBand
 from qgis.PyQt.QtGui import QColor
+from PyQt5.QtCore import Qt
 
 from .PluginParametres import PluginParametres
 
@@ -24,17 +25,18 @@ class TemporaryGeometry:
         """
         marker = QgsVertexMarker(canvas)
         marker.setColor(QColor("#178e0c"))
+        marker.setFillColor(QColor("#178e0c"))
         marker.setIconSize(10)
-        marker.setIconType(QgsVertexMarker.ICON_X)
-        marker.setPenWidth(3)
+        marker.setIconType(QgsVertexMarker.ICON_CIRCLE)
+        marker.setPenWidth(1)
         return marker
     
     @staticmethod
-    def createMarkerDistance(canvas:QgsMapCanvas):
+    def createMarkerDistanceSnap(canvas:QgsMapCanvas):
         """
         Méthode qui permet de créer un QgsVertexMarker pour montrer la localisation
         de la souris sur le RTSS dans la carte.
-        Le symbole créer est un X orange
+        Le symbole créer est un carrée
 
         Args:
             canvas (QgsMapCanvas): La référence de la carte
@@ -43,18 +45,42 @@ class TemporaryGeometry:
             QgsVertexMarker: Le marker pour le maptool 
         """
         marker = QgsVertexMarker(canvas)
-        marker.setColor(QColor("#e4741e"))
+        marker.setColor(QColor(PluginParametres().getValue("mesure_line_color")))
         marker.setIconSize(10)
-        marker.setIconType(QgsVertexMarker.ICON_X)
+        marker.setIconType(QgsVertexMarker.ICON_BOX)
         marker.setPenWidth(3)
         
         return marker
     
+    @staticmethod
+    def createMarkerDistanceExt(canvas:QgsMapCanvas):
+        """
+        Méthode qui permet de créer un QgsVertexMarker pour montrer la localisation
+        de la souris sur le RTSS dans la carte.
+        Le symbole créer est un cercle
+
+        Args:
+            canvas (QgsMapCanvas): La référence de la carte
+
+        Returns:
+            QgsVertexMarker: Le marker pour le maptool 
+        """
+        marker = QgsVertexMarker(canvas)
+        color = QColor(PluginParametres().getValue("mesure_line_color"))
+        marker.setColor(color)
+        marker.setFillColor(color)
+        marker.setIconSize(8)
+        marker.setIconType(QgsVertexMarker.ICON_CIRCLE)
+        marker.setPenWidth(1)
+        
+        return marker
+    
+    @staticmethod
     def createGeometryDistance(canvas:QgsMapCanvas):
         """
         Méthode qui permet de créer un QgsRubberBand pour montrer la localisation
         de la ligne de mesure le long du RTSS sur la carte.
-        Le symbole créer est une ligne orange transparante
+        Le symbole créer est une ligne transparante
 
         Args:
             canvas (QgsMapCanvas): La référence de la carte
@@ -64,11 +90,11 @@ class TemporaryGeometry:
         """
         segment = QgsRubberBand(canvas)
         color = QColor(PluginParametres().getValue("mesure_line_color"))
-        color.setAlpha(180)
         segment.setColor(color)
         segment.setWidth(3)
         return segment
     
+    @staticmethod
     def createMarkerChainage(canvas:QgsMapCanvas):
         """
         Méthode qui permet de créer un QgsVertexMarker pour montrer la localisation
@@ -88,3 +114,91 @@ class TemporaryGeometry:
         marker.setIconSize(10)
         marker.setPenWidth(2)
         return marker
+    
+    @staticmethod
+    def createSnappingLine(canvas:QgsMapCanvas):
+        """
+        Méthode qui permet de créer un QgsRubberBand pour montrer la ligne
+        de snap sur la carte.
+        Le symbole créer est une ligne pointillé rose
+
+        Args:
+            canvas (QgsMapCanvas): La référence de la carte
+
+        Returns:
+            QgsRubberBand: La geometrie temporaire 
+        """
+        segment = QgsRubberBand(canvas)
+        color = QColor("#df05c6")
+        color.setAlpha(70)
+        segment.setColor(color)
+        segment.setLineStyle(Qt.DashLine)
+        segment.setWidth(1)
+        return segment
+    
+    @staticmethod
+    def createMarkerNewPoint(canvas:QgsMapCanvas):
+        """
+        Méthode qui permet de créer un QgsVertexMarker pour montrer la localisation
+        sur du nouveau point à placer dans la carte.
+        Le symbole créer est un cerle rouge
+
+        Args:
+            canvas (QgsMapCanvas): La référence de la carte
+
+        Returns:
+            QgsVertexMarker: Le marker du nouveau point
+        """
+        # Define le pointeur du chainage
+        marker = QgsVertexMarker(canvas)
+        marker.setIconType(QgsVertexMarker.ICON_CIRCLE)
+        color = QColor("#ff0105")
+        marker.setColor(color)
+        color.setAlpha(60)
+        marker.setFillColor(color)
+        marker.setIconSize(7)
+        marker.setPenWidth(1)
+        return marker
+    
+    @staticmethod
+    def createNewGeom(canvas:QgsMapCanvas):
+        """
+        Méthode qui permet de créer un QgsRubberBand pour montrer la ligne
+        de snap sur la carte.
+        Le symbole créer est une ligne rouge
+
+        Args:
+            canvas (QgsMapCanvas): La référence de la carte
+
+        Returns:
+            QgsRubberBand: La geometrie temporaire 
+        """
+        segment = QgsRubberBand(canvas)
+        color = QColor("#ff0105")
+        segment.setColor(color)
+        color.setAlpha(60)
+        segment.setFillColor(color)
+        segment.setWidth(1)
+        return segment
+    
+    @staticmethod
+    def createNewGeomProlongation(canvas:QgsMapCanvas):
+        """
+        Méthode qui permet de créer un QgsRubberBand pour montrer la ligne
+        de snap sur la carte.
+        Le symbole créer est une ligne rouge
+
+        Args:
+            canvas (QgsMapCanvas): La référence de la carte
+
+        Returns:
+            QgsRubberBand: La geometrie temporaire 
+        """
+        segment = QgsRubberBand(canvas)
+        color = QColor("#ff0105")
+        segment.setColor(color)
+        color.setAlpha(60)
+        segment.setFillColor(color)
+        segment.setLineStyle(Qt.DotLine)
+        segment.setWidth(1)
+        return segment

@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
-import datetime
 import os
 
-class ExporterVersIIT:
+class IIT:
 
     def __init__(self):
         # Current date
@@ -65,7 +64,8 @@ class ExporterVersIIT:
     def writeDescription(self):
         pass
 
-    def getMRCByCode(self, code):
+    @staticmethod
+    def getMRCByCode(code):
         """ Permet de retourner le nom de la MRC selon le code inscrit dans IIT """
         code = str(code)
         if code == '30': return "Le Granit"
@@ -79,6 +79,7 @@ class ExporterVersIIT:
         elif code == '47': return "La Haute-Yamaska"
         else: return None
 
+    @staticmethod
     def getCEPByCode(code):
         """ Permet de retourner le nom du CEP selon le code inscrit dans IIT """
         code = str(code)
@@ -92,7 +93,8 @@ class ExporterVersIIT:
         elif code == '206': return "Granby"
         elif code == '802': return "Beauce-Sud"
         else: return None
-        
+    
+    @staticmethod
     def getCodeTypeLigne(type_ligne):
         """ Permet de retourner le code IIT du type de ligne du marquage longitudinal """
         if type_ligne == 'Simple discontinue':
@@ -109,7 +111,8 @@ class ExporterVersIIT:
             return '06'
         else:
             return ''
-            
+        
+    @staticmethod
     def getCodeCouleur(couleur):
         """ Permet de retourner le code IIT de la couleur du marquage longitudinal """
         if couleur == 'Blanc':
@@ -122,7 +125,8 @@ class ExporterVersIIT:
             return '05'
         else:
             return ''
-            
+    
+    @staticmethod        
     def getCodeTypeMat(type_mat):
         """ Permet de retourner le code IIT du matériaux du marquage longitudinal """
         if type_mat == u'Bandes préfabriquées':
@@ -140,6 +144,7 @@ class ExporterVersIIT:
         else:
             return '99'
 
+    @staticmethod
     def getCodeSousType(self, sous_type):
         """ Permet de retourner le code IIT du sous type de ligne du marquage longitudinal """
         if sous_type == u'Ligne axiale':

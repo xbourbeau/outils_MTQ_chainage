@@ -13,6 +13,7 @@ from .WFSLayerMTQ import WFSLayerMTQ
 
 class LayerManager:
     """ Objet qui permet de gérer des couches qui sont souvent utilisées. """
+    
     def __init__(self, iface=None, layer_reference=None, authid=None, code_dt=None, code_cs=None):
         """
         Args:

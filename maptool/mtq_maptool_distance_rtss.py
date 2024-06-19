@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from qgis.core import QgsGeometry, QgsApplication
-from qgis.gui import QgsMapToolEmitPoint, QgsMapTool, QgsMapCanvas
+from qgis.gui import QgsMapToolEmitPoint, QgsMapTool, QgsMapCanvas, QgsVertexMarker
 from qgis.PyQt.QtWidgets import QMenu
 
 from ..mtq.geomapping.imports import Geocodage, Chainage, LineRTSS, FeatRTSS
@@ -27,6 +27,8 @@ class MtqMapToolLongueurRTSS(QgsMapToolEmitPoint):
         self.segment_temporaire.reset()
         # Cacher l'indicateur de RTSS
         self.rtss_marker.hide()
+        self.extremetie_marker_1.hide()
+        self.extremetie_marker_2.hide()
         # Arrêter le tracage de l'outils
         self.is_tracing = False
         # Reset les valeurs du segment
@@ -43,7 +45,10 @@ class MtqMapToolLongueurRTSS(QgsMapToolEmitPoint):
         # Geometry temporaire (segment)
         self.segment_temporaire = TemporaryGeometry.createGeometryDistance(self.canvas())
         # Geometry temporaire de la position sur le RTSS
-        self.rtss_marker = TemporaryGeometry.createMarkerDistance(self.canvas())
+        self.rtss_marker = TemporaryGeometry.createMarkerDistanceSnap(self.canvas())
+        
+        self.extremetie_marker_1 = TemporaryGeometry.createMarkerDistanceExt(self.canvas())
+        self.extremetie_marker_2 = TemporaryGeometry.createMarkerDistanceExt(self.canvas())
         self.reset()
     
     def setLayer(self, layer_id): self.layer_rtss = self.layer(layer_id)
@@ -67,6 +72,8 @@ class MtqMapToolLongueurRTSS(QgsMapToolEmitPoint):
             else:
                 # Reset pour s'il y avait déjà une distance 
                 self.reset()
+                self.extremetie_marker_1.setCenter(self.rtss_marker.center())
+                self.extremetie_marker_1.show()
                 # Geometrie du point dans la projection de la couche des RTSS
                 geom = QgsGeometry.fromPointXY(self.toLayerCoordinates(self.layer_rtss, e.pos()))
                 # Liste des 5 RTSS les plus proche du click avec une fistance de recherche(m) selon le paramètre de QGIS 
@@ -85,6 +92,7 @@ class MtqMapToolLongueurRTSS(QgsMapToolEmitPoint):
                 # Chainage du premier point de la mesure
                 point_rtss = self.feat_rtss.geocoderInversePoint(geom)
                 self.mesure_line.setPoints([point_rtss, point_rtss])
+                
         # Click Droit
         else: self.reset()
     
@@ -105,6 +113,9 @@ class MtqMapToolLongueurRTSS(QgsMapToolEmitPoint):
             if self.mesure_line.isValide():
                 geom_line_mesure = self.feat_rtss.geocoderLine(self.mesure_line, on_rtss=True)
                 self.segment_temporaire.setToGeometry(geom_line_mesure, self.layer_rtss.crs())
+                self.extremetie_marker_2.setCenter(geom_line_mesure.asPolyline()[-1])
+                self.extremetie_marker_2.show()
+                
             # Montrer la distance
             self.showDistance()
         # Aucune mesure est en train d'être prise
@@ -112,13 +123,13 @@ class MtqMapToolLongueurRTSS(QgsMapToolEmitPoint):
             # Get infos du RTSS le plus proche du cursor
             point_on_rtss = self.geocode.geocoderPointOnRTSS(geom, dist_max=self.tolerance)
             # Ne pas afficher le curseur s'il n'est pas assez proche d'un RTSS
-            if point_on_rtss is None : self.rtss_marker.hide()
-            else:
-                # Projeter le point sur le RTSS dans la projection de la carte
-                point_on_rtss = self.toMapCoordinates(self.layer_rtss, point_on_rtss.getGeometry().asPoint())
-                self.rtss_marker.setCenter(point_on_rtss)
-                # Afficher le le marker de RTSS dans la carte
-                self.rtss_marker.show()
+            if point_on_rtss is None : return self.rtss_marker.hide()
+            
+            # Projeter le point sur le RTSS dans la projection de la carte
+            point_on_rtss = self.toMapCoordinates(self.layer_rtss, point_on_rtss.getGeometry().asPoint())
+            self.rtss_marker.setCenter(point_on_rtss)
+            # Afficher le le marker de RTSS dans la carte
+            self.rtss_marker.show()
 
     def updateTolerance(self, scale):
         """ Méthode qui permet de mettre à jour la tolérance de snapage """
@@ -151,14 +162,13 @@ class MtqMapToolLongueurRTSS(QgsMapToolEmitPoint):
     def showDistance(self):
         # Distance entre le point 1 et 2
         dist_chainage = self.mesure_line.length()
-        precision = self.params.getValue("precision_chainage")
+        precision = self.params.getValue("precision_mesure")
         # Formater et arrondire
         if self.params.getValue("formater_chainage"):
             dist_chainage = Chainage(dist_chainage).valueFormater(precision)
         else: 
             # Définir le format en fonction de la précision
-            if precision < 0: number_format = '{:.%if}' % (precision)
-            else: number_format = '{}'
+            number_format = '{:.%if}' % (precision if precision >= 0 else 0)
             dist_chainage = number_format.format(round(dist_chainage, precision))
         # Afficher la distance
         self.txt_distance.setText(dist_chainage)
@@ -170,6 +180,8 @@ class MtqMapToolLongueurRTSS(QgsMapToolEmitPoint):
             # Retirer de la carte les géometries créées
             self.canvas().scene().removeItem(self.segment_temporaire)
             self.canvas().scene().removeItem(self.rtss_marker)
+            self.canvas().scene().removeItem(self.extremetie_marker_1)
+            self.canvas().scene().removeItem(self.extremetie_marker_2)
             self.canvas().unsetMapTool(self)
             # Émettre le signal de desactivation de l'outil
             self.deactivated.emit()

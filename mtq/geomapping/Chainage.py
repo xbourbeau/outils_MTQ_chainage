@@ -66,27 +66,27 @@ class Chainage:
 
     def __sub__(self, other):
         if isinstance(other, Chainage): 
-            return self.value() - other.value()
+            return Chainage(self.value() - other.value())
         else: 
-            return self.value() - Chainage.verifyFormatChainage(other)
+            return Chainage(self.value() - Chainage.verifyFormatChainage(other))
 
     def __add__(self, other):
         if isinstance(other, Chainage): 
             return Chainage(self.value() + other.value())
         else: 
-            return self.value() + Chainage.verifyFormatChainage(other)
+            return Chainage(self.value() + Chainage.verifyFormatChainage(other))
 
     def __mul__(self, other):
         if isinstance(other, Chainage): 
             return Chainage(self.value() * other.value())
         else: 
-            return self.value() * Chainage.verifyFormatChainage(other)
+            return Chainage(self.value() * Chainage.verifyFormatChainage(other))
 
     def __truediv__(self, other):
         if isinstance(other, Chainage): 
             return Chainage(self.value() / other.value())
         else: 
-            return self.value() / Chainage.verifyFormatChainage(other)
+            return Chainage(self.value() / Chainage.verifyFormatChainage(other))
 
     def __round__(self, ndigits): 
         self.set(self.value(precision=ndigits))

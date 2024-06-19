@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 import time
+from qgis.PyQt.QtWidgets import QMessageBox
 
 class Utilitaire:
 
     def __init__(self):
-        pass
+        self.timer = None
 
     def getMessageSubject(self, level, custom_subject=None):
         if custom_subject is not None: return custom_subject
@@ -82,6 +83,15 @@ class Utilitaire:
         Utilitaire().afficherMessageQGIS(iface, message, level=1, temps=temps, subject=subject)
 
     @staticmethod
+    def warningQuestion(title, message):
+        answer = QMessageBox.warning(
+            QMessageBox(),
+            title,
+            message,
+            QMessageBox.Yes | QMessageBox.No)
+        return answer == QMessageBox.Yes
+
+    @staticmethod
     def printTime(start_time, sujet):
         """
         Imprime la durée d'exécution d'un bloc de code.
@@ -93,3 +103,10 @@ class Utilitaire:
         execution_time = time.time() - start_time
         print(f"Durée d'exécution ({sujet}) : {execution_time} secondes")
         return 
+    
+    def startTimer(self): self.timer = time.time()
+
+    def endTimer(self): return time.time() - self.timer
+
+    def printTimer(self, sujet=""):
+        self.printTime(self.endTimer(), sujet=sujet)

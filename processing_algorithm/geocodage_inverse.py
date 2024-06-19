@@ -262,12 +262,12 @@ class GeocodageInverse(QgsProcessingAlgorithm):
                     # Géocodage inverse
                     result = geocode.geocoderInverseLineByExtremities(feat.geometry(), rtss=feat_rtss)
                     # Ajout des valeurs attributaires calculées
-                    atts.append(result['start'][0]['rtss'])
-                    atts.append(result['start'][0]['chainage'])
-                    if offset_val: atts.append(result['start'][0]['offset'])
-                    atts.append(result['end'][0]['rtss'])
-                    atts.append(result['end'][0]['chainage'])
-                    if offset_val: atts.append(result['end'][0]['offset'])
+                    atts.append(result.startPoint().getRTSS().value())
+                    atts.append(result.startChainage().value())
+                    if offset_val: atts.append(result.startOffset())
+                    atts.append(result.endPoint().getRTSS().value())
+                    atts.append(result.endChainage().value())
+                    if offset_val: atts.append(result.endOffset())
             # Informer l'utilisateur s'il y a un problème avec le géocodage inverse de l'entitée
             except: feedback.pushWarning(f"L'entitée {feat.id()} n'a pas été géocodée correctement")
                 

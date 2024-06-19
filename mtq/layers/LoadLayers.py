@@ -4,13 +4,10 @@ from .LayerMTQ import LayerMTQ
 
 class LoadLayers(QgsTask):
     """ Subclass of QgsTask pour charger la source de plusieur couches """
-    def __init__(self, layers:dict[str, LayerMTQ], **kwargs):
+    def __init__(self, layers, **kwargs):
         super().__init__('Load layers', QgsTask.CanCancel)
         self.layers = layers
         self.result_layers = {}
-        self.datasources = {}
-        for layer_name, layer in self.layers.items():
-            self.datasources[layer_name] = layer.dataSource(**kwargs)
         self.exception = None
 
     def run(self):
@@ -18,8 +15,8 @@ class LoadLayers(QgsTask):
         try:
             QgsMessageLog.logMessage(f"Loading layers: {', '.join(list(self.layers.keys()))} loaded!", "Load layers", Qgis.Info)
             total = len(self.layers)
-            for i, (layer_name, layer) in enumerate(self.layers.items()):
-                self.result_layers[layer_name] = QgsVectorLayer(self.datasources[layer_name], layer_name, layer.dataProvider())
+            for i, (layer_name, layer_dict) in enumerate(self.layers.items()):
+                self.result_layers[layer_name] = QgsVectorLayer(layer_dict["data_source"], layer_name, layer_dict["provider"])
                 self.setProgress((i+1*100)/total)
                 QgsMessageLog.logMessage(f"Layer {layer_name} loaded!", "Load layers", Qgis.Info)
                 if self.isCanceled(): return False
@@ -42,5 +39,5 @@ class LoadLayers(QgsTask):
         QgsMessageLog.logMessage('"{name}" was canceled'.format(name=self.description()),"Load layers", Qgis.Info)
         super().cancel()
         
-    def getLayers(self)->dict[str, LayerMTQ]: 
+    def getLayers(self)->dict[str, QgsVectorLayer]: 
         return self.result_layers
