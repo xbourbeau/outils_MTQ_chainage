@@ -24,13 +24,12 @@
 """
 
 from qgis.core import QgsProcessingProvider
-from .processing_algorithm.point_de_chainage_sur_rtss import generateChainagePointOnRTSS
-from .processing_algorithm.geocodage_inverse import GeocodageInverse
-from .processing_algorithm.geocode_point_rtss import GeocodePoint
-from .processing_algorithm.geocode_ligne_rtss import GeocodeLine
-from .processing_algorithm.profil_rtss_script import generateRTSSProfilFromMNT
-from .processing_algorithm.create_perpendicular_line_along_line import generatePerpendicularLines
-from .processing_algorithm.create_transect_along_rtss import generateTransect
+from ..processing_algorithm.point_de_chainage_sur_rtss import generateChainagePointOnRTSS
+from ..processing_algorithm.geocodage_inverse import GeocodageInverse
+from ..processing_algorithm.geocode_point_rtss import GeocodePoint
+from ..processing_algorithm.geocode_ligne_rtss import GeocodeLine
+from ..processing_algorithm.create_perpendicular_line_along_line import generatePerpendicularLines
+from ..processing_algorithm.create_transect_along_rtss import generateTransect
 
 
 class Provider(QgsProcessingProvider):
@@ -40,7 +39,6 @@ class Provider(QgsProcessingProvider):
         self.addAlgorithm(GeocodageInverse())
         #self.addAlgorithm(GeocodePoint())
         #self.addAlgorithm(GeocodeLine())
-        self.addAlgorithm(generateRTSSProfilFromMNT())
         self.addAlgorithm(generatePerpendicularLines())
         self.addAlgorithm(generateTransect())
     
@@ -63,8 +61,7 @@ class Provider(QgsProcessingProvider):
         the Processing toolbox.
         """
         return QgsProcessingProvider.icon(self)
-        
-pass 
+         
         
         
         

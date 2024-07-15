@@ -32,7 +32,7 @@ from qgis.gui import QgsMapMouseEvent, QgisInterface
 import os
 
 # Import from Plugin
-from .provider import Provider
+from .modules.provider import Provider
 
 # Import Interfaces
 from .interfaces.fenetre_parametre import fenetreParametre
