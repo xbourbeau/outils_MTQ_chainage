@@ -496,6 +496,7 @@ class MtqPluginChainage:
         try:
             # Déconnecter la couche des RTSS
             self.layer_rtss.selectionChanged.disconnect(self.afficherActionWithSelection)
+            # BUG: Crash if layer delete and expressions are used
             self.layer_rtss.willBeDeleted.disconnect(self.setPluginInactive)
             if self.params.getValue("use_only_on_visible"): self.layer_rtss.repaintRequested.disconnect(self.updateGeocode)
             if self.params.showContextMenu(): self.canvas.contextMenuAboutToShow.disconnect(self.populateContextMenu)
@@ -765,18 +766,18 @@ class MtqPluginChainage:
             action_copier_rtss = subMenu.addAction(
                 f'RTSS ({rtss.value()})')
             actionaction_copier_chainage = subMenu.addAction(
-                f'Chaînage ({chainage.value()})')
-            actionTrace = subMenu.addAction(f'Copier la distance trace ({dist})')
+                f'Chaînage ({chainage.value(precision=self.params.getValue("precision_chainage"))})')
+            actionTrace = subMenu.addAction(f'Copier la distance trace ({round(dist, self.params.getValue("precision_distance"))})')
             actionTrace.triggered.connect(
                 lambda *args: QgsApplication.clipboard().setText(dist))
             action_copier_tout = subMenu.addAction(
-                f'Numéro du RTSS et chaînage ({rtss.value()} {chainage.value()})')
+                f'Numéro du RTSS et chaînage ({rtss.value()} {chainage.value(precision=self.params.getValue("precision_chainage"))})')
             action_copier_rtss.triggered.connect(
                 lambda *args: QgsApplication.clipboard().setText(rtss.value()))
             actionaction_copier_chainage.triggered.connect(
                 lambda *args: QgsApplication.clipboard().setText(str(chainage.value())))
             action_copier_tout.triggered.connect(
-                lambda *args: QgsApplication.clipboard().setText(f'{rtss.value()} {chainage.value()}'))
+                lambda *args: QgsApplication.clipboard().setText(f'{rtss.value()} {chainage.value(precision=self.params.getValue("precision_chainage"))}'))
 
         if self.params.getValue("show_copie_menu_formater"):
             # Ajouter une section au sous menu
@@ -788,14 +789,14 @@ class MtqPluginChainage:
                 lambda *args: QgsApplication.clipboard().setText(rtss.valueFormater()))
             
             action_copier_chainage_formater = subMenu.addAction(
-                f'Chaînage ({chainage.valueFormater()})')
+                f'Chaînage ({chainage.valueFormater(precision=self.params.getValue("precision_chainage"))})')
             action_copier_chainage_formater.triggered.connect(
-                lambda *args: QgsApplication.clipboard().setText(chainage.valueFormater()))
+                lambda *args: QgsApplication.clipboard().setText(chainage.valueFormater(precision=self.params.getValue("precision_chainage"))))
             
             action_copier_tout_formater = subMenu.addAction(
                 f'RTSS et chaînage ({rtss.valueFormater()} {chainage.valueFormater()})')
             action_copier_tout_formater.triggered.connect(
-                lambda *args: QgsApplication.clipboard().setText(f'{rtss.valueFormater()} {chainage.valueFormater()}'))
+                lambda *args: QgsApplication.clipboard().setText(f'{rtss.valueFormater()} {chainage.valueFormater(precision=self.params.getValue("precision_chainage"))}'))
             
     def setRaccourciChainage(self):
         """
