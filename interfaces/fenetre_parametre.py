@@ -33,6 +33,7 @@ from qgis.PyQt.QtCore import pyqtSignal
 # Class pour la gestion des paramètre du plugin
 from ..modules.PluginParametres import PluginParametres
 from ..mtq.fnt.imports import choisirFichier
+from ..mtq.utils import Utilitaire
 from ..functions.checkIfKeySequenceExists import checkIfKeySequenceExists
 from ..functions.getIcon import getIcon, getPixmap
 
@@ -291,6 +292,7 @@ class fenetreParametre(QDialog, FORM_CLASS):
             action = self.params.getAction(action_name)
             if action.get() != widget.isChecked(): action.set(widget.isChecked())
         self.close()
+        Utilitaire.succesMessage(self.iface, " Les paramètres enregistrés avec succès!", subject="Plugin chainage MTQ:")
     
     def saveContextLayerSettings(self):
         """ Permet d'enregistrer les paramètres pour la Tab de la couche de context """

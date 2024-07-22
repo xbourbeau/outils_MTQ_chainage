@@ -212,7 +212,7 @@
               <string>Ajoute des options de copie lors d'un click droit dans la carte</string>
              </property>
              <property name="title">
-              <string>Context menu (option de copies)</string>
+              <string>Menu de contexte (option de copies)</string>
              </property>
              <layout class="QGridLayout" name="gridLayout_24">
               <item row="0" column="0">

@@ -604,7 +604,6 @@ class MtqPluginChainage:
         if active and self.plugin_is_active:
             self.suivi_chainage_is_connected = True
             self.canvas.xyCoordinates.connect(self.updateSuiviDuChainage)
-            self.updateGeocode()
         elif self.suivi_chainage_is_connected:
             self.suivi_chainage_is_connected = False
             self.canvas.xyCoordinates.disconnect(self.updateSuiviDuChainage)
@@ -633,7 +632,6 @@ class MtqPluginChainage:
             if not validateLayer(layer_name, fields_name=[field_value, field_rtss], geom_type=1) is None:
                 field_rtss = [field_rtss]
             else: field_rtss = []
-            #self.reseau_context.setModuleGeocodage(self.geocode)
             # Créer la tâche
             self.task_generate_reseau = TaskGenerateReseauSegementation(
                 geocode=self.geocode,

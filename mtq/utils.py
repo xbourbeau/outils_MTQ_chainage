@@ -109,4 +109,4 @@ class Utilitaire:
     def endTimer(self): return time.time() - self.timer
 
     def printTimer(self, sujet=""):
-        self.printTime(self.endTimer(), sujet=sujet)
+        self.printTime(self.timer, sujet=sujet)
