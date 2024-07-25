@@ -62,7 +62,8 @@ class MtqMapToolCreerGeometry(QgsMapToolEdit):
     def setActiveLayer(self):
         self.active_layer = self.currentVectorLayer()
         # TODO: Test for QGIS v. avant 3.30
-        self.geom_type = self.active_layer.geometryType()
+        try: self.geom_type = self.active_layer.geometryType()
+        except: self.geom_type = -1
         self.reset()
 
     def setLayer(self, layer_id): self.layer_rtss = self.layer(layer_id)
