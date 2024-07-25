@@ -55,6 +55,7 @@ class MtqMapToolCreerGeometry(QgsMapToolEdit):
         self.feat_rtss = None
         self.current_pt_rtss = None
         self.previous_pt_rtss = None
+        self.stop_moving = False
         self.list_points = []
         self.line_rtss = LineRTSS([])
         self.polygon_rtss = PolygonRTSS([])
@@ -110,6 +111,7 @@ class MtqMapToolCreerGeometry(QgsMapToolEdit):
         else: 
             if self.geom_type == 1 or self.geom_type == 2:
                 geom = reprojectGeometry(self.new_geom.asGeometry(), QgsProject.instance().crs(), self.active_layer.crs())
+                self.stop_moving = True
                 if geom.isGeosValid(): return self.createNewFeature(geom)
             self.reset()
     
@@ -120,6 +122,8 @@ class MtqMapToolCreerGeometry(QgsMapToolEdit):
         Args:
             - e (QgsMouseEvent) = Objet regroupant les information sur la position du curseur dans la carte
         """
+        # Rien faire
+        if self.stop_moving: return None
         # Geometrie du point du cursor dans la projection de la couche des RTSS
         geom = QgsGeometry.fromPointXY(self.toLayerCoordinates(self.layer_rtss, e.pos()))
         # Get infos du RTSS le plus proche du cursor
