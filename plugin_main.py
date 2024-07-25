@@ -63,6 +63,9 @@ from .functions.getIcon import getIcon
 
 from .expressions.expression_geocodage import *
 
+# DEV: Ajouter l'option d'ouvrir la fenêtre de Géocodage
+# DEV: Add link to open folder of installation
+
 class MtqPluginChainage:
     """ QGIS Plugin Implementation."""
 

@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import webbrowser
-
 from qgis.core import QgsApplication
 from qgis.gui import QgsMapTool, QgsMapCanvas
 
@@ -25,6 +24,7 @@ class MtqMapToolOpenSVN(QgsMapTool):
     def canvasPressEvent(self, e):
         default_link = """http://ws.sigvideo.mtq.min.intra/Interface/VisionneuseVideo.aspx?"""
         # Geometrie du point dans la projection de la couche des RTSS
+        #TODO: Check projection error
         point_on_rtss = self.geocode.geocoderPointOnRTSS(self.toLayerCoordinates(self.layer_rtss, e.pos()))
         center_point = reprojectGeometry(point_on_rtss.getGeometry(), self.layer_rtss.crs(), 4326).asPoint()
         if center_point.x() != 0.0 or center_point.y() != 0.0:
@@ -38,28 +38,6 @@ class MtqMapToolOpenSVN(QgsMapTool):
             self.canvas().unsetMapTool(self)
             # Désactiver l'outil
             QgsMapTool.deactivate(self)
-        
-pass
-    
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
         
         
         
