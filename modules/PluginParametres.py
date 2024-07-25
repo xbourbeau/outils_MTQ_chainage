@@ -112,7 +112,7 @@ class PluginParametres(GestionParametre):
                 plugin_name=plugin_name,
                 categorie=categorie_option,
                 setting_name="use_only_on_visible",
-                default_value=True),
+                default_value=False),
             # Paramètre: Police d'écriture des tooltip
             "font_on_map": ParametreFont(
                 plugin_name=plugin_name,
@@ -136,7 +136,7 @@ class PluginParametres(GestionParametre):
                 plugin_name=plugin_name,
                 categorie=categorie_option,
                 setting_name="show_chainage_on_map",
-                default_value=False),
+                default_value=True),
             # Paramètre: Afficher la distance dans le tooltip
             "show_distance_on_map": ParametreBool(
                 plugin_name=plugin_name,
