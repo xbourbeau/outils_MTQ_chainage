@@ -128,7 +128,7 @@ class generateTransect(QgsProcessingAlgorithm):
                             self.INPUT_INTERVAL,
                             self.tr('Interval de chainage'),
                             20,
-                            minValue=1)
+                            minValue=0.01)
         parametre_dist.setDefaultUnit(QgsUnitTypes.DistanceMeters)
         self.addParameter(parametre_dist)
         
