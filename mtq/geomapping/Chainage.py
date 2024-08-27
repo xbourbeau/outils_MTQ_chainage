@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from typing import Union
+import math
 
 class Chainage:
     """ 
@@ -42,15 +43,12 @@ class Chainage:
 
     def __eq__(self, other):
         if isinstance(other, Chainage): 
-            return self.value() == other.value()
+            return math.isclose(self.value(), other.value(), rel_tol=1e-9, abs_tol=1e-9)
         else: 
-            return self.value() == Chainage.verifyFormatChainage(other)
+            return math.isclose(self.value(), Chainage.verifyFormatChainage(other), rel_tol=1e-9, abs_tol=1e-9)
 
     def __ne__(self, other):
-        if isinstance(other, Chainage): 
-            return self.value() != other.value()
-        else: 
-            return self.value() != Chainage.verifyFormatChainage(other)
+        return not self.__eq__(other)
 
     def __gt__(self, other):
         if isinstance(other, Chainage): 
@@ -127,7 +125,9 @@ class Chainage:
             if precision is None: 
                 return self.chainage
             else: 
-                return round(self.chainage, precision)
+                chainage_arrondi = round(self.chainage, precision)
+                if precision <= 0: return int(chainage_arrondi)
+                else: return chainage_arrondi
 
     def valueFormater(self, precision=None):
         """

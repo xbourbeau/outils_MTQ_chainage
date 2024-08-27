@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 from ..fnt.interpolateOffsetOnLine import interpolateOffsetOnLine
-
-# Importer la librairie pour des opérations trigo
 from typing import Union
 
 # Librairie MTQ
@@ -58,7 +56,7 @@ class LineRTSS:
         # Longueur de la ligne par défault
         longueur = 0
         # Retourne une longueur la ligne par défault si elle n'est pas valide
-        if not self.isValide(): return longueur
+        if self.isInvalide(): return longueur
         # Définir le dernier point parcouru avec le premier de la ligne 
         last_point = self.startPoint()
         # Parcourir toutes les points de la ligne sauf le premier
@@ -86,12 +84,14 @@ class LineRTSS:
         if self.isEmpty(): return None
         else: return self.points[-1]
 
-    def getPart(selt, rtss:Union[str, RTSS]):
-        pass
-
     def getPoints(self):
         """ Permet de retourner la liste des PointRTSS de la ligne """
         return self.points
+
+    def getRTSS(self):
+        """ Permet de retourner le RTSS de la ligne """
+        if self.isEmpty(): return None
+        return self.points[0].getRTSS()
 
     def getVertex(self, vertex_id:int):
         """
@@ -111,22 +111,25 @@ class LineRTSS:
 
     def hasOneRTSS(self):
         """ Permet de vérifier si la ligne est sur un seul RTSS """
-        return len(self.listRTSS()) == 1
+        return True
 
     def isEmpty(self):
         """ Permet de retourner un indicateur de si la ligne est vide """
         return self.points == []
     
-    def isParallel(self, precision=None):
+    def isInvalide(self):
+        """ Permet de vérifier si la ligne est invalide """
+        return not self.isValide()
+
+    def isParallel(self, precision=5):
         """ Permet de vérifier si la ligne est parallel a la trace """
-        if not self.isValide(): return None
+        if self.isInvalide(): return None
         if precision is None: return len(set([pt.getOffset() for pt in self.points])) == 1
-        else: return len(set([round(pt.getOffset(),precision)  for pt in self.points])) == 1
+        else: return len(set([round(pt.getOffset(), precision)  for pt in self.points])) == 1
 
     def isValide(self):
         """ Permet de retourner un indicateur de si la ligne est valide donc contient plus de 1 point """
-        # BUG Doit vérifier que les point ne soient pas pareille
-        return len(self.points) > 1
+        return len(set(self.points)) > 1
 
     def interpolate(self):
         """ Indicateur que la ligne doit interpoler la trace du RTSS entre les points """
@@ -151,7 +154,7 @@ class LineRTSS:
         Args:
             - point(PointRTSS) = Le point à définir comme le dernier
         """
-        self.points[-1] = point
+        self.setPoint(idx=-1, point_rtss=point)
 
     def setInterpolation(self, interpolate_on_rtss):
         """ Permet de définir si la ligne doit être interpolé sur le RTSS """
@@ -183,6 +186,20 @@ class LineRTSS:
                     offset_d=offset_d,
                     offset_f=offset_f))
 
+    def setPoint(self, idx, point_rtss:PointRTSS):
+        """
+        Permet de modifier un point de la ligne
+
+        Args:
+            idx (int): L'index du point a modifier
+            point_rtss (PointRTSS): Le point modifié
+        """
+        # Vérifier que le point est sur le même RTSS
+        if self.getRTSS() != point_rtss.getRTSS(): raise Exception(f"Le point doit etre sur le RTSS {self.getRTSS().valueFormater()}")
+        try: self.points[idx] = point_rtss
+        except: return False
+        return True
+
     def setPoints(self, points:list[PointRTSS]):
         """ 
         Permet de définir la liste des points qui constitue la ligne
@@ -190,6 +207,9 @@ class LineRTSS:
         Args:
             - points (list): Liste d'objet PointRTSS
         """
+        # Vérifier que les points soient tous sur les mêmes RTSS
+        if len(set([pt.getRTSS() for pt in points])) != 1:
+            raise Exception("Les points doivent etre sur 1 seul RTSS")
         self.points = points
 
     def setStart(self, point:PointRTSS):
@@ -199,7 +219,7 @@ class LineRTSS:
         Args:
             - point(PointRTSS) = Le point à définir comme le premier
         """
-        self.points[0] = point
+        self.setPoint(idx=0, point_rtss=point)
 
     def startChainage(self):
         """ Permet de retourner le chainage de début de la ligne """

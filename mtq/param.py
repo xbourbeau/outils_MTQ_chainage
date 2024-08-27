@@ -45,6 +45,10 @@ C_REQUESTS = "requests"
 C_STYLES = "styles"
 # default_style = Le style par défault de la couche
 C_DEFAULT_STYLE = "default_style"
+# description = Une courte description de la couche
+C_DESCRIPTION = "description"
+# geocatalogue = Le lien vers la fiche du géocatalogue
+C_GEOCATALOGUE = "geocatalogue"
 
 # Nom de la couche des Municipalité
 DEFAULT_NOM_COUCHE_MUN = 'Municipalité'
@@ -77,6 +81,13 @@ DEFAULT_NOM_COUCHE_DT = 'Direction générale territoriale - MTQ'
 DEFAULT_NOM_CHAMP_CODE_DT = 'cod_niv_hierc_2'
 # Nom du champ qui contient les noms de CS
 DEFAULT_NOM_CHAMP_NOM_DT = 'nom_unite_admns_court'
+
+# Nom du champs de l'identifiant dans l'index du lidar mobile
+DEFAULT_NOM_CHAMP_LIDAR_ID = "id_index"
+# Nom du champs de la date dans l'index du lidar mobile
+DEFAULT_NOM_CHAMP_LIDAR_DATE = "date"
+# Nom du champs du lien de téléchargement dans l'index du lidar mobile
+DEFAULT_NOM_CHAMP_LIDAR_TELECHARGEMENT = "fichier1_u"
 
 # Dictionnaire contenant toute les DT et toute les CS pour la creation d'une Province
 DICT_PROVINCE:dict[str, dict[str, dict[str, str]]] = {

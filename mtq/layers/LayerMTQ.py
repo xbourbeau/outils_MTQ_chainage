@@ -8,7 +8,8 @@ from qgis.core import QgsVectorLayer, QgsApplication, QgsProject
 from qgis.gui import QgisInterface
 from ..param import (
     C_ALIAS, C_DEFAULT_STYLE, C_CS, C_DT, C_ID_NAME, C_ID_TYPE, C_TYPE_DT,
-    C_NAME, C_PROV, C_REQUESTS, C_SOURCE, C_STYLES, C_TAG, C_TYPE_CS, C_SEARCH_FIELDS)
+    C_NAME, C_PROV, C_REQUESTS, C_SOURCE, C_STYLES, C_TAG, C_TYPE_CS, C_SEARCH_FIELDS,
+    C_DESCRIPTION, C_GEOCATALOGUE)
 from ..region.imports import *
 from .LoadLayer import LoadLayer
 
@@ -18,7 +19,7 @@ class LayerMTQ:
     __slots__ = ("layer_id", "layer_name", "layer_provider", "layer_tags",
                  "key_field_name", "key_field_type", "dt_field_name", "dt_field_type",
                  "cs_field_name", "cs_field_type", "layer_styles", "default_style",
-                 "layer_requests", "layer_source", "search_fields")
+                 "layer_requests", "layer_source", "search_fields", "description", "lien_geocatalogue")
 
     def __init__(self,
                  id,
@@ -31,11 +32,13 @@ class LayerMTQ:
                  dt_field_type:str="",
                  cs_field_name:str="",
                  cs_field_type:str="",
-                 search_fields:str="",
+                 description:str="",
+                 search_fields:list[str]=[],
                  default_style:str=None,
                  request:Dict[str, str]={},
                  styles:Dict[str, str]={},
-                 tags:list[str]=[]):
+                 tags:list[str]=[],
+                 lien_geocatalogue:str=""):
         """ 
         Instancier un objet LayerMTQ
 
@@ -46,6 +49,8 @@ class LayerMTQ:
         self.layer_id = id
         # Set the layer name
         self.setName(name)
+        # Set la description de la couche
+        self.description = description
         # Set the layer source
         self.setSource(source)
         # Set the layer provider
@@ -57,21 +62,29 @@ class LayerMTQ:
         # Set the layer CS field
         self.setCSField(cs_field_name, cs_field_type)
         # Set the layer tags
-        self.layer_tags = tags
+        self.setTags(tags)
         # Set les champs de recherches
-        self.setSearchField(search_fields)
+        self.search_fields = search_fields
         # Set the layer styles
         self.setStyles(styles, default_style)
         # Set the layer requests
         self.setRequests(request)
+        # Set le lien vers le géocatalogue
+        self.lien_geocatalogue = lien_geocatalogue
 
     @classmethod
     def fromPDSerie(cls, layer_name, layer_info:pd.Series):
         """ Constructeur à partir d'une Serie Pandas """
-        tags = layer_info[C_TAG]
-        if tags is np.nan: tags = []
-        else: tags = tags.split(";")
-        
+        # Définir la liste des Tags
+        if C_TAG in layer_info.index:
+            tags = LayerMTQ.formatField(layer_info[C_TAG], ";")
+        else: tags = []
+
+        # Définir la liste des champs de recherche
+        if C_SEARCH_FIELDS in layer_info.index:
+            search_fields = LayerMTQ.formatField(layer_info[C_SEARCH_FIELDS], ";")
+        else: search_fields = []
+
         return cls(
             id=layer_name,
             name=layer_info[C_ALIAS],
@@ -83,16 +96,23 @@ class LayerMTQ:
             dt_field_type=layer_info[C_TYPE_DT],
             cs_field_name=layer_info[C_CS],
             cs_field_type=layer_info[C_TYPE_CS],
-            search_fields=str(layer_info[C_SEARCH_FIELDS]),
-            default_style=layer_info[C_DEFAULT_STYLE],
-            request=literal_eval(layer_info[C_REQUESTS]),
-            styles=literal_eval(layer_info[C_STYLES]),
-            tags=tags
+            description=layer_info[C_DESCRIPTION] if C_DESCRIPTION in layer_info.index else "",
+            search_fields=search_fields,
+            default_style=layer_info[C_DEFAULT_STYLE] if C_DEFAULT_STYLE in layer_info.index else "",
+            request=literal_eval(layer_info[C_REQUESTS]) if C_REQUESTS in layer_info.index else {},
+            styles=literal_eval(layer_info[C_STYLES]) if C_STYLES in layer_info.index else {},
+            tags=tags,
+            lien_geocatalogue=layer_info[C_GEOCATALOGUE] if C_GEOCATALOGUE in layer_info.index else ""
         )
 
     def __str__ (self): return f"LayerMTQ ({self.name()})"
     
     def __repr__ (self): return f"LayerMTQ ({self.name()})"
+    
+    @staticmethod
+    def formatField(val, seperator=";"):
+        if val is np.nan: return []
+        return val.split(seperator)
 
     def addTag(self, tag:str):
         """ Permet d'ajouter un tag à la listes des tags de la couche """
@@ -100,6 +120,7 @@ class LayerMTQ:
 
     def addTags(self, tags:list[str]):
         """ Permet d'ajouter des tags à la listes des tags de la couche """
+        tags = [tag for tag in tags if tag]
         self.layer_tags.extend(tags)
 
     def asVectorLayer(self, **kwargs):
@@ -192,6 +213,14 @@ class LayerMTQ:
         """ Permet de retourner l'identifiant de la couche """
         return self.layer_id
 
+    def getDescription(self):
+        """ Permet de retourner la description de la couche si disponible """
+        return self.description
+
+    def getFile(self):
+        """ Permet de retourner le chemin vers le fichier de la couche """
+        return self.source()
+
     def getLoadTask(self, **kwargs):
         return LoadLayer(self.dataSource(**kwargs), self.name(), self.dataProvider())
 
@@ -208,6 +237,10 @@ class LayerMTQ:
         except: pass
         return self.layer_styles.get(style, self.defaultStyle())
 
+    def lienGeocatalogue(self):
+        """ Permet de retourner le lien vers le géocatalogue """
+        return self.lien_geocatalogue
+
     def load(self, **kwargs):
         task_load_layer = self.getLoadTask(**kwargs)
         # Ajouter la tâche
@@ -218,6 +251,10 @@ class LayerMTQ:
         """ Permet de retourner le nom de la couche """
         return self.layer_name
 
+    def hasSameSource(self, source):
+        """ Permet de vérifier si la couche à la même source de fichier qu'une source en entrée """
+        return self.source() == source
+            
     def requests(self):
         """ Permet de retourner le dictionnaire des requêtes """
         return self.layer_requests
@@ -293,10 +330,6 @@ class LayerMTQ:
         # Définir le dictionnaire des styles
         self.layer_requests = requests
 
-    def setSearchField(self, field:str):
-        if field == "": self.search_fields = []
-        else: self.search_fields = field.split(";")
-
     def setSource(self, source:str):
         """ Permet de définir la source de la couche """
         if os.path.exists(source): self.layer_source = source
@@ -310,7 +343,6 @@ class LayerMTQ:
             - styles (dict): Un dictionnaire de style pour la couche
             - default_style (str): Un style à utiliser par défault
         """
-        print(styles)
         # Définir le dictionnaire des styles
         self.layer_styles = styles
         # Définir le style par défault s'il est dans le dictionnaire
@@ -322,6 +354,14 @@ class LayerMTQ:
             if keys == []: self.default_style = None
             # Sinon définir le style par défault avec la première valeur
             else: self.default_style = keys[0]
+
+    def setTags(self, tags):
+        self.layer_tags = []
+        self.addTags(tags)
+
+    def searchFields(self):
+        """ Permet de retourner la liste des champs pouvant servir à la recherche """
+        return self.search_fields
 
     def styles(self):
         """ Permet de retourner le dictionnaire des styles """

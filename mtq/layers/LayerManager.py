@@ -2,13 +2,16 @@
 import pandas as pd
 import os
 from typing import Union, Dict
-from qgis.core import QgsProject, QgsApplication
+from qgis.core import QgsProject, QgsApplication, QgsVectorLayer
 from ..region.Province import Province
 from ..param import DEFAULT_LAYER_REFERENCE, DEFAULT_AUTHID, C_PROV, C_SOURCE
 from .LoadLayers import LoadLayers
 from .LayerMTQ import LayerMTQ
 from .GeopackageLayerMTQ import GeopackageLayerMTQ
 from .WFSLayerMTQ import WFSLayerMTQ
+from .WMSLayerMTQ import WMSLayerMTQ
+from ..utils import Utilitaire
+from ..search.SearchEngine import SearchEngine
 
 
 class LayerManager:
@@ -22,6 +25,8 @@ class LayerManager:
             - code_cs (int): Le code du CS par défaut pour les filtres de couche
         """
         self.iface = iface
+        # Définir l'engin de recherche de couche
+        self.search_engine = SearchEngine()
         # DataFrame (vide) contenant tous les informations des couches
         self.layers:Dict[str,Union[LayerMTQ, WFSLayerMTQ, GeopackageLayerMTQ]] = {}
         if not layer_reference is None: self.loadData(layer_reference)
@@ -74,15 +79,24 @@ class LayerManager:
             - layer_name (str): Le nom unique de la couche
             - layer_info (Pandas Series): Une series Pandas contenant les informations de la couche
         """
-        if layer_name in self: raise ValueError(f"Le nom {layer_name} est déjà dans l'index des couches")
-        # Créer la couche
-        if layer_info[C_PROV] == "ogr": 
-            if os.path.splitext(layer_info[C_SOURCE].split("|")[0])[1] == ".gpkg":
-                layer = GeopackageLayerMTQ.fromPDSerie(layer_name, layer_info)
-            else: layer = LayerMTQ.fromPDSerie(layer_name, layer_info)
-        else: layer = WFSLayerMTQ.fromPDSerie(layer_name, layer_info)
-        # Ajouter la couche au dictionnaire des couches
-        self.layers[layer_name] = layer
+        try:
+            # Vérifier que la couche est unique
+            if layer_name in self: raise ValueError(f"Le nom {layer_name} est déjà dans l'index des couches")
+            # Vérifier si le provider est OGR
+            if layer_info[C_PROV] == "ogr": 
+                if os.path.splitext(layer_info[C_SOURCE].split("|")[0])[1] == ".gpkg":
+                    layer = GeopackageLayerMTQ.fromPDSerie(layer_name, layer_info)
+                else: layer = LayerMTQ.fromPDSerie(layer_name, layer_info)
+            # Vérifier si le provider est WFS
+            elif layer_info[C_PROV] == "wfs": layer = WFSLayerMTQ.fromPDSerie(layer_name, layer_info)
+            # Sinon ne pas ajouter la couche
+            else: return None
+            # Ajouter la couche au dictionnaire des couches
+            self.layers[layer_name] = layer
+
+        # Informer l'utilisateur de l'erreur
+        except Exception as e:
+            if self.iface: Utilitaire.criticalMessage(self.iface, str(e), subject=f"Erreur sur la couche ({layer_name})")
 
     def addLayerToMap(self, layer_name, use_dt=True, use_cs=False, use_style=True, **kwargs):
         """
@@ -131,6 +145,12 @@ class LayerManager:
         task_load_layer.taskCompleted.connect(lambda: addLayersToMapFromTask(self, task_load_layer, styles))
         QgsApplication.taskManager().addTask(task_load_layer)
 
+    def clear(self):
+        """ Permet de retirer toutes les références des couches du LayerManager """
+        self.layers.clear()
+        # Mettre à l'index de recherche
+        self.updateSearchEngine()
+
     def exportToCSV(self, csv):
         """ Methode to export all layers info to a CSV """
         self.layers.to_csv(csv, index=True)
@@ -141,6 +161,29 @@ class LayerManager:
         Retourne None si aucune couche n'est trouvé
         """
         return self.layers.get(layer_name, None)
+    
+    def getFromLayer(self, layer:QgsVectorLayer, use_name=False, use_source=True):
+        """
+        Permet de retourner la couche MTQ à partir d'une couche QgsVectorLayer
+
+        Args:
+            layer (QgsVectorLayer): La couche à vérifier si elle est dans le manager
+            use_name (bool, optional): Utiliser le nom de la couche. Defaults to False.
+            use_source (bool, optional): Utiliser la source de la couche. Defaults to True.
+        """
+        # Parcourir les couches de l'instance du projet
+        for layer_name, layer_mtq in self.layers.items():
+            # Vérifier s'il faut vérifier par nom et si le nom des couches sont indentique
+            if use_name and layer_name==layer.name(): return layer_mtq
+            # Vérifier s'il faut vérifier par source et si le type de couche sont indentique
+            elif use_source and layer_mtq.dataProvider() == layer.dataProvider().name().lower():
+                if layer_mtq.dataProvider() == 'ogr':
+                    # Retourner la couche si les sources OGR sont indentique
+                    if layer_mtq.hasSameSource(layer.source()): return layer_mtq
+                elif layer_mtq.dataProvider() == 'wfs':
+                    # Vérifier si le nom de la source WFS et le lien vers le WFS sont indentique 
+                    if layer_mtq.hasSameSource(layer.dataProvider().uri()): return layer_mtq
+        return None
 
     def getCS(self, value=None, use_dt=None):
         if use_dt is True: use_dt = self.getDT()
@@ -168,10 +211,27 @@ class LayerManager:
         else: return self.quebec.getDT(value)
 
     def getExtention(self, layer_name):
+        """ Permet de retourner l'extention d'une couche """
         layer = self.get(layer_name)
         if layer is None: return None
         return layer.fileExtention()
     
+    def getDescription(self, layer_name):
+        """ Permet de retourner la description d'une couche """
+        layer = self.get(layer_name)
+        if layer is None: return None
+        return layer.getDescription()
+
+    def getDisplayName(self, layer_name):
+        """
+        Permet de retourner l'alias d'une couche ou directement
+        son nom si aucun alias est spécifié.
+        """
+        layer = self.get(layer_name)
+        if layer is None: return None
+        if layer.name(): return layer.name()
+        else: return layer_name
+
     def getLayer(self, layer_name, use_dt=True, use_cs=False, **kwargs):
         """ 
         Méthode qui permet de charger une couche et de retourner le QgsVectorLayer de la couche.
@@ -190,10 +250,9 @@ class LayerManager:
         if layer is None: return None
         dt = self.getDT(use_dt) if use_dt else None
         cs = self.getCS(use_cs, dt) if use_cs else None
-        #TODO: Vérifier que la couche est valide!
         # Définir la source de la couche
         return layer.asVectorLayer(authid=self.authid, dt=dt, cs=cs, **kwargs)
-    
+
     def getLayersTask(self, layers_names, use_dt=True, use_cs=False, **kwargs):
         """
         Méthode qui permet créer une QgsTask pour charger plusieurs couches
@@ -306,6 +365,47 @@ class LayerManager:
         """
         return len(self.getLayerInProject(layer_name, use_name=use_name, use_source=use_source)) > 0
     
+    def isLayerInManager(self, layer:QgsVectorLayer, use_name=False, use_source=True):
+        """
+        Permet de vérifier si une couche est dans le LayerManager
+
+        Args:
+            layer (QgsVectorLayer): La couche à vérifier si elle est dans le manager
+            use_name (bool, optional): Utiliser le nom de la couche. Defaults to False.
+            use_source (bool, optional): Utiliser la source de la couche. Defaults to True.
+        """
+        # Parcourir les couches de l'instance du projet
+        for layer_name, layer_mtq in self.layers.items():
+            # Vérifier s'il faut vérifier par nom et si le nom des couches sont indentique
+            if use_name and layer_name==layer.name(): return True
+            # Vérifier s'il faut vérifier par source et si le type de couche sont indentique
+            elif use_source and layer_mtq.dataProvider() == layer.dataProvider().name().lower():
+                if layer_mtq.dataProvider() == 'ogr':
+                    # Retourner la couche si les sources OGR sont indentique
+                    if layer_mtq.hasSameSource(layer.source()): return True
+                elif layer_mtq.dataProvider() == 'wfs':
+                    # Vérifier si le nom de la source WFS et le lien vers le WFS sont indentique 
+                    if layer_mtq.hasSameSource(layer.dataProvider().uri()): return True
+        return False
+
+    def getLayers(self):
+        return self.layers.values()
+
+    def layerType(self, layer_name):
+        """
+        Permet de retourner le type de la couche.
+        Ex: ogr, wfs, gpkg
+
+        Args:
+            - layer_name (str): Nom de la couche dans l'index
+        """
+        layer = self.get(layer_name)
+        if isinstance(layer, GeopackageLayerMTQ): return "gpkg"
+        if isinstance(layer, WFSLayerMTQ): return "wfs"
+        if isinstance(layer, WMSLayerMTQ): return "wms"
+        if isinstance(layer, LayerMTQ): return "ogr"
+        return None
+
     def loadData(self, file):
         """
         Méthode qui permet de charger des informations sur des couches à partir d'un
@@ -325,13 +425,15 @@ class LayerManager:
         else: raise Exception(f"Le fichier ({file}) doit être un Document .csv ou .xlsx")
         
         # ---------- Convertir les champs ----------
-        layers_table.fillna("")
+        layers_table = layers_table.fillna("")
         # Parcourir chaque couche du tableau
         for layer_name in layers_table.index:
             # Vérifier que la couche n'est pas déjà dans le dictionnaire
             if layer_name in self.layers: continue
             # Ajouter la couche au module
             self.addLayer(layer_name, layers_table.loc[layer_name])
+        # Mettre à l'index de recherche
+        self.updateSearchEngine()
     
     def loadFromCSV(self, csv):
         """ Methode to load all layers info in a Pandas DataFrame from CSV"""
@@ -341,35 +443,37 @@ class LayerManager:
         """ Methode to load all layers info in a Pandas DataFrame from Excel"""
         self.loadData(excel_file)
     
+    def openGeocatalogue(self, layer_name):
+        """
+        Permet d'ouvrir la fiche vers le géocatalogue.
+
+        Args:
+            - layer_name (str): Nom de la couche dans l'index
+        """
+        layer = self.get(layer_name)
+        if layer is None: return None
+        if layer.lienGeocatalogue() != "":
+            os.startfile(layer.lienGeocatalogue())
+
     def removeLayerFromProject(self, layer_name, use_name=True, use_source=False):
         """ Méthode qui permet de retirer une couche, qui se trouve dans un QgsProject """
         for layer in self.getLayerInProject(layer_name, use_name=use_name, use_source=use_source):
             QgsProject.instance().removeMapLayer(layer.id())
     
-    def searcheLayers(self, recherche="", use_tags=True):
+    def searcheLayers(self, recherche="", use_tags=True, limit=1_000):
         """ 
         Méthode qui permet de retourner les couches dans la gestionnaire de couche 
         selon un text de recherche.
         
         Args:
             - recherche (str): Texte qui permet de rechercher du text dans la liste des couches
-            - use_tags (bool): Utiliser les tags de la couche pour la recherche
+            - use_tags (bool): ** INUTILE **
+            - limit (int): Le nombre maximum de retour dans la liste
         """
         # Retrouner toutes les couches si aucune recherche est spécifié 
         if recherche == "": return list(self.layers.keys())
-        layer_names = []
-        # Parcourir toute les couches
-        for layer_name in self.layers.keys():
-            list_of_text_search = [layer_name]
-            if use_tags: list_of_text_search += self.getTags(layer_name)
-            for text in list_of_text_search: 
-                if recherche.lower() == text.lower()[:len(recherche)]:
-                    layer_names.append(layer_name)
-                    break
-                if len(recherche) > 1 and recherche.lower() in text.lower():
-                    layer_names.append(layer_name)
-                    break
-        return layer_names
+        # Retourner le résultat de la recherche
+        return self.search_engine.search(recherche, limit=limit)
 
     def setAuthId(self, authid):
         """ Méthode qui permet de définir le authentification id à utiliser """
@@ -382,3 +486,10 @@ class LayerManager:
     def setDT(self, code_dt):
         """ Méthode qui permet de définir une DT par défault """
         self.dt = self.quebec.getDT(code_dt)
+
+    def updateSearchEngine(self):
+        """ Permet de mettre à jour l'index de recherche selon l'index des couches """
+        # Définir un dictionnaire de recherche
+        index = {layer.id(): [layer.name()] + layer.tags() for layer in self.getLayers()}
+        # Mettre à jour l'engin de recherche avec l'index créer
+        self.search_engine.updateSearchingIndex(index)

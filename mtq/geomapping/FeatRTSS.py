@@ -101,15 +101,15 @@ class FeatRTSS(RTSS):
         """
         return self.createLine([self.chainageDebut(), self.chainageFin()], offsets=[offset])
 
-    def chainageDebut(self)->Chainage:
+    def chainageDebut(self) -> Chainage:
         """ Renvoie le chainage de début du RTSS """
         return self.chainage_d
 
-    def chainageFin(self)->Chainage:
+    def chainageFin(self) -> Chainage:
         """ Renvoie le chainage de fin du RTSS, sois sa longueur en chainage. """
         return self.chainage_f
 
-    def createLine(self, chainages:list[int, float, Chainage, str], offsets:list=[0], interpolate_on_rtss=True)->LineRTSS:
+    def createLine(self, chainages:list[int, float, Chainage, str], offsets:list=[0], interpolate_on_rtss=True) -> LineRTSS:
         """
         Méthode qui permet de créer un LineRTSS sur le RTSS
         
@@ -128,11 +128,11 @@ class FeatRTSS(RTSS):
         # Créer la ligne sur le RTSS
         return LineRTSS(list_point_rtss, interpolate_on_rtss=interpolate_on_rtss)
 
-    def createPoint(self, chainage:Union[int, float, Chainage, str], offset=0)->PointRTSS:
+    def createPoint(self, chainage:Union[int, float, Chainage, str], offset=0) -> PointRTSS:
         """ Méthode qui permet de créer un PointRTSS sur le RTSS """
         return PointRTSS(self.value(), self.getChainageOnRTSS(chainage), offset)
 
-    def createPolygon(self, chainages:list[int, float, Chainage, str], offsets:list, interpolate_on_rtss=True)->PolygonRTSS:
+    def createPolygon(self, chainages:list[int, float, Chainage, str], offsets:list, interpolate_on_rtss=True) -> PolygonRTSS:
         """
         Méthode qui permet de créer un PolygonRTSS sur le RTSS
         
@@ -150,7 +150,7 @@ class FeatRTSS(RTSS):
         # Créer le polygon sur le RTSS
         return PolygonRTSS(list_point_rtss, interpolate_on_rtss=interpolate_on_rtss)
     
-    def createPolygonFromSize(self, chainage:Chainage, width, height, offset=0, interpolate_on_rtss=True)->PolygonRTSS:
+    def createPolygonFromSize(self, chainage:Chainage, width, height, offset=0, interpolate_on_rtss=True) -> PolygonRTSS:
         """
         Méthode qui permet de créer un PolygonRTSS sur le RTSS à partir d'un point de référence (chainage/offset)
         et des valeurs de longueur et hauteur.
@@ -215,7 +215,7 @@ class FeatRTSS(RTSS):
         point_f = self.geocoderInversePoint(QgsGeometry.fromPointXY(list_geom_point[-1]))
         
         # TODO: Défine interpolate_on_rtss with a random point on the ligne
-        interpolate_on_rtss = self.getDistanceFromPoint(list_geom_point[int(len(list_geom_point)/2)])
+        #interpolate_on_rtss = self.getDistanceFromPoint(list_geom_point[int(len(list_geom_point)/2)])
         
         return LineRTSS([point_d, point_f])
 
@@ -228,8 +228,8 @@ class FeatRTSS(RTSS):
         
         Return (PointRTSS): L'objet PointRTSS équivalent a la géometry
         """
-        geometry.convertToSingleType()
         geometry = FeatRTSS.verifyFormatPoint(geometry)
+        geometry.convertToSingleType()
         # Définir le offset du point
         offset = self.getDistanceFromPoint(geometry)
         # Trouver le chainage du point sur le RTSS
@@ -251,6 +251,7 @@ class FeatRTSS(RTSS):
         for point in geometry.vertices():
             # Géocodage inverse de l'extremitées
             list_point_rtss.append(self.geocoderInversePoint(QgsGeometry.fromPointXY(QgsPointXY(point))))
+            # TODO: Remove unecessary points 
         
         return PolygonRTSS(list_point_rtss)
 
@@ -448,7 +449,7 @@ class FeatRTSS(RTSS):
                     LineRTSS([point, polygon[idx+1]], interpolate_on_rtss=polygon.interpolate()),
                     ).asPolyline()[:-1])
         # Retourn la géometrie polygonal (Si moins de 3 point la géometrie est NULL)
-        return QgsGeometry().fromPolygonXY([list_polygon_points])
+        return QgsGeometry().fromPolygonXY([list_polygon_points]).makeValid()
 
     def geocoderPolygonFromChainage(self, chainages:list[int, float, Chainage, str], offsets, interpolate_on_rtss=True):
         """
@@ -567,7 +568,6 @@ class FeatRTSS(RTSS):
 
     def getRTSS(self):
         """ Permet de retourner l'ojet RTSS de la class """
-        # OPTIMISATION: Il y a probablement une meilleur manière
         rtss = RTSS(self.value())
         rtss.attributs = self.attributs
         return rtss

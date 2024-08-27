@@ -579,6 +579,7 @@ class Geocodage:
         
         Return: PolygonRTSS = L'objet PolygonRTSS qui représente le mieux la géometrie
         """
+        if not geom_poly: raise NameError("La geometry du polygon a convertir est NULL")
         # Aller chercher directement le featRTSS si un RTSS est défini et est dans la dictionnaire de référence
         if rtss: feat_rtss = self.get(rtss)
         # Sinon appeller la fonction pour avoir le RTSS le plus proche de la géometrie
@@ -728,12 +729,13 @@ class Geocodage:
         if isinstance(precision, int): self.precision = precision
         else: self.precision = None
     
-    def updateRTSS(self, rtss_features:QgsFeatureIterator,
-                               crs:QgsCoordinateReferenceSystem=None,
-                               nom_champ_rtss=None,
-                               nom_champ_long=None,
-                               nom_champ_chainage_d=None,
-                               **kwarg):
+    def updateRTSS(self, 
+            rtss_features:QgsFeatureIterator,
+            crs:QgsCoordinateReferenceSystem=None,
+            nom_champ_rtss=None,
+            nom_champ_long=None,
+            nom_champ_chainage_d=None,
+            **kwarg):
         """ Méthode qui permet de créer ou de mettre à jour la référence des RTSS
         
         Args:

@@ -766,20 +766,21 @@ class MtqPluginChainage:
             # Ajouter les actions de copie des valeurs
             action_copier_rtss = subMenu.addAction(
                 f'RTSS ({rtss.value()})')
-            actionaction_copier_chainage = subMenu.addAction(
+            action_copier_chainage = subMenu.addAction(
                 f'Chaînage ({chainage.value(precision=self.params.getValue("precision_chainage"))})')
             actionTrace = subMenu.addAction(f'Copier la distance trace ({round(dist, self.params.getValue("precision_distance"))})')
-            actionTrace.triggered.connect(
-                lambda *args: QgsApplication.clipboard().setText(dist))
+
             action_copier_tout = subMenu.addAction(
                 f'Numéro du RTSS et chaînage ({rtss.value()} {chainage.value(precision=self.params.getValue("precision_chainage"))})')
             action_copier_rtss.triggered.connect(
                 lambda *args: QgsApplication.clipboard().setText(rtss.value()))
-            actionaction_copier_chainage.triggered.connect(
-                lambda *args: QgsApplication.clipboard().setText(str(chainage.value())))
+            action_copier_chainage.triggered.connect(
+                lambda *args: QgsApplication.clipboard().setText(str(chainage.value(precision=self.params.getValue("precision_chainage")))))
             action_copier_tout.triggered.connect(
                 lambda *args: QgsApplication.clipboard().setText(f'{rtss.value()} {chainage.value(precision=self.params.getValue("precision_chainage"))}'))
-
+            actionTrace.triggered.connect(
+                lambda *args: QgsApplication.clipboard().setText(dist))
+            
         if self.params.getValue("show_copie_menu_formater"):
             # Ajouter une section au sous menu
             subMenu.addSection("Valeurs formatté: ")
@@ -795,7 +796,7 @@ class MtqPluginChainage:
                 lambda *args: QgsApplication.clipboard().setText(chainage.valueFormater(precision=self.params.getValue("precision_chainage"))))
             
             action_copier_tout_formater = subMenu.addAction(
-                f'RTSS et chaînage ({rtss.valueFormater()} {chainage.valueFormater()})')
+                f'RTSS et chaînage ({rtss.valueFormater()} {chainage.valueFormater(precision=self.params.getValue("precision_chainage"))})')
             action_copier_tout_formater.triggered.connect(
                 lambda *args: QgsApplication.clipboard().setText(f'{rtss.valueFormater()} {chainage.valueFormater(precision=self.params.getValue("precision_chainage"))}'))
             

@@ -7,3 +7,12 @@ from .openSIGO import *
 from .pageFormat import *
 from .reprojections import *
 from .format import *
+from .colorPicker import *
+from .reverseGeom import *
+from .getMaxOffset import getMaxOffset
+from .getMinOffset import getMinOffset
+from .identifyPolygonCorners import identifyPolygonCorners
+from .getCenterPoint import getCenterPoint
+from .downloadFile import downloadFile
+from .normalize import minMaxNormalize
+from .uniquePathName import uniquePathName

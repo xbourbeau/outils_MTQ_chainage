@@ -7,10 +7,7 @@ from .LayerMTQ import LayerMTQ
 class GeopackageLayerMTQ(LayerMTQ):
     """ Définition d'un objet GeopackageLayerMTQ qui permet de représenter une couche QGIS """
 
-    __slots__ = ("layer_id", "layer_name", "layer_provider", "layer_tags",
-                 "key_field_name", "key_field_type", "dt_field_name", "dt_field_type",
-                 "cs_field_name", "cs_field_type", "layer_styles", "default_style",
-                 "layer_requests", "layer_source", "geopackage", "search_fields")
+    __slots__ = LayerMTQ.__slots__ + ("geopackage",)
 
     def __init__(self,
                  id,
@@ -23,11 +20,13 @@ class GeopackageLayerMTQ(LayerMTQ):
                  dt_field_type:str="",
                  cs_field_name:str="",
                  cs_field_type:str="",
+                 description:str="",
                  search_fields:str="",
                  default_style:str=None,
                  request:Dict[str, str]={},
                  styles:Dict[str, str]={},
-                 tags:list[str]=[]):
+                 tags:list[str]=[],
+                 lien_geocatalogue:str=""):
         """ 
         Instancier un objet GeopackageLayerMTQ
 
@@ -46,11 +45,13 @@ class GeopackageLayerMTQ(LayerMTQ):
             dt_field_type=dt_field_type,
             cs_field_name=cs_field_name,
             cs_field_type=cs_field_type,
+            description=description,
             search_fields=search_fields,
             default_style=default_style,
             styles=styles,
             request=request,
-            tags=tags)
+            tags=tags,
+            lien_geocatalogue=lien_geocatalogue)
 
     def __str__ (self): return f"GeopackageLayerMTQ {self.name()}"
     
@@ -60,6 +61,16 @@ class GeopackageLayerMTQ(LayerMTQ):
         return f'''fid IN (SELECT id FROM rtree_{self.source().split("=")[1]}_geom as indexr 
             WHERE indexr.maxx >= {extent.xMinimum()} AND indexr.minx <= {extent.xMaximum()} AND indexr.maxy >= {extent.yMinimum()} AND indexr.miny <= {extent.yMaximum()}) 
             AND ST_Intersects(ST_GeometryFromText('{extent.asWktPolygon()}'), geom)'''
+
+    def getFile(self):
+        """ Permet de retourner le chemin vers le fichier de la couche """
+        return self.source().split("|")[0]
+
+    def hasSameSource(self, source):
+        """ Permet de vérifier si la couche à la même source de fichier qu'une source en entrée """
+        composantes = source.split("|")
+        if len(composantes) <= 1: return False
+        return os.path.samefile(composantes[0], self.getFile()) and composantes[1] == self.source().split("|")[1]
 
     def dataSource(self, **kwargs):
         # Liste des conditions à ajouter pour le datasource

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 # Importer les objects du module core de QGIS 
+import math
 from qgis.core import QgsGeometry
 from typing import Union
 
@@ -29,6 +30,19 @@ class PointRTSS:
     def __str__ (self): return f"PointRTSS {self.rtss}: {self.chainage}, {self.offset}m"
     
     def __repr__ (self): return f"PointRTSS {self.rtss}: {self.chainage} ({self.offset}m)"
+
+    def __eq__(self, other):
+        if isinstance(other, PointRTSS): 
+            if self.getRTSS() != other.getRTSS(): return False
+            if self.getChainage() != other.getChainage(): return False
+            if not math.isclose(self.getOffset(), other.getOffset(), rel_tol=1e-9, abs_tol=1e-9): return False
+            return True  
+        return False
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+    
+    def __hash__(self): return hash((self.rtss, self.chainage, self.offset))
 
     def getChainage(self, **kwargs):
         """

@@ -1,11 +1,15 @@
 # -*- coding: utf-8 -*-
 from ..fnt.interpolateOffsetOnLine import interpolateOffsetOnLine
+from ..fnt.identifyPolygonCorners import identifyPolygonCorners
+from ..fnt.groupeValues import groupeValues
+from ..fnt.getCenterPoint import getCenterPoint
 # Importer la librairie pour des opérations trigo
 from typing import Union
 
 # Librairie MTQ
 from .RTSS import RTSS
 from .PointRTSS import PointRTSS
+from .LineRTSS import LineRTSS
 
 class PolygonRTSS:
     """ Définition d'un polygon selon le référencement linéaire RTSS/chainage du MTQ """
@@ -52,12 +56,36 @@ class PolygonRTSS:
         """
         self.points.append(point)
 
-    def createMidleLine(self):
+    def createMidleLine(self, tolerance_angle=170):
+        """ 
+        Méthode qui permet de retourner la ligne de centre d'un polygon.
+        
+        Args: 
+            tolerance_angle (int) = L'angle max pour être considérer un coin du polygon
+
+        Return (LineRTSS): Une ligne RTSS qui représente le milieu du polygon
         """
-        Méthode qui permet de retourner la ligne de centre d'un polygon 
-        """
-        # TODO: Développer la méthode
-        pass
+        # Liste des coordonnées (chainage, offset) du polygone
+        pts_coords = [(i.getChainage().value(), i.getOffset()) for i in self.getPoints()][:-1]
+        # Identifier les coins du polygon
+        chainages, offsets = zip(*identifyPolygonCorners(pts_coords, tolerance_angle=tolerance_angle))
+        # Identifier les débuts fin du polygon
+        # BUGS: Il faut tester si la librairie est installer
+        labels = groupeValues(chainages)
+        # Identifier le numéro du groupe qui représente le chainage de début
+        start_nbr = labels[chainages.index(min(chainages))]
+        # Séparer les coordonnées des coins du début
+        start_coords = [(chainages[i], offsets[i]) for i in range(len(labels)) if labels[i] == start_nbr]
+        # Séparer les coordonnées des coins de la fin
+        end_coords = [(chainages[i], offsets[i]) for i in range(len(labels)) if labels[i] != start_nbr]
+        # Définir les valeurs de début de la ligne milieu
+        chainage_d, offset_d = getCenterPoint(start_coords)
+        # Définir les valeurs de fin de la ligne milieu
+        chainage_f, offset_f = getCenterPoint(end_coords)
+        # Retourner la ligne milieu
+        return LineRTSS([
+            PointRTSS(self.getRTSS(), chainage_d, offset_d),
+            PointRTSS(self.getRTSS(), chainage_f, offset_f)])
 
     def getChainageDebut(self):
         """ Permet de retourner le chainage le plus petit """
@@ -75,13 +103,27 @@ class PolygonRTSS:
         """ Permet de retourner le offset le plus grand """
         return min([pt.getOffset() for pt in self.points])
 
+    def getHeight(self):
+        """ Permet de retourner la différente maximum des offsets des points du polygon """
+        offsets = [pt.getOffset() for pt in self.points]
+        return abs(min(offsets) - max(offsets))
+
     def getPoints(self):
         """ Permet de retourner la liste des PointRTSS du polygon """
         return self.points
 
+    def getRTSS(self):
+        """ Permet de retourner le RTSS du polygone """
+        return self.listRTSS()[0]
+
+    def getWidth(self):
+        """ Permet de retourner la différente maximum des chainages des points du polygon """
+        chainages = [pt.getChainage().value() for pt in self.points]
+        return abs(min(chainages) - max(chainages))
+
     def hasOneRTSS(self):
         """ Permet de vérifier si le polygon est sur un seul RTSS """
-        return len(self.listRTSS()) == 1
+        return True
 
     def isEmpty(self):
         """ Permet de retourner un indicateur de si la ligne est vide """
@@ -111,14 +153,19 @@ class PolygonRTSS:
         """ Permet de définir si le polygon doit être interpolé sur le RTSS """
         self.interpolate_on_rtss = interpolate_on_rtss
 
-    def setEnd(self, point:PointRTSS):
+    def setPoint(self, idx, point_rtss:PointRTSS):
         """
-        Méthode qui permet de définir le dernier point du polygon
+        Permet de modifier un point du polygon
 
         Args:
-            - point(PointRTSS) = Le point à définir comme le dernier
+            idx (int): L'index du point a modifier
+            point_rtss (PointRTSS): Le point modifié
         """
-        self.points[-1] = point
+        # Vérifier que le point est sur le même RTSS
+        if self.getRTSS() != point_rtss.getRTSS(): raise Exception(f"Le point doit etre sur le RTSS {self.getRTSS().valueFormater()}")
+        try: self.points[idx] = point_rtss
+        except: return False
+        return True
 
     def setPoints(self, points:list[PointRTSS]):
         """ 
