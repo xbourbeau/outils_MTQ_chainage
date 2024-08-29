@@ -56,7 +56,7 @@ from .modules.CompleterRTSS import CompleterRTSS
 from .tasks.TaskGenerateReseauSegementation import TaskGenerateReseauSegementation
 
 from .mtq.core import Geocodage, Chainage, PointRTSS, ReseauSegmenter
-from .mtq.functions import openSIGO, validateLayer
+from .mtq.functions import openMapInSIGO, validateLayer
 from .mtq.utils import Utilitaire as Utils
 
 from .functions.getVisibleFeatures import getVisibleFeatures
@@ -390,7 +390,7 @@ class MtqPluginChainage:
         action_open_sigo = self.add_action(
             name="Open SIGO",
             help_str='Ouvrir la vue courante dans SIGO',
-            callback=lambda: openSIGO(self.iface),
+            callback=lambda: openMapInSIGO(self.iface),
             parent=self.iface.mainWindow(),
             add_to_menu=False)
             

@@ -3,16 +3,21 @@ import pandas as pd
 import os
 from typing import Union, Dict
 from qgis.core import QgsProject, QgsApplication, QgsVectorLayer
+from qgis.gui import QgisInterface
+
+# Module MTQ imports
 from ..region.Province import Province
 from ..param import DEFAULT_LAYER_REFERENCE, DEFAULT_AUTHID, C_PROV, C_SOURCE
+from ..utils import Utilitaire
+from ..search.SearchEngine import SearchEngine
+from ..fnt.openSIGO import openLayersInSIGO
+
+# Layers imports
 from .LoadLayers import LoadLayers
 from .LayerMTQ import LayerMTQ
 from .GeopackageLayerMTQ import GeopackageLayerMTQ
 from .WFSLayerMTQ import WFSLayerMTQ
 from .WMSLayerMTQ import WMSLayerMTQ
-from ..utils import Utilitaire
-from ..search.SearchEngine import SearchEngine
-
 
 class LayerManager:
     """ Objet qui permet de gérer des couches qui sont souvent utilisées. """
@@ -454,6 +459,27 @@ class LayerManager:
         if layer is None: return None
         if layer.lienGeocatalogue() != "":
             os.startfile(layer.lienGeocatalogue())
+
+    def openLayersInSIGO(self, layers_name:list[str], use_map=False):
+        """
+        Permet d'ouvrir des couches WFS dans SIGO
+
+        Args:
+            layers_name (list[str]): Liste des noms de couches à voir dans SIGO
+            use_map (bool): utiliser la carte pour la vue
+        """
+        # Liste des couches à ajouter à SIGO
+        layers_wfs = []
+        # Parcourir les noms de couches
+        for layer_name in layers_name:
+            layer = self.get(layer_name)
+            if layer is None: continue
+            if layer.dataProvider().lower() != "wfs": continue
+            # Ajouter la couche à SIGO
+            layers_wfs.append(layer)
+        # Ouvrir SIGO
+        if use_map: openLayersInSIGO(layers=layers_wfs, iface=self.iface)
+        else: openLayersInSIGO(layers=layers_wfs)
 
     def removeLayerFromProject(self, layer_name, use_name=True, use_source=False):
         """ Méthode qui permet de retirer une couche, qui se trouve dans un QgsProject """
