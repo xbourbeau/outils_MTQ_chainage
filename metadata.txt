@@ -6,7 +6,7 @@
 name=Outils chainage MTQ
 qgisMinimumVersion=3.16
 description=Regroupe les outils pratiques pour les RTSS/Chainage
-version=3.2.4
+version=3.3.1
 author=Xavier Bourbeau
 email=xavier.bourbeau@transports.gouv.qc.ca
 
@@ -35,15 +35,17 @@ changelog=
    3.2.3 - Correction bug: Erreur sur la géometrie temporaire de l'outils de mesure dans la version 3.32 et plus de QGIS.
    3.2.3 - Ajout: Un géotraitement de géocodage inverse a été ajouté.
 
-   3.2.4 - Correction bug: La validation des rtss est ajusté pour accépter les rtss ayant des espaces suplémentaire et manquant les '0' du début.
-   3.2.4 - Ajout (Experimental): Une action pour créer des nouvelles entités (ponctuelle ou linéaire) géocodées dans une couche en edition.
-   3.2.4 - Ajout (Experimental): Une action permetant de faire le géocodage inverse des entitées d'une couche.
-   3.2.4 - Ajout (Experimental): Une couche de context peux être ajouter pour créer un index de segmentation linéaire sur le réseau.
-   3.2.4 - Ajout: Une action permetant de générer des rectangles le long d'un rtss afin de produire des atlas.
-   3.2.4 - Ajout: Des options pour copier les valeurs courante on été ajouter au menu du clique droit lorsque le suivi du chainage est actif. (Par Fael Poirier)
-   3.2.4 - Amélioration: Reconfiguration de la fenêtre des paramètres et ajoute de nouvelles configurations
-   3.2.4 - Ajout: Des expressions de geocodage personnalisé peuvent être ajoutées
-   3.2.4 - Retrait: Retrait des géotraitements de géocodage (point et ligne)
+   3.3.1 - Correction bug: La validation des rtss est ajusté pour accépter les rtss ayant des espaces suplémentaire et manquant les '0' du début.
+   3.3.1 - Ajout (Experimental): Une action pour créer des nouvelles entités (ponctuelle ou linéaire) géocodées dans une couche en edition.
+   3.3.1 - Ajout (Experimental): Une action permetant de faire le géocodage inverse des entitées d'une couche.
+   3.3.1 - Ajout (Experimental): Une couche de context peux être ajouter pour créer un index de segmentation linéaire sur le réseau.
+   3.3.1 - Ajout: Une action permetant de générer des rectangles le long d'un rtss afin de produire des atlas.
+   3.3.1 - Ajout: Des options pour copier les valeurs courante on été ajouter au menu du clique droit lorsque le suivi du chainage est actif. (Par Fael Poirier)
+   3.3.1 - Amélioration: Reconfiguration de la fenêtre des paramètres et ajoute de nouvelles configurations
+   3.3.1 - Ajout: Des expressions de geocodage personnalisé peuvent être ajoutées
+   3.3.1 - Retrait: Retrait des géotraitements de géocodage (point et ligne)
+   3.3.1 - Amélioration: La recherche de RTSS est plus "intelligente"
+   3.3.1 - Plusieurs autres modifications
 
 # Tags are comma separated with spaces allowed
 tags=python;chainage;mtq;rtss
