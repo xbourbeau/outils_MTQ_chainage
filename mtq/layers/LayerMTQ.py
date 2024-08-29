@@ -64,7 +64,7 @@ class LayerMTQ:
         # Set the layer tags
         self.setTags(tags)
         # Set les champs de recherches
-        self.search_fields = search_fields
+        self.setSearchFields(search_fields)
         # Set the layer styles
         self.setStyles(styles, default_style)
         # Set the layer requests
@@ -158,7 +158,6 @@ class LayerMTQ:
         else: ids = ','.join([str(id) for id in list_id])
         return f"{self.key_field_name} in ({ids})"
         
-
     def dataProvider(self):
         """ Permet de retourner le provider de la couche """
         return self.layer_provider
@@ -220,6 +219,10 @@ class LayerMTQ:
     def getFile(self):
         """ Permet de retourner le chemin vers le fichier de la couche """
         return self.source()
+
+    def getKeyField(self): 
+        """ Permet de retourner le nom du champs d'id de la couche """
+        return self.key_field_name
 
     def getLoadTask(self, **kwargs):
         return LoadLayer(self.dataSource(**kwargs), self.name(), self.dataProvider())
@@ -329,6 +332,10 @@ class LayerMTQ:
         """
         # Définir le dictionnaire des styles
         self.layer_requests = requests
+
+    def setSearchFields(self, search_fields:list):
+        """ Permet de definir les champs pouvant servire de recherche à la couche """
+        self.search_fields = [field for field in search_fields if field]
 
     def setSource(self, source:str):
         """ Permet de définir la source de la couche """

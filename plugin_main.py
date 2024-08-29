@@ -23,13 +23,14 @@
 """
 # Import QGIS
 from qgis.PyQt.QtGui import QIcon, QKeySequence
-from qgis.PyQt.QtWidgets import QAction, QCompleter, QToolButton, QMenu
+from qgis.PyQt.QtWidgets import QAction, QToolButton, QMenu
 from qgis.core import (QgsProject, QgsPointXY, QgsApplication, QgsCoordinateTransform,
                        QgsRectangle, Qgis, QgsExpression)
 from qgis.gui import QgsMapMouseEvent, QgisInterface
 
 # Import General
 import os
+import copy
 
 # Import from Plugin
 from .modules.provider import Provider
@@ -50,6 +51,7 @@ from .modules.PluginUpdates import PluginUpdates
 from .modules.ToolbarWidjet import ToolbarWidjet
 from .modules.TemporaryGeometry import TemporaryGeometry
 from .modules.PluginParametres import PluginParametres
+from .modules.CompleterRTSS import CompleterRTSS
 
 from .tasks.TaskGenerateReseauSegementation import TaskGenerateReseauSegementation
 
@@ -575,26 +577,30 @@ class MtqPluginChainage:
         return False
 
     def getModuleGeocodage(self):
+        """ Permet de retourner directement l'objet Geocodage """
         if self.plugin_is_active: return self.geocode
-        # Indiquer à l'utilisateur que l'entité à bien été ajouter
-        widget = self.iface.messageBar().createMessage("Le plugin n'est pas actif! Aucun module de geocodage n'est défini")
-        # Afficher le message
-        self.iface.messageBar().pushWidget(widget, Qgis.Warning, duration=3)
-        return None
+        # Afficher le message qu'il y a un probleme avec le retour du module de Geocodage
+        return Utils.warningMessage(self.iface, "Le plugin n'est pas actif! Aucun module de geocodage n'est défini")
     
+    def getCopyModuleGeocodage(self):
+        """ Permet de retourner une copy de l'objet Geocodage """
+        if self.plugin_is_active: return copy.deepcopy(self.geocode)
+        # Afficher le message qu'il y a un probleme avec le retour du module de Geocodage
+        return Utils.warningMessage(self.iface, "Le plugin n'est pas actif! Aucun module de geocodage n'est défini")
+
     def setRtssCompleter(self):
+        """ Permet de définir le CompleterRTSS pour la barre de recherche de RTSS """
         try:
             # Créer le completer
-            completer = QCompleter(self.geocode.getListRTSS(self.params.getValue("formater_rtss"), sorted=True))
-            completer.setCaseSensitivity(0)
-            completer.setModelSorting(2)
+            completer = CompleterRTSS(
+                self.geocode,
+                parent=self.txt_rtss,
+                formater_rtss=self.params.getValue("formater_rtss"))
             # Appliquer le Completer au LineEdit
             self.txt_rtss.setCompleter(completer)
         except Exception as error:
-            # Indiquer à l'utilisateur que l'entité à bien été ajouter
-            widget = self.iface.messageBar().createMessage(f'Attention!: {error}')
-            # Afficher le message
-            self.iface.messageBar().pushWidget(widget, Qgis.Warning, duration=3)        
+            # Afficher le message qu'il y a un probleme avec le CompleterRTSS
+            Utils.warningMessage(self.iface, str(error), subject="Attention!: ")  
     
     def actionChainage(self, active):
         """
@@ -996,6 +1002,7 @@ class MtqPluginChainage:
         except: Utils.warningMessage(self.iface, "Oups! Un problème est survenu avec le repérange dans la carte...")
         
     def zoomToFeatChainage(self):
+        """ Permet de zoomer la carte sur le chainage entréer """
         # Numéro du RTSS et Chainage
         chainage = Chainage.verifyFormatChainage(self.txt_chainage.text())
         self.zoomToFeat(chainage)

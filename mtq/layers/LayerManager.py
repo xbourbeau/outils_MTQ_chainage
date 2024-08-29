@@ -492,4 +492,4 @@ class LayerManager:
         # Définir un dictionnaire de recherche
         index = {layer.id(): [layer.name()] + layer.tags() for layer in self.getLayers()}
         # Mettre à jour l'engin de recherche avec l'index créer
-        self.search_engine.updateSearchingIndex(index)
+        self.search_engine.updateSearchingIndex(index, split_word=True)

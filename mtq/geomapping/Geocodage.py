@@ -8,6 +8,8 @@ from collections import Counter
 from ..fnt.format import verifyFormatPoint
 from ..fnt.layer import validateLayer
 
+from ..search.SearchEngine import SearchEngine
+
 # Importer la librairie pour des opérations trigo
 import numpy as np
 import copy
@@ -60,6 +62,8 @@ class Geocodage:
         self.dict_rtss:Dict[RTSS, FeatRTSS] = {}
         # Référence des id RTSS
         self.dict_ids:Dict[int, RTSS] = {}
+        # Créer l'engine de recherche des RTSS
+        self.search_engine = SearchEngine()
         # Référence du system de coordonnée
         self.setCRS(crs)
         # Créer la référence des RTSS
@@ -703,6 +707,22 @@ class Geocodage:
         if self.precision is None: return Chainage(chainage)
         else: return round(Chainage(chainage), self.precision)
 
+    def search(self, search_text:str, limit=5, as_rtss=False):
+        """
+        Permet d'utiliser l'engine de recherche pour trouver un RTSS
+
+        Args:
+            search_text (str): Le text pour chercher les RTSS
+            limit (int): Le nombre de choix de retour possible
+            as_rtss (bool): Si la liste des RTSS doit être retourner sous forme d'objet RTSS
+        """
+        # Liste des numéros de RTSS les plus probable selon l'engin de recherche 
+        list_possible_rtss = self.search_engine.search(search_text, limit=limit)
+        # Convertir les numéros de RTSS en objet RTSS si spécifié
+        if as_rtss: list_possible_rtss = [RTSS(rtss) for rtss in list_possible_rtss]
+        # Retourner la liste des RTSS les plus probables
+        return list_possible_rtss
+
     def setCRS(self, crs):
         """
         Méthode qui permet de définir le système de coordonnée des geometries utilisé. 
@@ -729,6 +749,15 @@ class Geocodage:
         if isinstance(precision, int): self.precision = precision
         else: self.precision = None
     
+    def updateSearchEngine(self, dict_index:dict[str:list[str]]):
+        """
+        Permet de mettre à jour l'engin de recherche de RTSS.
+
+        Args:
+            dict_index (Dict[str, list[str]]): Le dictionnaire des index de recheche. Ex: Valeur du résultat: [list de recherche]
+        """
+        self.search_engine.updateSearchingIndex(dict_index)
+
     def updateRTSS(self, 
             rtss_features:QgsFeatureIterator,
             crs:QgsCoordinateReferenceSystem=None,
@@ -749,6 +778,8 @@ class Geocodage:
         if nom_champ_rtss: self.nom_champ_rtss = nom_champ_rtss
         if nom_champ_long: self.nom_champ_long = nom_champ_long
         self.nom_champ_chainage_d = nom_champ_chainage_d
+        # Dictionnaire utiliser pour la recherche par RTSS
+        dict_index = {}
         # Définir le nouveau CRS si défini
         if crs: self.setCRS(crs)
         # Vérifier que le CRS de la class est valide
@@ -766,5 +797,14 @@ class Geocodage:
                     nom_champ_long=self.nom_champ_long,
                     chainage_d=self.nom_champ_chainage_d,
                     **kwarg)
+                # Ajouter le RTSS à l'index des identifiants
                 self.dict_ids[rtss.id()] = num_rts
+                # Ajouter le RTSS à l'index spatial
                 self.spatial_index.addFeature(rtss)
+                # Ajouter le RTSS au dictionnaire de recherche
+                dict_index[num_rts.value()] = [
+                    num_rts.value(zero=False), 
+                    num_rts.valueFormater(), 
+                    num_rts.value(formater=True, zero=False)]
+            # Mettre à jour l'engin de recherche
+            self.updateSearchEngine(dict_index)
