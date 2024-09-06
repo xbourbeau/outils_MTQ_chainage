@@ -90,7 +90,6 @@ class MtqMapToolNewEcusson(QgsMapTool):
                 # Ajouter la classification fonctionnelle si possible
                 if point_on_rtss.getRTSS().hasAttribut("class_fonct") and self.field_index_classe:
                     att[self.field_index_classe] = str(point_on_rtss.getRTSS().getAttribut("class_fonct"))
-                
                 point_on_rtss = reprojectGeometry(point_on_rtss.getGeometry(), self.layer_rtss.crs(), self.layer_ecusson.crs())
                 if not self.layer_ecusson.isEditable(): self.layer_ecusson.startEditing()
                 self.layer_ecusson.addFeature(QgsVectorLayerUtils.createFeature(self.layer_ecusson, point_on_rtss, att))

@@ -90,4 +90,5 @@ class PointRTSS:
         self.offset = offset
     
     def setRTSS(self, rtss):
-        self.rtss = RTSS(rtss)
+        if isinstance(rtss, RTSS): self.rtss = rtss
+        else: self.rtss = RTSS(rtss)

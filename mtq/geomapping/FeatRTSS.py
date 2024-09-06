@@ -130,7 +130,7 @@ class FeatRTSS(RTSS):
 
     def createPoint(self, chainage:Union[int, float, Chainage, str], offset=0) -> PointRTSS:
         """ Méthode qui permet de créer un PointRTSS sur le RTSS """
-        return PointRTSS(self.value(), self.getChainageOnRTSS(chainage), offset)
+        return PointRTSS(self.getRTSS(), self.getChainageOnRTSS(chainage), offset)
 
     def createPolygon(self, chainages:list[int, float, Chainage, str], offsets:list, interpolate_on_rtss=True) -> PolygonRTSS:
         """
