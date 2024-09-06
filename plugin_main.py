@@ -333,7 +333,7 @@ class MtqPluginChainage:
         
         # ------------------ Action de placer des écussons ------------------
         # Créer le maptool
-        tool_add_ecusson = MtqMapToolNewEcusson(self.canvas, self.geocode)
+        tool_add_ecusson = MtqMapToolNewEcusson(self.iface, self.geocode)
         self.action_add_ecusson = self.add_action(
             name="Placer des écussons",
             help_str='Placer des écussons sur la carte',

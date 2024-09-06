@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 from qgis.core import (QgsGeometry, QgsVectorLayerUtils, 
     QgsField, QgsVectorLayer, QgsExpressionContextUtils, QgsApplication)
-from qgis.gui import QgsMapTool, QgsMapCanvas
+from qgis.gui import QgsMapTool, QgsMapCanvas, QgisInterface
 from qgis.PyQt.QtCore import QVariant
 
-from ..mtq.core import Geocodage
+from ..mtq.core import Geocodage, Utilitaire
 from ..mtq.functions import reprojectGeometry, validateLayer
 from ..modules.PluginParametres import PluginParametres
 from ..functions.addLayerToMap import addLayerToMap
@@ -13,13 +13,15 @@ from ..modules.TemporaryGeometry import TemporaryGeometry
 class MtqMapToolNewEcusson(QgsMapTool):
     """ Outil qui permet d'ajouter des points réprésentant des éccussons à une couche """
     
-    def __init__(self, canvas:QgsMapCanvas, geocode:Geocodage):
+    def __init__(self, iface:QgisInterface, geocode:Geocodage):
         # Class de géocodage
         self.geocode = geocode
         # Référence de la couche des RTSS
         self.layer_rtss = None
+        self.iface = iface
+        self.first_message = True
         # Créer un instance de l'outil d'edition sur la carte
-        QgsMapTool.__init__(self, canvas)
+        QgsMapTool.__init__(self, self.iface.mapCanvas())
         self.mCursor = QgsApplication.getThemeCursor(3)
         # Class qui gère l'enregistrement des paramètres
         self.params = PluginParametres()
@@ -47,10 +49,10 @@ class MtqMapToolNewEcusson(QgsMapTool):
         self.field_index = [i for i, field in enumerate(self.layer_ecusson.fields()) if field.name() == field_name]
         if self.field_index: self.field_index = self.field_index[0]
         else: self.field_index = 0
-        
+
         self.field_index_classe = [i for i, field in enumerate(self.layer_ecusson.fields()) if field.name() == field_name_classe]
         if self.field_index_classe: self.field_index_classe = self.field_index_classe[0]
-        else: self.field_index_classe = None
+        else: self.field_index_classe = None 
         
         self.layer_ecusson.willBeDeleted.connect(self.deactivate)
         self.canvas().scaleChanged.connect(self.updateTolerance)
@@ -90,6 +92,11 @@ class MtqMapToolNewEcusson(QgsMapTool):
                 # Ajouter la classification fonctionnelle si possible
                 if point_on_rtss.getRTSS().hasAttribut("class_fonct") and self.field_index_classe:
                     att[self.field_index_classe] = str(point_on_rtss.getRTSS().getAttribut("class_fonct"))
+                # Avertir l'utilisateur qu'il n'y a pas de champs de classification fonctionnelle
+                elif self.first_message:
+                    self.first_message = False
+                    Utilitaire.warningMessage(self.iface, "Aucun champ de classification fonctionnelle n'est défini pour le type d'écusson")
+                
                 point_on_rtss = reprojectGeometry(point_on_rtss.getGeometry(), self.layer_rtss.crs(), self.layer_ecusson.crs())
                 if not self.layer_ecusson.isEditable(): self.layer_ecusson.startEditing()
                 self.layer_ecusson.addFeature(QgsVectorLayerUtils.createFeature(self.layer_ecusson, point_on_rtss, att))
