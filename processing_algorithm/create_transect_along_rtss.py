@@ -111,7 +111,7 @@ class generateTransect(QgsProcessingAlgorithm):
                 self.tr('Numéro de RTSS'),
                 'num_rts',
                 self.tr(self.INPUT_RTSS))
-        parametre_rtss.setDataType(1)
+        #parametre_rtss.setDataType(1)
         self.addParameter(parametre_rtss)
         
         # ------------------- Champ LONG -------------------
@@ -120,14 +120,14 @@ class generateTransect(QgsProcessingAlgorithm):
                 self.tr('Chainage de fin du RTSS'),
                 'val_longr_sous_route',
                 self.tr(self.INPUT_RTSS))
-        parametre_chainage_f.setDataType(0)
+        #parametre_chainage_f.setDataType(0)
         self.addParameter(parametre_chainage_f)
         
         # ------------------- INPUT_INTERVAL -------------------
         parametre_dist = QgsProcessingParameterDistance (
                             self.INPUT_INTERVAL,
                             self.tr('Interval de chainage'),
-                            20,
+                            defaultValue=20,
                             minValue=0.01)
         parametre_dist.setDefaultUnit(QgsUnitTypes.DistanceMeters)
         self.addParameter(parametre_dist)
@@ -136,7 +136,7 @@ class generateTransect(QgsProcessingAlgorithm):
         parametre_long_droite = QgsProcessingParameterDistance (
                             self.INPUT_LINE_LENGTH_DROITE,
                             self.tr('Longueur de lignes à droite de la chaussée'),
-                            20,
+                            defaultValue=20,
                             minValue=0.01
                         )
         parametre_long_droite.setDefaultUnit(QgsUnitTypes.DistanceMeters)
@@ -146,7 +146,7 @@ class generateTransect(QgsProcessingAlgorithm):
         parametre_long_gauche = QgsProcessingParameterDistance (
                             self.INPUT_LINE_LENGTH_GAUCHE,
                             self.tr('Longueur de lignes à gauche de la chaussée'),
-                            20,
+                            defaultValue=20,
                             minValue=0.01
                         )
         parametre_long_gauche.setDefaultUnit(QgsUnitTypes.DistanceMeters)

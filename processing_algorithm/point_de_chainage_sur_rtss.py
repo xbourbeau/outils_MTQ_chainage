@@ -107,26 +107,26 @@ class generateChainagePointOnRTSS(QgsProcessingAlgorithm):
         # ------------------- Champ RTSS -------------------
         self.addParameter(
             QgsProcessingParameterField(
-                self.INPUT_FIELD_RTSS,
-                self.tr('Numéro de RTSS'),
-                'num_rts',
-                self.INPUT_RTSS,
+                name=self.INPUT_FIELD_RTSS,
+                description=self.tr('Numéro de RTSS'),
+                defaultValue='num_rts',
+                parentLayerParameterName=self.INPUT_RTSS,
                 type=QgsProcessingParameterField.String))
         
         # ------------------- Champ chainage fin -------------------
         self.addParameter(
             QgsProcessingParameterField(
-                self.INPUT_FIELD_LONG,
-                self.tr('Chainage de fin du RTSS'),
-                'val_longr_sous_route',
-                self.INPUT_RTSS,
+                name=self.INPUT_FIELD_LONG,
+                description=self.tr('Chainage de fin du RTSS'),
+                defaultValue='val_longr_sous_route',
+                parentLayerParameterName=self.INPUT_RTSS,
                 type=QgsProcessingParameterField.Numeric))
         
         # ------------------- Intervalle -------------------
         parametre_dist = QgsProcessingParameterDistance (
                             self.INPUT_INTERVAL,
                             self.tr('Interval de chainage'),
-                            10,
+                            defaultValue=10,
                             minValue=0.000001)
         parametre_dist.setDefaultUnit(QgsUnitTypes.DistanceMeters)
         self.addParameter(parametre_dist)

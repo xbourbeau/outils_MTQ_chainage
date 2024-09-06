@@ -140,7 +140,7 @@ class GeocodageInverse(QgsProcessingAlgorithm):
                 self.tr('   Chainage de fin des RTSS'),
                 'val_longr_sous_route',
                 self.tr(self.LAYER_RTSS),
-                 QgsProcessingParameterField.Numeric
+                QgsProcessingParameterField.Numeric
             )
         )
         # Paramètre de la précision du module de géocodage à utiliser
@@ -148,7 +148,7 @@ class GeocodageInverse(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.PRECISION,
                 self.tr('   Précision des chainages à géocoder'),
-                0,
+                defaultValue=0,
                 minValue=-5,
                 maxValue=5
             )

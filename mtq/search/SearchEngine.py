@@ -1,11 +1,12 @@
 from typing import Dict
-from .rapidfuzz import process
-from .rapidfuzz import fuzz
-from .rapidfuzz import utils
+
+from rapidfuzz import process
+from rapidfuzz import fuzz
+from rapidfuzz import utils
 
 class SearchEngine:
     
-    __slots__ = ("dict_index", "split_word")
+    __slots__ = ("dict_index", "split_word", "dict_facteur_start")
 
     def __init__(self, dict_index:Dict[str, list[str]]={}, split_word=False):
         """
@@ -14,6 +15,7 @@ class SearchEngine:
         Args:
             dict_index (Dict[str, list[str]]): Le dictionnaire des index de recheche. Ex: Valeur du résultat: [list de recherche]
         """
+        self.dict_facteur_start = {1: 8, 2: 5, 3: 3}
         self.updateSearchingIndex(dict_index, split_word)
     
     def updateSearchingIndex(self, dict_index:Dict[str, list[str]], split_word=False):
@@ -31,7 +33,7 @@ class SearchEngine:
             # Parcourir la clée ses valeurs associées
             for text in [key] + list(values):
                 if self.splitWord():
-                    for mot in text.split(" "):
+                    for mot in text.split(" ") + [text]:
                         # Ajouter chaque valeur servant à la recherche au dictionnaire avec la clé assosier
                         if mot in self.dict_index: self.dict_index[mot].append(key)
                         else: self.dict_index[mot] = [key]
@@ -55,14 +57,10 @@ class SearchEngine:
         # Basic fuzzy match score
         score = fuzz.QRatio(query, choice)
         if score == 0: return 0
-        
-        len_score = len(query)
-        if len_score == 1: facteur_start = 8
-        elif len_score == 2: facteur_start = 5
-        elif len_score == 3: facteur_start = 3
-        else: facteur_start = 2
         # Boost le score si la recherche match avec le début
-        if choice.startswith(query): score *= facteur_start
+        if choice.startswith(query):
+            facteur_start = self.dict_facteur_start.get(len(query), 2)
+            score *= facteur_start
         # Retourner le score modifier
         return score
 
