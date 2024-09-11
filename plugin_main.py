@@ -45,6 +45,7 @@ from .interfaces.fenetre_geocodage_inverse import fenetreGeocodageInverse
 from .maptool.mtq_maptool_distance_rtss import MtqMapToolLongueurRTSS
 from .maptool.mtq_maptool_new_ecusson import MtqMapToolNewEcusson
 from .maptool.mtq_maptool_open_svn import MtqMapToolOpenSVN
+from .maptool.mtq_maptool_open_svn_360 import MtqMapToolOpenSVN360
 from .maptool.mtq_maptool_creer_geometry import MtqMapToolCreerGeometry
 
 from .modules.PluginUpdates import PluginUpdates
@@ -385,6 +386,20 @@ class MtqPluginChainage:
         # Définir l'action de l'outils
         tool_open_svn.setAction(action_open_svn)
         self.maptools_needing_layer.append(tool_open_svn)
+
+        # ------------------ Ouvrir une fenêtre SVN ------------------
+        tool_open_svn_360 = MtqMapToolOpenSVN360(self.canvas, self.geocode)
+        action_open_svn_360 = self.add_action(
+            name="Open SVN 360",
+            help_str='Ouvrir un emplacement dans le nouveau SVN 360',
+            callback=lambda active: self.canvas.setMapTool(tool_open_svn_360) if active else tool_open_svn_360.action().setChecked(True),
+            add_to_active_plugin=True,
+            isCheckable=True,
+            parent=self.iface.mainWindow(),
+            add_to_menu=False)
+        # Définir l'action de l'outils
+        tool_open_svn_360.setAction(action_open_svn_360)
+        self.maptools_needing_layer.append(tool_open_svn_360)
         
         # ------------------ Ouvrir une fenêtre SIGO ------------------
         action_open_sigo = self.add_action(

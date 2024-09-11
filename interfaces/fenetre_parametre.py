@@ -66,7 +66,8 @@ class fenetreParametre(QDialog, FORM_CLASS):
             "Creation de geometrie": self.chx_create_geometrie,
             "Geocodage inverse": self.chx_geocoder_inverse,
             "Open SIGO": self.chx_open_sigo,
-            "Open SVN": self.chx_open_svn}
+            "Open SVN": self.chx_open_svn,
+            "Open SVN 360": self.chx_open_svn_360}
         
         self.checkbox_tooltip = {
             "show_rtss_on_map": self.chx_tooltip_rtss,

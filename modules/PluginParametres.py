@@ -424,6 +424,13 @@ class PluginParametres(GestionParametre):
                 setting_name="open_svn_is_visible",
                 visible_by_default=False),
             
+            "Open SVN 360": ParametreAction(
+                plugin_name=plugin_name,
+                nom="Open SVN 360",
+                icon=self.setIcon("svn_360.png"),
+                setting_name="open_svn_360_is_visible",
+                visible_by_default=False),
+            
             "Geocodage inverse": ParametreAction(
                 plugin_name=plugin_name,
                 nom="Geocodage inverse",

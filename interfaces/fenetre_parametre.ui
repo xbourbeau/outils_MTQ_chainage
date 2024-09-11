@@ -32,7 +32,7 @@
       <enum>QTabWidget::Rounded</enum>
      </property>
      <property name="currentIndex">
-      <number>1</number>
+      <number>8</number>
      </property>
      <property name="iconSize">
       <size>
@@ -3000,13 +3000,48 @@ color:rgb(255, 0, 0)</string>
                 </font>
                </property>
                <property name="text">
-                <string>Ouvrir la fenêtre SVN</string>
+                <string>Ouvrir la visionneuse d'image du ministère SVN</string>
                </property>
               </widget>
              </item>
             </layout>
            </item>
            <item row="13" column="0">
+            <layout class="QHBoxLayout" name="horizontalLayout_73">
+             <item>
+              <spacer name="horizontalSpacer_58">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               <property name="sizeType">
+                <enum>QSizePolicy::Fixed</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>10</width>
+                 <height>20</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+             <item>
+              <widget class="QCheckBox" name="chx_open_svn_360">
+               <property name="font">
+                <font>
+                 <pointsize>10</pointsize>
+                 <weight>50</weight>
+                 <italic>true</italic>
+                 <bold>false</bold>
+                </font>
+               </property>
+               <property name="text">
+                <string>Ouvrir la nouvelle visionneuse d'image du ministère SVN 360</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item row="14" column="0">
             <spacer name="verticalSpacer_12">
              <property name="orientation">
               <enum>Qt::Vertical</enum>
