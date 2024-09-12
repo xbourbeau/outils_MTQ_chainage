@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
-
+import os
 from qgis.core import (QgsProject, QgsCoordinateReferenceSystem, QgsCoordinateTransform,
                        QgsVectorLayer, QgsFeature)
-import os
 
 def copyVectorLayer(source_layer: QgsVectorLayer, epsg=None):
     if not source_layer.isValid():

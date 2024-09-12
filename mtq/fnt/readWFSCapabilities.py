@@ -1,9 +1,7 @@
 import requests
 from xml.etree import ElementTree as ET
-import sys
-path_to_mtq_lib = r"\\Mtq.min.intra\\fic\\ESTRIE\\Espace Collaboratif\\Cartographie\\Profils SIG\\QGIS\\python\\Librairie"
-if not path_to_mtq_lib in sys.path: sys.path.append(path_to_mtq_lib)
-from requests_negotiate_sspi import HttpNegotiateAuth
+try: from requests_negotiate_sspi import HttpNegotiateAuth
+except: pass
 
 def layerPossibleCRS(wfs_server:str, layer_name:str):
     """

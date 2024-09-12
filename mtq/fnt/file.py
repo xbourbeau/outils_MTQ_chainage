@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 from qgis.PyQt.QtWidgets import QFileDialog
 import os.path
 

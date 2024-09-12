@@ -1,14 +1,24 @@
 import os
 import numpy as np
 from shapely.geometry import box
-import processing
-from scipy.spatial import cKDTree
+
+try: 
+    import processing
+    PROCESSSING_LIB = True
+except: PROCESSSING_LIB = False
+
+try: 
+    from scipy.spatial import cKDTree
+    SCIPY_LIB = True
+except: SCIPY_LIB = False
 
 from qgis.core import QgsGeometry, QgsCoordinateReferenceSystem, QgsVectorLayer
 from .IndexLidar import IndexLidar
 
-try: import laspy
-except: pass
+try: 
+    import laspy
+    LASPY_LIB = True
+except: LASPY_LIB = False
 
 class Lidar:
     """ Un objet Lidar qui représente un fichier .las ou .laz qui contient un nuage de point """

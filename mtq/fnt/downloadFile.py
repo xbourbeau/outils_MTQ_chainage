@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
 import requests
-import sys
-path_to_mtq_lib = r"\\Mtq.min.intra\\fic\\ESTRIE\\Espace Collaboratif\\Cartographie\\Profils SIG\\QGIS\\python\\Librairie"
-if not path_to_mtq_lib in sys.path: sys.path.append(path_to_mtq_lib)
-from requests_negotiate_sspi import HttpNegotiateAuth
+try: from requests_negotiate_sspi import HttpNegotiateAuth
+except: pass
 
 
 def downloadFile(url:str, output_file:str, auth=True):
@@ -15,8 +13,7 @@ def downloadFile(url:str, output_file:str, auth=True):
         output_file (str): Le fichier à enregistrer
         auth (bool): Utiliser une authentification pour le site
 
-    Returns:
-        _type_: _description_
+    Returns (bool): Success or not
     """
     try:
         # Send a GET request to the URL
