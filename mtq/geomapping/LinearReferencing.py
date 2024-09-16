@@ -12,6 +12,7 @@ from .RTSS import RTSS
 from .SegmentationPoint import SegmentationPoint
 from .LineSegmentationElement import LineSegmentationElement
 
+# DEV: Ajouter une méthode pour générée une couche qui permet de visionner le résultat
 
 class LinearReferencing(FeatRTSS):
     """ Représente un objet FeatRTSS sur lequel il y a une segmentation linéaire. """

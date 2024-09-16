@@ -208,7 +208,7 @@ class LineRTSS:
             - points (list): Liste d'objet PointRTSS
         """
         # Vérifier que les points soient tous sur les mêmes RTSS
-        if len(set([pt.getRTSS() for pt in points])) != 1:
+        if len(set([pt.getRTSS() for pt in points])) > 1:
             raise Exception("Les points doivent etre sur 1 seul RTSS")
         self.points = points
 

@@ -48,7 +48,15 @@ class ReseauSegmenter(Geocodage):
         else: self.setReseau(reseau)
 
     @classmethod
-    def fromLayerFields(cls, geocode, layer, champ_rtss, champ_cd, champ_cf, filter_request=QgsFeatureRequest()):
+    def fromLayerFields(
+        cls,
+        geocode:Geocodage,
+        layer:QgsVectorLayer,
+        field_value:str,
+        champ_rtss:str,
+        champ_cd:str,
+        champ_cf:str,
+        filter_request=QgsFeatureRequest()):
         """
         Constructeur qui permet de créer l'objet ReseauSegmenter avec toute les RTSS.
         d'un module de geocodage. Le réseau est segmenter selon le RTSS et chainage début et fin
@@ -57,16 +65,17 @@ class ReseauSegmenter(Geocodage):
         Args:
             - geocode: Module de géocodage
             - layer: Le QgsVectorLayer de la couche
+            - field_value: Le nom du champ de valeur de la couche
             - champ_rtss: Le nom du champ du RTSS des entitées
             - champ_cd: Le nom du champ du chainage de début des entitées
             - champ_cf: Le nom du champ du chainage de fin des entitées
             - filter_request (QgsFeatureRequest): Requête pour filtrer la couche en entrée
         """
-        reseau_segmenter = cls.fromGeocodage(geocode)
+        reseau_segmenter = cls(geocode)
         # Parourir toutes les entitées de la couche
         for feat in layer.getFeatures(filter_request):
             # Definir l'objet LinearReferencing
-            rtss_seg = reseau_segmenter.getRTSSSegmenter(feat[champ_rtss])
+            rtss_seg = reseau_segmenter.getLinearReference(feat[champ_rtss])
             # Vérifier si l'objet LinearReferencing est valide
             if rtss_seg is None: continue
             # Définir le chainage de début de l'entitée
@@ -101,7 +110,7 @@ class ReseauSegmenter(Geocodage):
             - step: La distance entre chaque point utilisé pour l'interpolation
             - max_dist: La distance maximal pour qu'un objet soit considéré sur la route 
         """
-        reseau_segmenter = cls.fromGeocodage(geocode)
+        reseau_segmenter = cls(geocode)
         # Localisation des vitesses
         spatial_index = QgsSpatialIndex(layer.getFeatures(), flags=QgsSpatialIndex.FlagStoreFeatureGeometries)
         # Pourcourir toutes les modules de référence linéraire des RTSS
@@ -182,6 +191,7 @@ class ReseauSegmenter(Geocodage):
             field_rtss,
             field_chainage_d,
             field_chainage_f,
+            field_value=None,
             copy_elements=True):
         """
         Permet d'ajouter des éléments à partir d'un itérateur d'entité
@@ -190,12 +200,20 @@ class ReseauSegmenter(Geocodage):
             feature_iter (QgsFeatureIterator): itérateur d'entité à ajouter au réseau 
             field_rtss (_type_): Le champs des entitées contenant le RTSS 
             field_chainage_d (_type_): Le champs des entitées contenant le chainage de début 
-            field_chainage_f (_type_): Le champs des entitées contenant le chainage de fin 
+            field_chainage_f (_type_): Le champs des entitées contenant le chainage de fin
+            field_value (str): Le nom du champs qui contient une valeur à ajouter
             copy_elements (bool, optional): Conserver les éléments de la segmentation intersectée.
         """
         for feat in feature_iter:
             cd, cf = feat[field_chainage_d], feat[field_chainage_f]
-            self.addElement(feat[field_rtss], LineSegmentationElement(feat.id()), cd, cf, copy_elements=copy_elements)
+            
+            # Définir la valeur d'attribut
+            if field_value: att = {field_value: feat[field_value]}
+            else: att = {}
+            # Vérifier si la valeur de la segmentation au chainage courant est la même que la valeur la plus proche
+            element = LineSegmentationElement(feat.id(), offset_d=0, attributs=att)
+
+            self.addElement(feat[field_rtss], element, cd, cf, copy_elements=copy_elements)
 
     def addFromInterpolation(
         self,
