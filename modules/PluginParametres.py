@@ -408,7 +408,7 @@ class PluginParametres(GestionParametre):
                 nom="Creation de geometrie",
                 icon=self.setIcon("create_line.png"),
                 setting_name="creer_geometrie_is_visible",
-                visible_by_default=True),
+                visible_by_default=False),
 
             "Open SIGO": ParametreAction(
                 plugin_name=plugin_name,
