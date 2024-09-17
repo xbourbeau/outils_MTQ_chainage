@@ -103,22 +103,20 @@ class generatePerpendicularLines(QgsProcessingAlgorithm):
         parametre_dist = QgsProcessingParameterDistance (
                             self.INPUT_INTERVAL,
                             self.tr('Interval des lignes à générer'),
-                            20,
+                            defaultValue=20,
                             minValue=1
                         )
         parametre_dist.setDefaultUnit(QgsUnitTypes.DistanceMeters)
-        parametre_dist.setDataType(0) # Nombre entier
         self.addParameter(parametre_dist)
         
         
         parametre_long = QgsProcessingParameterDistance (
                             self.INPUT_LINE_LENGTH,
                             self.tr('Longueur perpendiculaire des lignes à générer'),
-                            20,
+                            defaultValue=20,
                             minValue=1
                         )
         parametre_long.setDefaultUnit(QgsUnitTypes.DistanceMeters)
-        parametre_long.setDataType(0) # Nombre entier
         self.addParameter(parametre_long)
             
         

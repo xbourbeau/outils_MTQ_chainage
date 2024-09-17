@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
+from qgis.core import QgsRenderContext, QgsFields, QgsVectorLayer
 
-from qgis.core import QgsRenderContext, QgsFields
-
-''' Méthode de creation d'un itérateur d'entitées visible sur la carte'''
-def getVisibleFeatures(layer):
+def getVisibleFeatures(layer:QgsVectorLayer):
+    ''' Fonction de creation d'un itérateur d'entitées visible sur la carte '''
     renderer = layer.renderer().clone()
     ctx = QgsRenderContext()
     renderer.startRender(ctx, QgsFields())

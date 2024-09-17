@@ -20,13 +20,10 @@ from qgis.core import (QgsProcessing,
                        NULL)
 import numpy as np
 
-from ..mtq.geocodage import geocodage
-from ..mtq.format import formaterChainage
+from ..mtq.core import Geocodage, Chainage
 
-'''
-Fonction qui permet de générer des lignes perpendiculaire à un certain interval le long d'une ligne.
-'''
 class generateTransect(QgsProcessingAlgorithm):
+    """ Permet de générer des lignes perpendiculaire à un certain interval le long d'une ligne. """
     # Constants used to refer to parameters and outputs. They will be
     # used when calling the algorithm from another algorithm, or when
     # calling from the QGIS console.
@@ -114,7 +111,7 @@ class generateTransect(QgsProcessingAlgorithm):
                 self.tr('Numéro de RTSS'),
                 'num_rts',
                 self.tr(self.INPUT_RTSS))
-        parametre_rtss.setDataType(1)
+        #parametre_rtss.setDataType(1)
         self.addParameter(parametre_rtss)
         
         # ------------------- Champ LONG -------------------
@@ -123,15 +120,15 @@ class generateTransect(QgsProcessingAlgorithm):
                 self.tr('Chainage de fin du RTSS'),
                 'val_longr_sous_route',
                 self.tr(self.INPUT_RTSS))
-        parametre_chainage_f.setDataType(0)
+        #parametre_chainage_f.setDataType(0)
         self.addParameter(parametre_chainage_f)
         
         # ------------------- INPUT_INTERVAL -------------------
         parametre_dist = QgsProcessingParameterDistance (
                             self.INPUT_INTERVAL,
                             self.tr('Interval de chainage'),
-                            20,
-                            minValue=1)
+                            defaultValue=20,
+                            minValue=0.01)
         parametre_dist.setDefaultUnit(QgsUnitTypes.DistanceMeters)
         self.addParameter(parametre_dist)
         
@@ -139,7 +136,7 @@ class generateTransect(QgsProcessingAlgorithm):
         parametre_long_droite = QgsProcessingParameterDistance (
                             self.INPUT_LINE_LENGTH_DROITE,
                             self.tr('Longueur de lignes à droite de la chaussée'),
-                            20,
+                            defaultValue=20,
                             minValue=0.01
                         )
         parametre_long_droite.setDefaultUnit(QgsUnitTypes.DistanceMeters)
@@ -149,7 +146,7 @@ class generateTransect(QgsProcessingAlgorithm):
         parametre_long_gauche = QgsProcessingParameterDistance (
                             self.INPUT_LINE_LENGTH_GAUCHE,
                             self.tr('Longueur de lignes à gauche de la chaussée'),
-                            20,
+                            defaultValue=20,
                             minValue=0.01
                         )
         parametre_long_gauche.setDefaultUnit(QgsUnitTypes.DistanceMeters)
@@ -249,13 +246,13 @@ class generateTransect(QgsProcessingAlgorithm):
         # get features from source
         total = 100.0 / source_rtss.featureCount() if source_rtss.featureCount() else 0
         
-        geocode = geocodage(source_rtss.getFeatures(), source_rtss.sourceCrs(),
+        geocode = Geocodage(source_rtss.getFeatures(), source_rtss.sourceCrs(),
                             champ_rtss, champ_long, precision=5)
         
-        for current, (rtss, feat_rtss) in enumerate(geocode.dict_rtss.items()):
+        for current, feat_rtss in enumerate(geocode.getListFeatRTSS()):
             # Stop the algorithm if cancel button has been clicked
             if feedback.isCanceled(): break
-            chainage_f = feat_rtss.getChainageFin()
+            chainage_f = int(feat_rtss.chainageFin())
             # Nombre de point à créer sur le RTSS
             longeur_ajuster = chainage_f-(chainage_f%interval_dist)
             
@@ -266,7 +263,7 @@ class generateTransect(QgsProcessingAlgorithm):
                 longueur_ligne = dist_droite + dist_gauche
                 feat = QgsFeature()
                 feat.setGeometry(perpendicular_line)
-                feat.setAttributes([rtss, float(chainage), formaterChainage(chainage), longueur_ligne, dist_droite, dist_gauche])
+                feat.setAttributes([feat_rtss.value(), float(chainage), Chainage(chainage).valueFormater(), longueur_ligne, dist_droite, dist_gauche])
                 # Add a feature in the sink
                 sink.addFeature(feat, QgsFeatureSink.FastInsert)
                 
@@ -275,7 +272,7 @@ class generateTransect(QgsProcessingAlgorithm):
                 longueur_ligne = dist_droite + dist_gauche
                 feat = QgsFeature()
                 feat.setGeometry(perpendicular_line)
-                feat.setAttributes([rtss, chainage_f, formaterChainage(chainage_f), longueur_ligne, dist_droite, dist_gauche])
+                feat.setAttributes([feat_rtss.value(), chainage_f, Chainage(chainage_f).valueFormater(), longueur_ligne, dist_droite, dist_gauche])
                 # Add a feature in the sink
                 sink.addFeature(feat, QgsFeatureSink.FastInsert)
             

@@ -16,8 +16,7 @@ from qgis.core import (QgsProcessing,
                        QgsWkbTypes,
                        NULL)
 
-from ..mtq.geocodage import geocodage
-from ..mtq.format import formaterChainage
+from ..mtq.core import Geocodage, Chainage
 import numpy as np
 
 '''
@@ -108,26 +107,26 @@ class generateChainagePointOnRTSS(QgsProcessingAlgorithm):
         # ------------------- Champ RTSS -------------------
         self.addParameter(
             QgsProcessingParameterField(
-                self.INPUT_FIELD_RTSS,
-                self.tr('Numéro de RTSS'),
-                'num_rts',
-                self.INPUT_RTSS,
+                name=self.INPUT_FIELD_RTSS,
+                description=self.tr('Numéro de RTSS'),
+                defaultValue='num_rts',
+                parentLayerParameterName=self.INPUT_RTSS,
                 type=QgsProcessingParameterField.String))
         
         # ------------------- Champ chainage fin -------------------
         self.addParameter(
             QgsProcessingParameterField(
-                self.INPUT_FIELD_LONG,
-                self.tr('Chainage de fin du RTSS'),
-                'val_longr_sous_route',
-                self.INPUT_RTSS,
+                name=self.INPUT_FIELD_LONG,
+                description=self.tr('Chainage de fin du RTSS'),
+                defaultValue='val_longr_sous_route',
+                parentLayerParameterName=self.INPUT_RTSS,
                 type=QgsProcessingParameterField.Numeric))
         
         # ------------------- Intervalle -------------------
         parametre_dist = QgsProcessingParameterDistance (
                             self.INPUT_INTERVAL,
                             self.tr('Interval de chainage'),
-                            10,
+                            defaultValue=10,
                             minValue=0.000001)
         parametre_dist.setDefaultUnit(QgsUnitTypes.DistanceMeters)
         self.addParameter(parametre_dist)
@@ -188,34 +187,33 @@ class generateChainagePointOnRTSS(QgsProcessingAlgorithm):
         # Compute the number of steps to display within the progress bar and
         # get features from source
         total = 100.0 / source_rtss.featureCount() if source_rtss.featureCount() else 0
-        features = source_rtss.getFeatures()
         
-        geocode = geocodage(source_rtss.getFeatures(), source_rtss.sourceCrs(),
+        geocode = Geocodage(source_rtss.getFeatures(), source_rtss.sourceCrs(),
                             champ_rtss, champ_chainage_f)
         
-        for current, (rtss, feat_rtss) in enumerate(geocode.dict_rtss.items()):
+        for current, feat_rtss in enumerate(geocode.getListFeatRTSS()):
             # Stop the algorithm if cancel button has been clicked
             if feedback.isCanceled(): break
-            chainage_f = feat_rtss.getChainageFin()
+            chainage_f = int(feat_rtss.chainageFin())
             # Nombre de point à créer sur le RTSS
             longeur_ajuster = int(chainage_f-(chainage_f%interval_dist))
             
             # Parcourire chaque interval du RTSS
             for chainage in np.arange(0, longeur_ajuster+interval_dist, interval_dist):
-                point_chainage = feat_rtss.getPointFromChainage(chainage)
+                point_chainage = feat_rtss.geocoderPointFromChainage(chainage)
                 angle = feat_rtss.getAngleAtChainage(chainage)
                 feat = QgsFeature()
                 feat.setGeometry(point_chainage)
-                feat.setAttributes([rtss, float(chainage), formaterChainage(chainage), angle])
+                feat.setAttributes([feat_rtss.value(), float(chainage), Chainage(chainage).valueFormater(), angle])
                 # Add a feature in the sink
                 sink.addFeature(feat, QgsFeatureSink.FastInsert)
                 
             if chainage_f != longeur_ajuster:
-                point_chainage = feat_rtss.getPointFromChainage(chainage_f)
+                point_chainage = feat_rtss.geocoderPointFromChainage(chainage_f)
                 angle = feat_rtss.getAngleAtChainage(chainage_f)
                 feat = QgsFeature()
                 feat.setGeometry(point_chainage)
-                feat.setAttributes([rtss, float(chainage_f), formaterChainage(chainage_f), angle])
+                feat.setAttributes([feat_rtss.value(), float(chainage_f), Chainage(chainage_f).valueFormater(), angle])
                 # Add a feature in the sink
                 sink.addFeature(feat, QgsFeatureSink.FastInsert)
             

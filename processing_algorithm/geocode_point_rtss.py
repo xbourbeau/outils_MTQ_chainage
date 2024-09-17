@@ -33,7 +33,7 @@ from qgis.core import (QgsProcessing,
                        QgsProcessingParameterFile,
                        QgsProcessingParameterFeatureSink)
 
-from ..mtq.geocodage import geocodage
+from ..mtq.core import Geocodage, Chainage, PointRTSS
 
 class GeocodePoint(QgsProcessingAlgorithm):
 
@@ -162,7 +162,7 @@ class GeocodePoint(QgsProcessingAlgorithm):
                 self.tr('Chainage'),
                 'chainage',
                 self.tr(self.GEOCODE),
-                type=QgsProcessingParameterField.Numeric))
+                type=QgsProcessingParameterField.Numeric|QgsProcessingParameterField.String))
                 
         # ------------------- offset -------------------
         self.addParameter(QgsProcessingParameterField(
@@ -224,8 +224,7 @@ class GeocodePoint(QgsProcessingAlgorithm):
         # Send some information to the user
         feedback.pushInfo('CRS is {}'.format(source_rtss.sourceCrs().authid()))
         
-        geocode = geocodage(source_rtss.getFeatures(), source_rtss.sourceCrs(),
-                            champ_rtss_1, champ_chainage_1)
+        geocode = Geocodage.fromLayer(source_rtss, nom_champ_rtss=champ_rtss_1, nom_champ_long=champ_chainage_1)
         # Compute the number of steps to display within the progress bar and
         # get features from source
         total = 100.0 / file_geocoder.featureCount() if file_geocoder.featureCount() else 0
@@ -234,19 +233,16 @@ class GeocodePoint(QgsProcessingAlgorithm):
         for current, feature in enumerate(file_geocoder.getFeatures()):
             # Stop the algorithm if cancel button has been clicked
             if feedback.isCanceled(): break
-            if champ_offset:
-                offset = feature[champ_offset]
-            else:
-                offset = 0
-            
-            geom = geocode.geocoder(feature[champ_rtss_2], feature[champ_chainage_2], offset=offset)
+            if champ_offset: offset = feature[champ_offset]
+            else: offset = 0
+            point = PointRTSS(feature[champ_rtss_2], feature[champ_chainage_2], offset=offset)
+            geom = geocode.geocoderPoint(point)
             is_valide = True
             if not geom:
                 # Send some information to the user
                 feedback.pushWarning('L\'entité {} n\'a pas été géocodée: Le rtss {} n\'est pas dans la couche des rtss'.format(feature.id(), feature[champ_rtss_2]))
                 is_valide = False
-            else:
-                feat_total += 1
+            else: feat_total += 1
                 
             feat = QgsFeature()
             feat.setGeometry(geom)
@@ -256,16 +252,9 @@ class GeocodePoint(QgsProcessingAlgorithm):
             # Add a feature in the sink
             sink.addFeature(feat, QgsFeatureSink.FastInsert)
             
-            
             # Update the progress bar
             feedback.setProgress(int(current * total))
         
         feedback.pushInfo('{} entitée géocodées'.format(feat_total))
-        # Return the results of the algorithm. In this case our only result is
-        # the feature sink which contains the processed features, but some
-        # algorithms may return multiple feature sinks, calculated numeric
-        # statistics, etc. These should all be included in the returned
-        # dictionary, with keys matching the feature corresponding parameter
-        # or output names.
         
         return {self.OUTPUT: dest_id}

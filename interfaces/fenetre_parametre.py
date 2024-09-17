@@ -21,40 +21,41 @@
  *                                                                         *
  ***************************************************************************/
 """
-
 import os
 
-from qgis.core import QgsMapLayerProxyModel, QgsFieldProxyModel, Qgis
-from qgis.PyQt.QtWidgets import QDockWidget, QFileDialog
-from qgis.PyQt.QtGui import QPixmap, QIcon, QKeySequence, QColor
+from qgis.core import QgsMapLayerProxyModel, QgsFieldProxyModel
+from qgis.gui import QgisInterface
+from qgis.PyQt.QtWidgets import QDialog
+from qgis.PyQt.QtGui import QIcon, QKeySequence, QColor, QTransform
 from qgis.PyQt import uic
 from qgis.PyQt.QtCore import pyqtSignal
 
 # Class pour la gestion des paramètre du plugin
-from ..gestion_parametres import sourceParametre
-from ..mtq.fnt import choisirFichier
+from ..modules.PluginParametres import PluginParametres
+from ..mtq.fnt.imports import choisirFichier
+from ..mtq.utils import Utilitaire
 from ..functions.checkIfKeySequenceExists import checkIfKeySequenceExists
+from ..functions.getIcon import getIcon, getPixmap
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(os.path.dirname(__file__), 'fenetre_parametre.ui'))
     
-class fenetreParametre(QDockWidget, FORM_CLASS):
+class fenetreParametre(QDialog, FORM_CLASS):
 
     closing_window = pyqtSignal()
+    plugin_inactif = pyqtSignal()
+    plugin_actif = pyqtSignal()
+    generate_index = pyqtSignal()
+    delete_index = pyqtSignal()
 
-    def __init__(self, parent=None):
+    def __init__(self, iface:QgisInterface, parent=None):
         """Constructor."""
+        self.iface = iface
         super(fenetreParametre, self).__init__(parent)
         self.setupUi(self)
         
         # Class de gestion des paramètres
-        self.gestion_parametre = sourceParametre()
-        self.plugin_dir = os.path.dirname(os.path.dirname(__file__))
-        self.cbx_layer_rtss.setFilters(QgsMapLayerProxyModel.LineLayer)
-        self.cbx_field_rtss.setFilters(QgsFieldProxyModel.String)
-        self.cbx_field_chainage_d.setFilters(QgsFieldProxyModel.String|QgsFieldProxyModel.Numeric)
-        self.cbx_field_chainage.setFilters(QgsFieldProxyModel.String|QgsFieldProxyModel.Numeric)
-        self.cbx_field_class.setFilters(QgsFieldProxyModel.String)
-        
+        self.params = PluginParametres()
+
         self.widgets_action = {
             "Suivre le chainage": self.chx_follow_chainage,
             "Mesurer un chainage": self.chx_distance,
@@ -63,92 +64,159 @@ class fenetreParametre(QDockWidget, FORM_CLASS):
             "Calculer des atlas": self.chx_atlas,
             "Placer des écussons": self.chx_ecussons,
             "Creation de geometrie": self.chx_create_geometrie,
+            "Geocodage inverse": self.chx_geocoder_inverse,
             "Open SIGO": self.chx_open_sigo,
-            "Open SVN": self.chx_open_svn}
+            "Open SVN": self.chx_open_svn,
+            "Open SVN 360": self.chx_open_svn_360}
         
         self.checkbox_tooltip = {
             "show_rtss_on_map": self.chx_tooltip_rtss,
             "show_chainage_on_map": self.chx_tooltip_chainage,
-            "show_distance_on_map": self.chx_tooltip_offset}
+            "show_distance_on_map": self.chx_tooltip_offset,
+            "show_context_on_map": self.chx_tooltip_context}
         
         # Connections
         self.btn_enregistrer.clicked.connect(self.saveSettings)
         self.btn_annuler.clicked.connect(self.initialisePresentValues)
-        #self.btn_aide.clicked.connect(lambda: os.startfile("file://sstao00-adm005/TridentAnalyst/Plugin_chainage_mtq/Documentation/Index.html#section2"))
+        self.btn_generate_index.clicked.connect(self.generateContextLayerIndex)
+        self.btn_delete_index.clicked.connect(lambda: self.delete_index.emit())
+
         self.btn_symblologie_ecusson.clicked.connect(lambda: self.choisirQML(self.txt_sybologie_ecusson))
         self.btn_symblologie_chainage.clicked.connect(lambda: self.choisirQML(self.txt_sybologie_chainage))
-        self.cbx_layer_rtss.layerChanged.connect(self.setLayerCombobox)
-        self.key_shortcut.keySequenceChanged.connect(self.checkKeyShortcut)
-        self.key_shortcut_ecusson.keySequenceChanged.connect(self.checkKeyShortcut2)
-        
-        self.first_init = True
-        self.valide_key_chainage = False
-        self.valide_key_ecusson = False
-        
-        # Initialiser les couches dans les comboBox
-        self.initialisePresentValues()
-        
-        # Définir l'image du logo de l'outil
-        self.lbl_logo.setPixmap(QPixmap(os.path.realpath(os.path.join(self.plugin_dir, 'icons/parametres.png'))))
-        self.lbl_logo.setScaledContents(True)
+        self.btn_symblologie_transect.clicked.connect(lambda: self.choisirQML(self.txt_sybologie_transect))
+        self.btn_symblologie_atlas.clicked.connect(lambda: self.choisirQML(self.txt_sybologie_atlas))
+
+        self.setComboBoxFilters()
+        self.cbx_layer_rtss.layerChanged.connect(self.setLayerRTSSCombobox)
+        self.cbx_layer_context.layerChanged.connect(self.setLayerContextCombobox)
+
+        self.key_shortcut.keySequenceChanged.connect(self.checkKeyShortcutChainage)
+        self.key_shortcut_ecusson.keySequenceChanged.connect(self.checkKeyShortcutEcusson)
+        self.key_shortcut_distance.keySequenceChanged.connect(self.checkKeyShortcutDistance)
+        set_seq_length = lambda k: self.key_shortcut_parallele.setKeySequence(QKeySequence(k.toString().split(", ")[0]))
+        self.key_shortcut_parallele.keySequenceChanged.connect(set_seq_length)
+        set_seq_length = lambda k: self.key_shortcut_perpendiculaire.setKeySequence(QKeySequence(k.toString().split(", ")[0]))
+        self.key_shortcut_perpendiculaire.keySequenceChanged.connect(set_seq_length)
+
+        # Définir les image des tabs
+        self.setTabsIcons()
         
         # Définir l'icon des boutons pour choisir le fichier de sybologie
-        self.btn_symblologie_chainage.setIcon(QIcon(os.path.realpath(os.path.join(self.plugin_dir, 'icons/qml.png'))))
-        self.btn_symblologie_ecusson.setIcon(QIcon(os.path.realpath(os.path.join(self.plugin_dir, 'icons/qml.png'))))
+        self.btn_symblologie_chainage.setIcon(getIcon("qml"))
+        self.btn_symblologie_ecusson.setIcon(getIcon("qml"))
+        self.btn_symblologie_transect.setIcon(getIcon("qml"))
+        self.btn_symblologie_atlas.setIcon(getIcon("qml"))
 
+        # Parcourir les widget de case a cocher et définir son état et l'icon de l'action associé
+        for action_name, widget in self.widgets_action.items():
+            # Action associé au widjet
+            action = self.params.getAction(action_name)
+            # Définir son icon
+            if action: widget.setIcon(QIcon(action.getIcon()))
+
+    def setInterfaceActive(self):
+        if self.isVisible(): self.raise_()
+        else: 
+            self.initialisePresentValues()
+            self.plugin_inactif.emit()
+            # Set the current tab to be the first
+            self.tabWidget.setCurrentIndex(0)
+            self.show()
 
     def closeEvent(self, event):
-        self.btn_enregistrer.clicked.disconnect(self.saveSettings)
-        self.btn_annuler.clicked.disconnect(self.initialisePresentValues)
-        #self.btn_aide.clicked.disconnect()
-        self.btn_symblologie_ecusson.clicked.disconnect()
-        self.btn_symblologie_chainage.clicked.disconnect()
-        self.cbx_layer_rtss.layerChanged.disconnect(self.setLayerCombobox)
-        self.key_shortcut.keySequenceChanged.disconnect(self.checkKeyShortcut)
-        self.key_shortcut_ecusson.keySequenceChanged.disconnect(self.checkKeyShortcut2)
+        if self.isVisible():
+            self.closing_window.emit()
+            self.plugin_actif.emit()
+            event.accept()
     
-        self.closing_window.emit()
-        event.accept()
-    
-    def setLayerCombobox(self, layer):
+    def setTabsIcons(self):
+        # Définir les image des tabs
+        self.tabWidget.setTabIcon(0, getIcon("parametres"))
+        self.tabWidget.setTabIcon(1, QIcon(getPixmap("chaine").transformed(QTransform().rotate(90))))
+        self.tabWidget.setTabIcon(2, QIcon(getPixmap("chainage").transformed(QTransform().rotate(90))))
+        self.tabWidget.setTabIcon(3, QIcon(getPixmap("mesure").transformed(QTransform().rotate(90))))
+        self.tabWidget.setTabIcon(4, QIcon(getPixmap("ecusson").transformed(QTransform().rotate(90))))
+        self.tabWidget.setTabIcon(5, QIcon(getPixmap("create_line").transformed(QTransform().rotate(90))))
+        self.tabWidget.setTabIcon(6, QIcon(getPixmap("geocodage_inverse").transformed(QTransform().rotate(90))))
+        self.tabWidget.setTabIcon(7, QIcon(getPixmap("context_layer").transformed(QTransform().rotate(90))))
+        self.tabWidget.setTabIcon(8, QIcon(getPixmap("file").transformed(QTransform().rotate(90))))
+
+    def setComboBoxFilters(self):
+        self.cbx_layer_context.setFilters(QgsMapLayerProxyModel.LineLayer)
+        self.cbx_layer_rtss.setFilters(QgsMapLayerProxyModel.LineLayer)
+        self.cbx_field_rtss.setFilters(QgsFieldProxyModel.String)
+        self.cbx_field_chainage_d.setFilters(QgsFieldProxyModel.String|QgsFieldProxyModel.Numeric)
+        self.cbx_field_chainage.setFilters(QgsFieldProxyModel.String|QgsFieldProxyModel.Numeric)
+        self.cbx_field_class.setFilters(QgsFieldProxyModel.String)
+
+        self.cbx_field_route.setFilters(QgsFieldProxyModel.String|QgsFieldProxyModel.Numeric)
+        self.cbx_field_value.setFilters(QgsFieldProxyModel.String|QgsFieldProxyModel.Numeric)
+
+    def setLayerRTSSCombobox(self, layer):
         for cbx, param in ((self.cbx_field_rtss, "field_num_rtss"),
                             (self.cbx_field_chainage, "field_chainage_fin"),
                             (self.cbx_field_class, "field_classification"),
                             (self.cbx_field_chainage_d, "field_chainage_debut")):
             cbx.setLayer(layer)
-            idx = cbx.findText(self.gestion_parametre.getParam(param).getValue())
+            idx = cbx.findText(self.params.getValue(param))
+            if idx != -1: cbx.setCurrentIndex(idx)
+
+    def setLayerContextCombobox(self, layer):
+        for cbx, param in ((self.cbx_field_route, "field_context_route"),
+                            (self.cbx_field_value, "field_context_value")):
+            cbx.setLayer(layer)
+            idx = cbx.findText(self.params.getValue(param))
             if idx != -1: cbx.setCurrentIndex(idx)
     
     def initialisePresentValues(self):
         # Initialisé les valeurs selon les paramètres du plugin
-        
         # Set Layer comboBox 
-        idx = self.cbx_layer_rtss.findText(self.gestion_parametre.getParam("layer_rtss").getValue())
-        if idx != -1:
-            self.cbx_layer_rtss.setCurrentIndex(idx)
-            self.setLayerCombobox(self.cbx_layer_rtss.currentLayer())
+        idx = self.cbx_layer_rtss.findText(self.params.getValue("layer_rtss"))
+        if idx != -1: self.cbx_layer_rtss.setCurrentIndex(idx)
+        self.setLayerRTSSCombobox(self.cbx_layer_rtss.currentLayer())
         
-        self.chx_follow_update.setChecked(self.gestion_parametre.getParam("suivi_plugin_update").getValue())
-        self.chx_format_rtss.setChecked(self.gestion_parametre.getParam("formater_rtss").getValue())
-        self.chx_format_chainage.setChecked(self.gestion_parametre.getParam("formater_chainage").getValue())
-        self.chx_use_visible.setChecked(self.gestion_parametre.getParam("use_only_on_visible").getValue())
-        self.spx_precision.setValue(self.gestion_parametre.getParam("precision_chainage").getValue())
-        self.txt_layer_ecusson.setText(self.gestion_parametre.getParam("layer_ecusson_name").getValue())
-        self.txt_champ_route.setText(self.gestion_parametre.getParam("layer_ecusson_field_route").getValue())
-        self.txt_champ_classe.setText(self.gestion_parametre.getParam("layer_ecusson_field_classe").getValue())
-        self.txt_sybologie_ecusson.setText(self.gestion_parametre.getParam("layer_ecusson_style").getValue())
-        self.txt_sybologie_chainage.setText(self.gestion_parametre.getParam("layer_chainage_style").getValue())
-        self.chk_shorcut_chainage.setChecked(self.gestion_parametre.getParam("use_raccourcis_chainage").getValue())
-        self.key_shortcut.setKeySequence(QKeySequence(self.gestion_parametre.getParam("raccourcis_clavier").getValue()))
-        self.chk_shorcut_ecusson.setChecked(self.gestion_parametre.getParam("use_raccourcis_ecusson").getValue())
-        self.key_shortcut_ecusson.setKeySequence(QKeySequence(self.gestion_parametre.getParam("raccourcis_clavier_ecusson").getValue()))
-        self.mFontButton.setCurrentFont(self.gestion_parametre.getParam("font_on_map").getValue())
-        self.mColorButton.setColor(QColor(self.gestion_parametre.getParam("color_font_on_map").getValue()))
+        idx = self.cbx_layer_context.findText(self.params.getValue("context_layer"))
+        if idx != -1: self.cbx_layer_context.setCurrentIndex(idx)
+        self.setLayerContextCombobox(self.cbx_layer_context.currentLayer())
         
+        self.chx_follow_update.setChecked(self.params.getValue("suivi_plugin_update"))
+        self.chx_add_expressions.setChecked(self.params.getValue("load_custom_expressions"))
+        self.chx_format_rtss.setChecked(self.params.getValue("formater_rtss"))
+        self.chx_format_chainage.setChecked(self.params.getValue("formater_chainage"))
+        self.chk_copie_info_rtss.setChecked(self.params.getValue("show_copie_menu_info"))
+        self.chk_copie_formater.setChecked(self.params.getValue("show_copie_menu_formater"))
+        self.chk_copie_non_formater.setChecked(self.params.getValue("show_copie_menu_non_formater"))
+        self.chx_use_visible.setChecked(self.params.getValue("use_only_on_visible"))
+        self.spx_precision.setValue(self.params.getValue("precision_chainage"))
+        self.spx_precision_mesure.setValue(self.params.getValue("precision_mesure"))
+        self.spx_precision_dist.setValue(self.params.getValue("precision_distance"))
+        self.txt_layer_ecusson.setText(self.params.getValue("layer_ecusson_name"))
+        self.txt_champ_route.setText(self.params.getValue("layer_ecusson_field_route"))
+        self.txt_champ_classe.setText(self.params.getValue("layer_ecusson_field_classe"))
+        self.txt_sybologie_ecusson.setText(self.params.getValue("layer_ecusson_style"))
+        self.txt_sybologie_chainage.setText(self.params.getValue("layer_chainage_style"))
+        self.txt_sybologie_transect.setText(self.params.getValue("layer_transect_style"))
+        self.txt_sybologie_atlas.setText(self.params.getValue("layer_atlas_style"))
+        self.chk_shorcut_chainage.setChecked(self.params.getValue("use_raccourcis_chainage"))
+        self.key_shortcut.setKeySequence(QKeySequence(self.params.getValue("raccourcis_clavier")))
+        self.chk_shorcut_ecusson.setChecked(self.params.getValue("use_raccourcis_ecusson"))
+        self.key_shortcut_ecusson.setKeySequence(QKeySequence(self.params.getValue("raccourcis_clavier_ecusson")))
+        self.chk_shorcut_distance.setChecked(self.params.getValue("use_raccourcis_distance"))
+        self.key_shortcut_distance.setKeySequence(QKeySequence(self.params.getValue("raccourcis_clavier_distance")))
+        self.key_shortcut_parallele.setKeySequence(QKeySequence(self.params.getValue("raccourcis_clavier_parralele")))
+        self.key_shortcut_perpendiculaire.setKeySequence(QKeySequence(self.params.getValue("raccourcis_clavier_perpendiculaire")))
+        self.mFontButton.setCurrentFont(self.params.getValue("font_on_map"))
+        self.btn_color_chaine.setColor(QColor(self.params.getValue("color_font_on_map")))
+        self.btn_color_dist.setColor(QColor(self.params.getValue("mesure_line_color")))
+        self.chk_keep_marker.setChecked(self.params.getValue("keep_marker_suivi_chainage"))
+        self.chx_marqueur_exact.setChecked(self.params.getValue("pos_marqueur_arrondi"))
+        self.spx_dist_interpolation.setValue(self.params.getValue("dist_interpolation"))
+        self.spx_intervalle_interpolation.setValue(self.params.getValue("intervalle_interpolation"))
+
         # Définir les case à cocher du groupe pour afficher un tooltip
         group_box_check = False
         for param_name, widget in self.checkbox_tooltip.items():
-            state = self.gestion_parametre.getParam(param_name).getValue()
+            state = self.params.getValue(param_name)
             widget.setChecked(state)
             if state: group_box_check = True
         self.gbx_show_tooltip.setChecked(group_box_check)
@@ -156,78 +224,110 @@ class fenetreParametre(QDockWidget, FORM_CLASS):
         # Parcourir les widget de case a cocher et définir son état et l'icon de l'action associé
         for action_name, widget in self.widgets_action.items():
             # Action associé au widjet
-            action = self.gestion_parametre.getAction(action_name)
-            if action: 
-                # Définir son icon
-                if self.first_init: widget.setIcon(QIcon(action.getIcon()))
-                # Définir son état (coché/décoché)
-                widget.setChecked(action.getValue())
-        
-        self.first_init = False
+            action = self.params.getAction(action_name)
+            # Définir son état (coché/décoché)
+            if action: widget.setChecked(action.get())
     
-    # Enregistrer les paramètre dans un fichier text
     def saveSettings(self):
+        self.params.setValue("layer_rtss", self.cbx_layer_rtss.currentText())
+        self.params.setValue("field_num_rtss", self.cbx_field_rtss.currentField())
+        self.params.setValue("field_chainage_fin", self.cbx_field_chainage.currentField())
+        self.params.setValue("field_classification", self.cbx_field_class.currentField())
+        self.params.setValue("field_chainage_debut", self.cbx_field_chainage_d.currentField())
         
-        self.gestion_parametre.getParam("layer_rtss").setValue(self.cbx_layer_rtss.currentText())
-        self.gestion_parametre.getParam("field_num_rtss").setValue(self.cbx_field_rtss.currentField())
-        self.gestion_parametre.getParam("field_chainage_fin").setValue(self.cbx_field_chainage.currentField())
-        self.gestion_parametre.getParam("field_classification").setValue(self.cbx_field_class.currentField())
-        self.gestion_parametre.getParam("field_chainage_debut").setValue(self.cbx_field_chainage_d.currentField())
-        
-        self.gestion_parametre.getParam("suivi_plugin_update").setValue(self.chx_follow_update.isChecked())
-        self.gestion_parametre.getParam("formater_rtss").setValue(self.chx_format_rtss.isChecked())
-        self.gestion_parametre.getParam("formater_chainage").setValue(self.chx_format_chainage.isChecked())
-        self.gestion_parametre.getParam("use_only_on_visible").setValue(self.chx_use_visible.isChecked())
-        self.gestion_parametre.getParam("precision_chainage").setValue(self.spx_precision.value())
-        self.gestion_parametre.getParam("layer_ecusson_name").setValue(self.txt_layer_ecusson.text())
-        self.gestion_parametre.getParam("layer_ecusson_field_route").setValue(self.txt_champ_route.text())
-        self.gestion_parametre.getParam("layer_ecusson_field_classe").setValue(self.txt_champ_classe.text())
-        self.gestion_parametre.getParam("layer_ecusson_style").setValue(self.txt_sybologie_ecusson.text())
-        self.gestion_parametre.getParam("layer_chainage_style").setValue(self.txt_sybologie_chainage.text())
+        self.params.setValue("suivi_plugin_update", self.chx_follow_update.isChecked())
+        self.params.setValue("load_custom_expressions", self.chx_add_expressions.isChecked())
+        self.params.setValue("formater_rtss", self.chx_format_rtss.isChecked())
+        self.params.setValue("formater_chainage", self.chx_format_chainage.isChecked())
+        self.params.setValue("show_copie_menu_formater", self.chk_copie_formater.isChecked())
+        self.params.setValue("show_copie_menu_info", self.chk_copie_info_rtss.isChecked())
+        self.params.setValue("show_copie_menu_non_formater", self.chk_copie_non_formater.isChecked())
+        self.params.setValue("use_only_on_visible", self.chx_use_visible.isChecked())
+        self.params.setValue("keep_marker_suivi_chainage", self.chk_keep_marker.isChecked())
+        self.params.setValue("precision_chainage", self.spx_precision.value())
+        self.params.setValue("precision_mesure", self.spx_precision_mesure.value())
+        self.params.setValue("precision_distance", self.spx_precision_dist.value())
+        self.params.setValue("layer_ecusson_name", self.txt_layer_ecusson.text())
+        self.params.setValue("layer_ecusson_field_route", self.txt_champ_route.text())
+        self.params.setValue("layer_ecusson_field_classe", self.txt_champ_classe.text())
+        self.params.setValue("layer_ecusson_style", self.txt_sybologie_ecusson.text())
+        self.params.setValue("layer_chainage_style", self.txt_sybologie_chainage.text())
+        self.params.setValue("layer_transect_style", self.txt_sybologie_transect.text())
+        self.params.setValue("layer_atlas_style", self.txt_sybologie_atlas.text())
+        self.params.setValue("pos_marqueur_arrondi", self.chx_marqueur_exact.isChecked())
+
+        # Save the settings for the context layer tab
+        self.saveContextLayerSettings()
         
         # Set raccourci pour le suivi du chainage
         set_raccourci = self.chk_shorcut_chainage.isChecked()
-        self.gestion_parametre.getParam("use_raccourcis_chainage").setValue(set_raccourci)
-        if set_raccourci: self.gestion_parametre.getParam("raccourcis_clavier").setValue(self.key_shortcut.keySequence().toString())
+        self.params.setValue("use_raccourcis_chainage", set_raccourci)
+        if set_raccourci: self.params.setValue("raccourcis_clavier", self.key_shortcut.keySequence().toString())
         # Set raccourci pour le placement d'éccussons
         set_raccourci = self.chk_shorcut_ecusson.isChecked()
-        self.gestion_parametre.getParam("use_raccourcis_ecusson").setValue(set_raccourci)
-        if set_raccourci: self.gestion_parametre.getParam("raccourcis_clavier_ecusson").setValue(self.key_shortcut_ecusson.keySequence().toString())
-        
-        self.gestion_parametre.getParam("font_on_map").setValue(self.mFontButton.currentFont())
-        self.gestion_parametre.getParam("color_font_on_map").setValue(self.mColorButton.color().name())
+        self.params.setValue("use_raccourcis_ecusson", set_raccourci)
+        if set_raccourci: self.params.setValue("raccourcis_clavier_ecusson", self.key_shortcut_ecusson.keySequence().toString())
+        # Set raccourci pour la mesure de distance
+        set_raccourci = self.chk_shorcut_distance.isChecked()
+        self.params.setValue("use_raccourcis_distance", set_raccourci)
+        if set_raccourci: self.params.setValue("raccourcis_clavier_distance", self.key_shortcut_distance.keySequence().toString())
+        # Set raccourci pour le snapping parralele
+        if self.chk_shorcut_parallele.isChecked(): raccourci = self.key_shortcut_parallele.keySequence().toString()
+        else: raccourci = ""
+        self.params.setValue("raccourcis_clavier_parralele", raccourci)
+        # Set raccourci pour le snapping perpendiculaire
+        if self.chk_shorcut_perpendiculaire.isChecked(): raccourci = self.key_shortcut_perpendiculaire.keySequence().toString()
+        else: raccourci = ""
+        self.params.setValue("raccourcis_clavier_perpendiculaire", raccourci)
+
+        self.params.setValue("font_on_map", self.mFontButton.currentFont())
+        self.params.setValue("color_font_on_map", self.btn_color_chaine.color().name())
+        self.params.setValue("mesure_line_color", self.btn_color_dist.color().name())
         
         group_box_check = self.gbx_show_tooltip.isChecked()
         for param_name, widget in self.checkbox_tooltip.items():
-            if group_box_check: self.gestion_parametre.getParam(param_name).setValue(widget.isChecked())
-            else: self.gestion_parametre.getParam(param_name).setValue(False)
+            if group_box_check: self.params.setValue(param_name, widget.isChecked())
+            else: self.params.setValue(param_name, False)
         
         for action_name, widget in self.widgets_action.items():
-            action = self.gestion_parametre.getAction(action_name)
-            if action.getValue() != widget.isChecked(): action.setValue(widget.isChecked())
+            action = self.params.getAction(action_name)
+            if action.get() != widget.isChecked(): action.set(widget.isChecked())
         self.close()
-        
+        Utilitaire.succesMessage(self.iface, " Les paramètres enregistrés avec succès!", subject="Plugin chainage MTQ:")
+    
+    def saveContextLayerSettings(self):
+        """ Permet d'enregistrer les paramètres pour la Tab de la couche de context """
+        self.params.setValue("context_layer", self.cbx_layer_context.currentText())
+        self.params.setValue("field_context_value", self.cbx_field_value.currentField())
+        self.params.setValue("field_context_route", self.cbx_field_route.currentField())
+        self.params.setValue("dist_interpolation", self.spx_dist_interpolation.value())
+        self.params.setValue("intervalle_interpolation", self.spx_intervalle_interpolation.value())
+
     def choisirQML(self, line_edit):
         line_edit.setText(choisirFichier("Ouvrir un fichier de style", "QGIS Layer Settings (*.qml)", line_edit.text()))
         
-    
-    def checkKeyShortcut(self, key_sequence):
-        self.valide_key_chainage = False
-        if key_sequence.toString() != self.gestion_parametre.getParam("raccourcis_clavier").getValue():
-            if checkIfKeySequenceExists(key_sequence): 
-                self.lbl_key_sequence.setText(
-                    f"Attention! Le raccourci {key_sequence.toString()} est déjà associé à une action")
-                self.valide_key_chainage = True
-        if not self.valide_key_ecusson and not self.valide_key_chainage: self.lbl_key_sequence.setText("")
-    
-    def checkKeyShortcut2(self, key_sequence):
-        self.valide_key_ecusson = False
-        if key_sequence.toString() != self.gestion_parametre.getParam("raccourcis_clavier_ecusson").getValue():
+    def checkKeyShortcutChainage(self, key_sequence):
+        validation_text = ""
+        if key_sequence.toString() != self.params.getValue("raccourcis_clavier"):
             if checkIfKeySequenceExists(key_sequence):
-                self.lbl_key_sequence.setText(
-                    f"Attention! Le raccourci {key_sequence.toString()} est déjà associé à une action")
-                self.valide_key_ecusson = True
-        if not self.valide_key_ecusson and not self.valide_key_chainage: self.lbl_key_sequence.setText("")
+                validation_text = f"Attention! Le raccourci {key_sequence.toString()} est déjà associé à une action"
+        self.lbl_key_chainage.setText(validation_text)
+    
+    def checkKeyShortcutEcusson(self, key_sequence):
+        validation_text = ""
+        if key_sequence.toString() != self.params.getValue("raccourcis_clavier_ecusson"):
+            if checkIfKeySequenceExists(key_sequence):
+                validation_text = f"Attention! Le raccourci {key_sequence.toString()} est déjà associé à une action"
+        self.lbl_key_ecusson.setText(validation_text)
+
+    def checkKeyShortcutDistance(self, key_sequence):
+        validation_text = ""
+        if key_sequence.toString() != self.params.getValue("raccourcis_clavier_distance"):
+            if checkIfKeySequenceExists(key_sequence):
+                validation_text = f"Attention! Le raccourci {key_sequence.toString()} est déjà associé à une action"
+        self.lbl_key_distance.setText(validation_text)
         
-        
-pass
+    def generateContextLayerIndex(self):
+        """ Permet d'enregistrer les paramètres et d'emmetre le signal pour générer le réseau """
+        self.saveContextLayerSettings()
+        self.generate_index.emit()
