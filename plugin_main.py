@@ -32,6 +32,11 @@ from qgis.gui import QgsMapMouseEvent, QgisInterface
 import os
 import copy
 
+import sys
+# Get the current directory and add 'rapidfuzz' to the sys.path
+extra_packages = os.path.join(os.path.dirname(__file__), 'mtq/packages')
+if not extra_packages in sys.path: sys.path.append(extra_packages)
+
 # Import from Plugin
 from .modules.provider import Provider
 

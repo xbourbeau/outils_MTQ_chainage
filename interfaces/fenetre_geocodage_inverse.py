@@ -269,7 +269,7 @@ class fenetreGeocodageInverse(QDialog, FORM_CLASS):
             # Changer les valeurs de l'entité au dictionnaire des résultats
             layer.changeAttributeValues(feat.id(), atts)
             # Show progress
-            self.progressBar.setValue(i*100/nbr_feature)
+            self.progressBar.setValue(int(i*100/nbr_feature))
 
     def geocoderInverseLayerLine(self, layer:QgsVectorLayer):
         # Nombre d'entité à calculer
@@ -316,7 +316,7 @@ class fenetreGeocodageInverse(QDialog, FORM_CLASS):
             # Changer les valeurs de l'entité au dictionnaire des résultats
             layer.changeAttributeValues(feat.id(), atts)
             # Show progress
-            self.progressBar.setValue(i*100/nbr_feature)
+            self.progressBar.setValue(int(i*100/nbr_feature))
 
     def geocoderInverseLayerPolygon(self, layer:QgsVectorLayer):
         # Nombre d'entité à calculer
@@ -362,4 +362,4 @@ class fenetreGeocodageInverse(QDialog, FORM_CLASS):
             # Changer les valeurs de l'entité au dictionnaire des résultats
             layer.changeAttributeValues(feat.id(), atts)
             # Show progress
-            self.progressBar.setValue(i*100/nbr_feature)
+            self.progressBar.setValue(int(i*100/nbr_feature))
