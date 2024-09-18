@@ -42,21 +42,24 @@ def copyVectorLayer(source_layer: QgsVectorLayer, epsg=None):
 
     return destination_layer
 
-def validateLayer(layer_name:str, fields_name=[], geom_type=None):
+def validateLayer(layer_name:str, fields_name=[], geom_type=None, crs_authid=None):
     """
     Fonction qui valide si une couche avec des champs et géometrie existe dans le projet.
     Args:
         layer_name (str): Nom de la couche
         fields_name (list of str): Nom des champs que la couche doit contenir
         geom_type (int): Le type de géometrie de la couche
+        crs_authid (str): La projection de la couche à verifier. Ex: crs_authid="EPSG:3798")
     """
     # Vérifier pour chaque couche avec le même nom laquel est la bonne
     for layer in QgsProject.instance().mapLayersByName(layer_name):
-        if layer.type() == 0:
-            if geom_type is None or layer.geometryType() == geom_type:
-                # Vérifier si le champs se retrouve dans la couche
-                liste_fields = [field.name() for field in layer.fields()]
-                if set(fields_name).issubset(liste_fields): return layer    
+        if layer.type() != 0: continue
+        if layer.geometryType() != geom_type and geom_type is not None: continue
+        if layer.crs().authid() != crs_authid and crs_authid is not None: continue
+        # Vérifier si le champs se retrouve dans la couche
+        liste_fields = [field.name() for field in layer.fields()]
+        if set(fields_name).issubset(liste_fields): return layer
+
     # Not Succesful
     return None 
 

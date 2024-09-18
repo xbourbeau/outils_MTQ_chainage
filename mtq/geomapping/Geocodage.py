@@ -379,8 +379,9 @@ class Geocodage:
         Return (list): Liste des objet FeatRTSS qui commence par la valeur demander
         """ 
         # Retourner les FeatRTSS qui commence
-        if isinstance(rtss, str): 
-            rtss = ''.join([i for i in rtss if i in "1234567890abcdefghijklmnopqrstuvwxyz"])
+        if not isinstance(rtss, str): rtss = str(rtss)
+        rtss = rtss.upper()
+        rtss = ''.join([i for i in rtss if i in "1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ"])
         return [val for val in self.dict_rtss.values() if val.startWith(rtss)]
 
     def getListRTSS(self, formater=True, sorted=False):

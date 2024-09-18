@@ -1,10 +1,5 @@
 from typing import Dict
 
-# Nom de la couche des RTSS 
-DEFAULT_NOM_COUCHE_RTSS = 'BGR - RTSS'
-# Nom du champ qui contient les RTSS 
-DEFAULT_NOM_CHAMP_RTSS = 'num_rts'
-
 class RTSS:
     """ 
     Un objet qui représente un RTSS (route-tronçon-section-sous route)
@@ -169,10 +164,11 @@ class RTSS:
         Args:
             - value (str/int): Le rtss à définir
         """
-        if not isinstance(value, str): value = str(value)
-        if " " in value: value = value.replace(" ", "")
-        if "-" in value: value = value.replace('-', '')
-        if len(value) >= 11:  value = value.rjust(14, '0')
+        #if not isinstance(value, str): value = str(value)
+        #if " " in value: value = value.replace(" ", "")
+        #if "-" in value: value = value.replace('-', '')
+        #if len(value) >= 11:  value = value.rjust(14, '0')
+        value = RTSS.verifyFormatRTSS(value)
         if len(value) != 14: raise ValueError("Le numero du RTSS est invalide, il doit contenir 14 caracteres")
         self.num_rts = value
     
@@ -188,6 +184,7 @@ class RTSS:
 
     def startWith(self, value):
         """ Permet de vérifier si la valeur est le début du RTSS"""
+        value = str(value).upper()
         if value == self.value()[:len(value)]: return True
         if value == self.value(formater=True)[:len(value)]: return True
         if value == self.value(zero=False)[:len(value)]: return True
@@ -216,12 +213,13 @@ class RTSS:
         Fonction qui permet de toujours renvoyer un rtss non formater valide.
 
         Args:
-            - point (str/int): Le rtss à vérifier
+            - rtss (str): Le rtss à vérifier
         """
         if not isinstance(rtss, str): rtss = str(rtss)
         if " " in rtss: rtss = rtss.replace(" ", "")
         if "-" in rtss: rtss = RTSS.deformaterRTSS(rtss)
         if len(rtss) >= 11:  rtss = rtss.rjust(14, '0')
+        rtss = rtss.upper()
         return rtss
     
     
