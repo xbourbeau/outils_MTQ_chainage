@@ -212,6 +212,8 @@ class fenetreParametre(QDialog, FORM_CLASS):
         self.chx_marqueur_exact.setChecked(self.params.getValue("pos_marqueur_arrondi"))
         self.spx_dist_interpolation.setValue(self.params.getValue("dist_interpolation"))
         self.spx_intervalle_interpolation.setValue(self.params.getValue("intervalle_interpolation"))
+        self.gbx_create_layer_chainage.setChecked(self.params.getValue("use_layer_recherche_chainage"))
+        self.layer_chainage_name.setText(self.params.getValue("layer_recherche_chainage_name"))
 
         # Définir les case à cocher du groupe pour afficher un tooltip
         group_box_check = False
@@ -255,6 +257,8 @@ class fenetreParametre(QDialog, FORM_CLASS):
         self.params.setValue("layer_transect_style", self.txt_sybologie_transect.text())
         self.params.setValue("layer_atlas_style", self.txt_sybologie_atlas.text())
         self.params.setValue("pos_marqueur_arrondi", self.chx_marqueur_exact.isChecked())
+        self.params.setValue("use_layer_recherche_chainage", self.gbx_create_layer_chainage.isChecked())
+        self.params.setValue("layer_recherche_chainage_name", self.layer_chainage_name.text())
 
         # Save the settings for the context layer tab
         self.saveContextLayerSettings()

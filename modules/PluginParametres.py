@@ -48,7 +48,6 @@ class PluginParametres(GestionParametre):
         self.plugin_dir = os.path.dirname(os.path.dirname(__file__))
         # Définir les chemins par défault à l'interieur du plugin
         path_to_default_style_eccusson = os.path.realpath(os.path.join(self.plugin_dir, 'styles\styles_ecusson.qml'))
-        path_to_eccusson_backgroud = os.path.realpath(os.path.join(self.plugin_dir, 'styles'))
         path_to_default_style_atlas = os.path.realpath(os.path.join(self.plugin_dir, 'styles\styles_atlas.qml'))
         path_to_default_style_chainage = os.path.realpath(os.path.join(self.plugin_dir, 'styles\point_de_chainage.qml'))
         path_to_default_style_transect = os.path.realpath(os.path.join(self.plugin_dir, 'styles\styles_transect.qml'))
@@ -221,12 +220,6 @@ class PluginParametres(GestionParametre):
                 categorie=categorie_config,
                 setting_name="raccourcis_clavier_distance",
                 default_value='D'),
-            # Paramètre: Chemin vers les écussons vide par défault
-            "ecusson_path": Parametre(
-                plugin_name=plugin_name,
-                categorie=categorie_config,
-                setting_name="ecusson_path",
-                default_value=path_to_eccusson_backgroud),
             # Paramètre: Chemin vers le fichier qml de style pour la couche des points de chainage
             "layer_chainage_style": Parametre(
                 plugin_name=plugin_name,
@@ -341,6 +334,18 @@ class PluginParametres(GestionParametre):
                 categorie=categorie_config,
                 setting_name="load_custom_expressions",
                 default_value=True),
+            # Paramètre: Créer une couche lors de la recherche par chainage
+            "use_layer_recherche_chainage": ParametreBool(
+                plugin_name=plugin_name,
+                categorie=categorie_option,
+                setting_name="use_layer_recherche_chainage",
+                default_value=False),
+            # Paramètre: Le nom de la couche à créer pour la création de point lors de la recherche par chainage
+            "layer_recherche_chainage_name": Parametre(
+                plugin_name=plugin_name,
+                categorie=categorie_config,
+                setting_name="layer_recherche_chainage_name",
+                default_value="Recherche chainage MTQ"),
             # Paramètre: Chemin vers le répertoire des fichier ZIP des versions du plugin
             "dossier_plugin_update": Parametre(
                 plugin_name=plugin_name,

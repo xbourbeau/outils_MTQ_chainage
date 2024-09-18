@@ -32,7 +32,7 @@
       <enum>QTabWidget::Rounded</enum>
      </property>
      <property name="currentIndex">
-      <number>8</number>
+      <number>1</number>
      </property>
      <property name="iconSize">
       <size>
@@ -601,23 +601,7 @@
             <height>752</height>
            </rect>
           </property>
-          <layout class="QGridLayout" name="gridLayout_26">
-           <item row="4" column="0">
-            <spacer name="verticalSpacer_18">
-             <property name="orientation">
-              <enum>Qt::Vertical</enum>
-             </property>
-             <property name="sizeType">
-              <enum>QSizePolicy::Fixed</enum>
-             </property>
-             <property name="sizeHint" stdset="0">
-              <size>
-               <width>10</width>
-               <height>10</height>
-              </size>
-             </property>
-            </spacer>
-           </item>
+          <layout class="QGridLayout" name="gridLayout_30">
            <item row="1" column="0">
             <spacer name="verticalSpacer_5">
              <property name="orientation">
@@ -634,20 +618,64 @@
              </property>
             </spacer>
            </item>
-           <item row="7" column="0" colspan="2">
-            <spacer name="verticalSpacer_2">
-             <property name="orientation">
-              <enum>Qt::Vertical</enum>
-             </property>
-             <property name="sizeHint" stdset="0">
-              <size>
-               <width>20</width>
-               <height>40</height>
-              </size>
-             </property>
-            </spacer>
+           <item row="2" column="0" colspan="2">
+            <layout class="QVBoxLayout" name="verticalLayout_7">
+             <item>
+              <layout class="QHBoxLayout" name="horizontalLayout_2">
+               <item>
+                <widget class="QCheckBox" name="chk_shorcut_chainage">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>125</width>
+                   <height>0</height>
+                  </size>
+                 </property>
+                 <property name="text">
+                  <string>Suivre le chainage:</string>
+                 </property>
+                 <property name="checked">
+                  <bool>true</bool>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QKeySequenceEdit" name="key_shortcut">
+                 <property name="minimumSize">
+                  <size>
+                   <width>100</width>
+                   <height>0</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>16777215</width>
+                   <height>16777215</height>
+                  </size>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </item>
+             <item>
+              <widget class="QLabel" name="lbl_key_chainage">
+               <property name="styleSheet">
+                <string notr="true">font: bold italic 9pt &quot;Arial&quot;;
+color:rgb(255, 0, 0)</string>
+               </property>
+               <property name="text">
+                <string/>
+               </property>
+              </widget>
+             </item>
+            </layout>
            </item>
-           <item row="3" column="0">
+           <item row="3" column="0" colspan="2">
             <widget class="QGroupBox" name="gbx_show_tooltip">
              <property name="toolTip">
               <string>Permets d'afficher les informations suivantes à côté du curseur de la souris</string>
@@ -838,71 +866,7 @@
              </layout>
             </widget>
            </item>
-           <item row="5" column="0">
-            <widget class="QCheckBox" name="chk_keep_marker">
-             <property name="text">
-              <string>Toujours garder le marqueur de la postion dans la carte</string>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="0">
-            <layout class="QVBoxLayout" name="verticalLayout_7">
-             <item>
-              <layout class="QHBoxLayout" name="horizontalLayout_2">
-               <item>
-                <widget class="QCheckBox" name="chk_shorcut_chainage">
-                 <property name="sizePolicy">
-                  <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                   <horstretch>0</horstretch>
-                   <verstretch>0</verstretch>
-                  </sizepolicy>
-                 </property>
-                 <property name="minimumSize">
-                  <size>
-                   <width>125</width>
-                   <height>0</height>
-                  </size>
-                 </property>
-                 <property name="text">
-                  <string>Suivre le chainage:</string>
-                 </property>
-                 <property name="checked">
-                  <bool>true</bool>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QKeySequenceEdit" name="key_shortcut">
-                 <property name="minimumSize">
-                  <size>
-                   <width>100</width>
-                   <height>0</height>
-                  </size>
-                 </property>
-                 <property name="maximumSize">
-                  <size>
-                   <width>16777215</width>
-                   <height>16777215</height>
-                  </size>
-                 </property>
-                </widget>
-               </item>
-              </layout>
-             </item>
-             <item>
-              <widget class="QLabel" name="lbl_key_chainage">
-               <property name="styleSheet">
-                <string notr="true">font: bold italic 9pt &quot;Arial&quot;;
-color:rgb(255, 0, 0)</string>
-               </property>
-               <property name="text">
-                <string/>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </item>
-           <item row="6" column="0">
+           <item row="6" column="0" colspan="2">
             <widget class="QCheckBox" name="chx_marqueur_exact">
              <property name="toolTip">
               <string>Si décoché, le marqueur sur le RTSS représent exactement le point le plus proche sur le RTSS. Sinon il représente le chainage arrondie</string>
@@ -912,7 +876,49 @@ color:rgb(255, 0, 0)</string>
              </property>
             </widget>
            </item>
-           <item row="0" column="0">
+           <item row="8" column="0" colspan="2">
+            <widget class="QGroupBox" name="gbx_create_layer_chainage">
+             <property name="title">
+              <string>Créer une couche avec le résultat de la recherche par chainage</string>
+             </property>
+             <property name="checkable">
+              <bool>true</bool>
+             </property>
+             <property name="checked">
+              <bool>false</bool>
+             </property>
+             <layout class="QGridLayout" name="gridLayout_26">
+              <item row="0" column="0">
+               <layout class="QHBoxLayout" name="horizontalLayout_29">
+                <item>
+                 <widget class="QLabel" name="label_37">
+                  <property name="text">
+                   <string>Nom de la couche:</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QLineEdit" name="layer_chainage_name"/>
+                </item>
+               </layout>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item row="9" column="1">
+            <spacer name="verticalSpacer_2">
+             <property name="orientation">
+              <enum>Qt::Vertical</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>20</width>
+               <height>40</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+           <item row="0" column="0" colspan="2">
             <widget class="QLabel" name="label_28">
              <property name="font">
               <font>
@@ -933,6 +939,45 @@ color:rgb(255, 0, 0)</string>
               <set>Qt::AlignBottom|Qt::AlignHCenter</set>
              </property>
             </widget>
+           </item>
+           <item row="4" column="0">
+            <spacer name="verticalSpacer_18">
+             <property name="orientation">
+              <enum>Qt::Vertical</enum>
+             </property>
+             <property name="sizeType">
+              <enum>QSizePolicy::Fixed</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>10</width>
+               <height>10</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+           <item row="5" column="0" colspan="2">
+            <widget class="QCheckBox" name="chk_keep_marker">
+             <property name="text">
+              <string>Toujours garder le marqueur de la postion dans la carte</string>
+             </property>
+            </widget>
+           </item>
+           <item row="7" column="0">
+            <spacer name="verticalSpacer_22">
+             <property name="orientation">
+              <enum>Qt::Vertical</enum>
+             </property>
+             <property name="sizeType">
+              <enum>QSizePolicy::Fixed</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>20</width>
+               <height>10</height>
+              </size>
+             </property>
+            </spacer>
            </item>
           </layout>
          </widget>

@@ -58,6 +58,7 @@ from .modules.ToolbarWidjet import ToolbarWidjet
 from .modules.TemporaryGeometry import TemporaryGeometry
 from .modules.PluginParametres import PluginParametres
 from .modules.CompleterRTSS import CompleterRTSS
+from .modules.PluginTemporaryLayer import PluginTemporaryLayer
 
 from .tasks.TaskGenerateReseauSegementation import TaskGenerateReseauSegementation
 
@@ -995,6 +996,14 @@ class MtqPluginChainage:
         try:
             flash_geom = []
             extent = QgsRectangle()
+            
+            # Vérifier si l'option de créer un point lors de la recherche par chainage est actif
+            add_to_layer_chainage = self.params.getValue("use_layer_recherche_chainage")
+            if add_to_layer_chainage:
+                # Définir la couche
+                layer_chainage = PluginTemporaryLayer.createLayerChainage(self.canvas, self.layer_rtss.crs().authid())
+                feats_chainage = []
+
             # Parcourir les objets featRTSS pour le numéro de route cherché
             for feat_rtss in self.geocode.getRTSSFromText(self.txt_rtss.text()):
                 # Zoom sur le RTSS ou une partie dépendament du chainage
@@ -1006,8 +1015,21 @@ class MtqPluginChainage:
                     geom = feat_rtss.geocoderPointFromChainage(use_chainage)
                     flash_geom.append(geom)
                     extent.combineExtentWith(geom.buffer(100, 5).boundingBox())
+                    # Ajouter le point au chainage recherché si l'option est actif
+                    if add_to_layer_chainage: feats_chainage.append(QgsVectorLayerUtils.createFeature(layer_chainage, geom))
+
         # Afficher le message
-        except: Utils.warningMessage(self.iface, "Oups! Un problème est survenu avec la recherche...")
+        except: return Utils.warningMessage(self.iface, "Oups! Un problème est survenu avec la recherche...")
+        
+        # Vérifier si l'option de créer un point est actif
+        if add_to_layer_chainage:
+            try:
+                # Mettre la couche en edition
+                if not layer_chainage.isEditable(): layer_chainage.startEditing()
+                layer_chainage.addFeatures(feats_chainage)
+            # Afficher le message
+            except: Utils.warningMessage(self.iface, "Oups! Un problème est survenu la couche des points de chainages...")
+        
         try:
             if flash_geom:
                 # Vérifier si le bounding box doit être reprojeté
@@ -1019,10 +1041,11 @@ class MtqPluginChainage:
                 # Faire clignoter les entitées resultants 
                 self.canvas.flashGeometries(flash_geom, self.geocode.getCrs(), flashes=3, duration=500)
         # Afficher le message
-        except: Utils.warningMessage(self.iface, "Oups! Un problème est survenu avec le repérange dans la carte...")
+        except: return Utils.warningMessage(self.iface, "Oups! Un problème est survenu avec le repérange dans la carte...")
         
     def zoomToFeatChainage(self):
         """ Permet de zoomer la carte sur le chainage entréer """
         # Numéro du RTSS et Chainage
         chainage = Chainage.verifyFormatChainage(self.txt_chainage.text())
+
         self.zoomToFeat(chainage)
