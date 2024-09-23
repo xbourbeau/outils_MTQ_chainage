@@ -1,14 +1,13 @@
 # -*- coding: utf-8 -*-
-from qgis.core import (QgsGeometry, QgsVectorLayerUtils, 
-    QgsField, QgsVectorLayer, QgsExpressionContextUtils, QgsApplication)
+from qgis.core import QgsVectorLayerUtils, QgsApplication
 from qgis.gui import QgsMapTool, QgsMapCanvas, QgisInterface
-from qgis.PyQt.QtCore import QVariant
 
 from ..mtq.core import Geocodage, Utilitaire
-from ..mtq.functions import reprojectGeometry, validateLayer
+from ..mtq.functions import reprojectGeometry
+
 from ..modules.PluginParametres import PluginParametres
-from ..functions.addLayerToMap import addLayerToMap
 from ..modules.TemporaryGeometry import TemporaryGeometry
+from ..modules.PluginTemporaryLayer import PluginTemporaryLayer
 
 class MtqMapToolNewEcusson(QgsMapTool):
     """ Outil qui permet d'ajouter des points réprésentant des éccussons à une couche """
@@ -37,43 +36,32 @@ class MtqMapToolNewEcusson(QgsMapTool):
         # Geometry temporaire de la position sur le RTSS
         self.rtss_marker = TemporaryGeometry.createMarkerEcusson(self.canvas())
         
+        # Définir la couche des écussons à utiliser
+        self.layer_ecusson = PluginTemporaryLayer.getLayerEcusson(self.canvas(), self.layer_rtss.crs().authid())
+        # Définir l'index de ses champs
+        self.setFieldsIndex()
+
+        # Suivre si la couche vas être supprimer 
+        self.layer_ecusson.willBeDeleted.connect(self.deactivate)
+        self.canvas().scaleChanged.connect(self.updateTolerance)
+
+        self.updateTolerance(self.canvas().scale())
+    
+    def setFieldsIndex(self):
+        """ Permet de définir l'index des champs spécifé de la couche des éccussons """
+        # Champs à connaitre les index
         field_name = self.params.getValue("layer_ecusson_field_route")
         field_name_classe = self.params.getValue("layer_ecusson_field_classe")
         
-        self.layer_ecusson = validateLayer(self.params.getValue("layer_ecusson_name"), fields_name=[field_name], geom_type=0)
-        if not self.layer_ecusson:
-            self.layer_ecusson = self.createNewLayer()
-            path_to_ecusson = self.params.getValue("ecusson_path")
-            QgsExpressionContextUtils.setLayerVariable(self.layer_ecusson, 'path_to_ecusson', path_to_ecusson)
-        
+        # Définir l'index du champs des numéros de routes 
         self.field_index = [i for i, field in enumerate(self.layer_ecusson.fields()) if field.name() == field_name]
         if self.field_index: self.field_index = self.field_index[0]
         else: self.field_index = 0
 
+        # Définir l'index du champs de classification fonctionnelle
         self.field_index_classe = [i for i, field in enumerate(self.layer_ecusson.fields()) if field.name() == field_name_classe]
         if self.field_index_classe: self.field_index_classe = self.field_index_classe[0]
         else: self.field_index_classe = None 
-        
-        self.layer_ecusson.willBeDeleted.connect(self.deactivate)
-        self.canvas().scaleChanged.connect(self.updateTolerance)
-        self.updateTolerance(self.canvas().scale())
-    
-    def createNewLayer(self):
-        # Create layer
-        layer_ecusson = QgsVectorLayer(
-            f"point?crs={self.layer_rtss.crs().authid()}",
-            self.params.getValue("layer_ecusson_name"),
-            "memory")
-        # Add fields
-        field_route = self.params.getValue("layer_ecusson_field_route")
-        field_class = self.params.getValue("layer_ecusson_field_classe")
-        if field_route == '': field_route = "num_route"
-        if field_class == field_route or field_class == '': field_class = "Classification"
-        layer_ecusson.dataProvider().addAttributes([
-            QgsField(field_route, QVariant.String),
-            QgsField(field_class, QVariant.String)])
-        layer_ecusson.updateFields()
-        return addLayerToMap(self.canvas(), layer_ecusson, style=self.params.getValue("layer_ecusson_style"))
         
     def canvasPressEvent(self, e):
         """
