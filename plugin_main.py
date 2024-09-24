@@ -998,7 +998,7 @@ class MtqPluginChainage:
             extent = QgsRectangle()
             
             # Vérifier si l'option de créer un point lors de la recherche par chainage est actif
-            add_to_layer_chainage = self.params.getValue("use_layer_recherche_chainage")
+            add_to_layer_chainage = self.params.getValue("use_layer_recherche_chainage") and use_chainage is not None
             if add_to_layer_chainage:
                 # Définir la couche
                 layer_chainage = PluginTemporaryLayer.createLayerChainage(self.canvas, self.layer_rtss.crs().authid())
@@ -1047,5 +1047,4 @@ class MtqPluginChainage:
         """ Permet de zoomer la carte sur le chainage entréer """
         # Numéro du RTSS et Chainage
         chainage = Chainage.verifyFormatChainage(self.txt_chainage.text())
-
         self.zoomToFeat(chainage)
