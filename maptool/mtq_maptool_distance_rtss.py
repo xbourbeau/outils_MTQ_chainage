@@ -8,8 +8,10 @@ from ..mtq.geomapping.imports import Geocodage, Chainage, LineRTSS, FeatRTSS
 from ..modules.PluginParametres import PluginParametres
 from ..modules.TemporaryGeometry import TemporaryGeometry
 
+# DEV: Ajouter la possiblilité d'enregistrer la mesure dans une couches?
+
 class MtqMapToolLongueurRTSS(QgsMapToolEmitPoint):
-    
+
     def __init__(self, canvas:QgsMapCanvas, geocode:Geocodage, txt_distance):
         # Class de géocodage
         self.geocode = geocode

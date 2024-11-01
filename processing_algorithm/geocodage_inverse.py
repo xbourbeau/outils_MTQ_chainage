@@ -217,7 +217,7 @@ class GeocodageInverse(QgsProcessingAlgorithm):
         geocode = Geocodage.fromLayer(source_rtss, champ_rtss, champ_chainage, precision=precision)
         feedback.pushInfo(str(geocode.getEpsg()))
         feedback.pushInfo(f"Nombre de RTSS: {len(geocode.getListRTSS())}")
-        feedback.pushInfo(f"Précision des chainages: {geocode.precision} (ex: {Chainage.valueFormater(10**(geocode.precision*-1))})")
+        feedback.pushInfo(f"Précision des chainages: {geocode.precision} (ex: {Chainage.formaterChainage(10**(geocode.precision*-1))})")
         feedback.pushInfo("***************************************************")
         feedback.pushInfo("")
         
@@ -240,9 +240,9 @@ class GeocodageInverse(QgsProcessingAlgorithm):
             # Liste pour contenir les champs des nouveaux features
             atts = [feat[field.name()] for field in feat.fields()]
             
+            rtss = None
             # Définir le RTSS par défault de l'entité
             if champ_input_rtss:
-                rtss = None
                 feat_rtss = geocode.get(str(feat[champ_input_rtss]))
                 if feat_rtss is None: feedback.pushWarning(f"Le RTSS ({feat[champ_input_rtss]}) de l'entitée {feat.id()} n'est pas valide")
                 else: rtss = feat_rtss.getRTSS()
@@ -254,20 +254,26 @@ class GeocodageInverse(QgsProcessingAlgorithm):
                     result = geocode.geocoderInversePoint(feat.geometry(), rtss=rtss)
                     # Ajout des valeurs attributaires calculées
                     atts.append(result.getRTSS().value(format_rtss))
-                    atts.append(result.getChainage().value(format_chainage))
+                    atts.append(result.getChainage().value(format_chainage, precision=precision))
                     if offset_val: atts.append(result.getOffset())
                     
                 # Géocodage pour une couche de ligne
                 elif source.wkbType() == QgsWkbTypes.LineString:
+                    points = feat.geometry().asPolyline()
+                    # Géocodage inverse le premier point
+                    result_1 = geocode.geocoderInversePoint(points[0], rtss=rtss)
+                    # Géocodage inverse le dernier point
+                    result_2 = geocode.geocoderInversePoint(points[-1], rtss=rtss)
+
                     # Géocodage inverse
-                    result = geocode.geocoderInverseLineByExtremities(feat.geometry(), rtss=feat_rtss)
                     # Ajout des valeurs attributaires calculées
-                    atts.append(result.startPoint().getRTSS().value())
-                    atts.append(result.startChainage().value())
-                    if offset_val: atts.append(result.startOffset())
-                    atts.append(result.endPoint().getRTSS().value())
-                    atts.append(result.endChainage().value())
-                    if offset_val: atts.append(result.endOffset())
+                    atts.append(result_1.getRTSS().value(format_rtss))
+                    atts.append(result_1.getChainage().value(format_chainage, precision=precision))
+                    if offset_val: atts.append(result_1.getOffset())
+
+                    atts.append(result_2.getRTSS().value(format_rtss))
+                    atts.append(result_2.getChainage().value(format_chainage, precision=precision))
+                    if offset_val: atts.append(result_2.getOffset())
             # Informer l'utilisateur s'il y a un problème avec le géocodage inverse de l'entitée
             except: feedback.pushWarning(f"L'entitée {feat.id()} n'a pas été géocodée correctement")
                 
