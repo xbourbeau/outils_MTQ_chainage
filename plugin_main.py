@@ -85,7 +85,7 @@ class MtqPluginChainage:
         self.plugin_dir = os.path.dirname(__file__)
 
         # ******  À CHANGER LORS DE NOUVELLE MISE À JOUR **********
-        version = "3.3.1"
+        version = "3.3.2"
         self.documentation = "file://sstao00-adm005/TridentAnalyst/Plugin_chainage_mtq/Documentation/Index.html"
         # *********************************************************
 
