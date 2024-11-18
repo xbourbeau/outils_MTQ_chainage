@@ -107,6 +107,9 @@ class fenetreParametre(QDialog, FORM_CLASS):
         self.btn_symblologie_transect.setIcon(getIcon("qml"))
         self.btn_symblologie_atlas.setIcon(getIcon("qml"))
 
+        # Définir l'icon du checkbox pour montrer le marqueur de direction du RTSS
+        self.chx_marqueur_dir.setIcon(getIcon("marker_dir"))
+
         # Parcourir les widget de case a cocher et définir son état et l'icon de l'action associé
         for action_name, widget in self.widgets_action.items():
             # Action associé au widjet
@@ -183,6 +186,7 @@ class fenetreParametre(QDialog, FORM_CLASS):
         self.chx_add_expressions.setChecked(self.params.getValue("load_custom_expressions"))
         self.chx_format_rtss.setChecked(self.params.getValue("formater_rtss"))
         self.chx_format_chainage.setChecked(self.params.getValue("formater_chainage"))
+        self.chx_marqueur_dir.setChecked(self.params.getValue("show_marker_direction"))
         self.chk_copie_info_rtss.setChecked(self.params.getValue("show_copie_menu_info"))
         self.chk_copie_formater.setChecked(self.params.getValue("show_copie_menu_formater"))
         self.chk_copie_non_formater.setChecked(self.params.getValue("show_copie_menu_non_formater"))
@@ -243,6 +247,7 @@ class fenetreParametre(QDialog, FORM_CLASS):
         self.params.setValue("formater_chainage", self.chx_format_chainage.isChecked())
         self.params.setValue("show_copie_menu_formater", self.chk_copie_formater.isChecked())
         self.params.setValue("show_copie_menu_info", self.chk_copie_info_rtss.isChecked())
+        self.params.setValue("show_marker_direction", self.chx_marqueur_dir.isChecked())
         self.params.setValue("show_copie_menu_non_formater", self.chk_copie_non_formater.isChecked())
         self.params.setValue("use_only_on_visible", self.chx_use_visible.isChecked())
         self.params.setValue("keep_marker_suivi_chainage", self.chk_keep_marker.isChecked())

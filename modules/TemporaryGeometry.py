@@ -1,9 +1,28 @@
 # -*- coding: utf-8 -*-
 from qgis.gui import QgsVertexMarker, QgsMapCanvas, QgsRubberBand
-from qgis.PyQt.QtGui import QColor
-from PyQt5.QtCore import Qt
+from qgis.core import QgsSymbol
+from qgis.PyQt.QtGui import QColor, QTransform
+from PyQt5.QtGui import QPen, QBrush
+from PyQt5.QtCore import Qt, QPointF
 
 from .PluginParametres import PluginParametres
+
+class CustomMarkerDirection(QgsVertexMarker):
+    def __init__(self, canvas):
+        super().__init__(canvas)
+        size = 3
+        offset = 11
+        # Draw a custom triangle with a offset
+        self.polygon = [
+            QPointF(0, - size - offset),
+            QPointF(-size, size - offset),
+            QPointF(size, size - offset)]
+
+    def paint(self, painter):
+        # Customize marker appearance
+        painter.setPen(QPen(Qt.black, 1))
+        painter.setBrush(QBrush(QColor(0, 0, 0)))
+        painter.drawPolygon(self.polygon)
 
 class TemporaryGeometry:
 
@@ -113,6 +132,24 @@ class TemporaryGeometry:
         marker.setColor(QColor("#000000"))
         marker.setIconSize(10)
         marker.setPenWidth(2)
+        return marker
+    
+    @staticmethod
+    def createMarkerDirection(canvas:QgsMapCanvas):
+        """
+        Méthode qui permet de créer un QgsVertexMarker pour montrer la direction
+        du RTSS la plus proche de la souris dans la carte.
+        Le symbole créer est un triangle noir
+
+        Args:
+            canvas (QgsMapCanvas): La référence de la carte
+
+        Returns:
+            QgsVertexMarker: Le marker pour la direction du RTSS
+        """      
+        # Define le pointeur du chainage
+        marker = CustomMarkerDirection(canvas)
+        marker.setIconSize(25)
         return marker
     
     @staticmethod

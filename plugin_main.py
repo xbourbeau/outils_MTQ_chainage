@@ -135,6 +135,9 @@ class MtqPluginChainage:
         # Define le pointeur du chainage
         self.vertex_marker_snap = TemporaryGeometry.createMarkerChainage(self.canvas)
         self.vertex_marker_snap.hide()
+        # Define l'indicateur de direction du RTSS
+        self.vertex_marker_dir = TemporaryGeometry.createMarkerDirection(self.canvas)
+        self.vertex_marker_dir.hide()
         
         # Définir le text pour le suivi du chainage
         self.mouse_text = self.canvas.scene().addText("")
@@ -444,6 +447,7 @@ class MtqPluginChainage:
         self.canvas.layersChanged.disconnect(self.setPluginActive)
         # Retirer de la carte les géometries temporaire
         self.canvas.scene().removeItem(self.vertex_marker_snap)
+        self.canvas.scene().removeItem(self.vertex_marker_dir)
         self.canvas.scene().removeItem(self.mouse_text)
         # remove the toolbar
         del self.toolbar_chaine
@@ -638,7 +642,9 @@ class MtqPluginChainage:
             self.suivi_chainage_is_connected = False
             self.canvas.xyCoordinates.disconnect(self.updateSuiviDuChainage)
             # Retirer de la carte les géometries temporaire
-            if not self.params.getValue("keep_marker_suivi_chainage"): self.vertex_marker_snap.hide()
+            if not self.params.getValue("keep_marker_suivi_chainage"):
+                self.vertex_marker_snap.hide()
+                self.vertex_marker_dir.hide()
             self.mouse_text.hide()
     
     def setReseauSegementation(self):
@@ -711,15 +717,27 @@ class MtqPluginChainage:
                 precision=self.params.getValue("precision_chainage"))
             # Changer la position du marqueur pour le chainage arrondi
             if self.params.getValue("pos_marqueur_arrondi"): point_rtss.setChainage(chainage)
+            # Définir l'angle de la route au point
+            angle = self.geocode.getAngle(point_rtss) + self.canvas.rotation()
             # Géocoder le point sur le RTSS
             point_on_rtss = self.geocode.geocoderPoint(point_rtss, on_rtss=True).asPoint()
+
             message = "Oups! Un problème est survenu dans la reprojection..."
             # Reprojecter le point sur le rtss si nécéssaire
             if self.need_reprojection: point_on_rtss = self.crs_reverse_transform.transform(point_on_rtss)
-            message = "Oups! Le point n'a pas pu être placer..."
+            message = "Oups! Le point n'a pas pu être placé..."
             # Place le pointeur au chainage
             self.vertex_marker_snap.setCenter(point_on_rtss)
+            self.vertex_marker_snap.setRotation(angle)
             self.vertex_marker_snap.show()
+
+            message = "Oups! Le marqueur de la direction du RTSS n'a pas pu être placé..."
+            # Vérifier si le marqueur de la direction du RTSS devrait être afficher
+            if self.params.getValue("show_marker_direction"):
+                self.vertex_marker_dir.setCenter(point_on_rtss)
+                self.vertex_marker_dir.setRotation(angle)
+                self.vertex_marker_dir.show()
+            else: self.vertex_marker_dir.hide()
             
             message = "Oups! Un problème est avec le tooltip..."
             # Définir le format en fonction de la précision
@@ -741,8 +759,7 @@ class MtqPluginChainage:
                 self.mouse_text.setHtml(self.html_tooltip.format('<br>'.join(text_a_afficher)))
                 # Postion du chainage sur la carte en pixel
                 pos = self.canvas.getCoordinateTransform().transform(point_on_rtss)
-                 # Définir l'angle de la route au point
-                angle = self.geocode.getAngle(point_rtss) + self.canvas.rotation()
+                # Calculer la position X, Y du text
                 x, y = getToolTipPosition(pos, text_a_afficher, angle)
                 # Placer le text avec un offset
                 self.mouse_text.setPos(x, y)

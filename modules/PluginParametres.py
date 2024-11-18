@@ -250,6 +250,12 @@ class PluginParametres(GestionParametre):
                 categorie=categorie_option,
                 setting_name="keep_marker_suivi_chainage",
                 default_value=False),
+            # Paramètre: Montrer la direction du rtss sur l'indicateur de chainage
+            "show_marker_direction": ParametreBool(
+                plugin_name=plugin_name,
+                categorie=categorie_option,
+                setting_name="show_marker_direction",
+                default_value=False),
             # Paramètre: Précision utilisé pour de l'outil de mesure
             "precision_mesure": ParametreInt(
                 plugin_name=plugin_name,
