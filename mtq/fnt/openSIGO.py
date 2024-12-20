@@ -6,7 +6,7 @@ import math
 from .reprojections import reprojectGeometry
 from ..layers.WFSLayerMTQ import WFSLayerMTQ
 
-def openSIGO(zoom_level:int=None, center_point:QgsPointXY=None, layers_wms={}):
+def openSIGO(zoom_level:int=None, center_point:QgsPointXY=None, layers_wms={}, planiactif=False):
     """
     Permet d'ouvrir une fenêtre de SIGO selon les paramètres de l'URL
 
@@ -14,9 +14,11 @@ def openSIGO(zoom_level:int=None, center_point:QgsPointXY=None, layers_wms={}):
         zoom_level (int, optional): Le niveau de zoom de la vue SIGO. Defaults to None.
         center_point (QgsPointXY, optional): Le centre de la vue SIGO. Defaults to None.
         layers_wms (dict, optional): Dictionnaire qui contient les URL et les noms des couche à ajouter. Defaults to {}.
+        planiactif (bool): Replacer le lien SIGO par PlaniActif
     """
+    if planiactif: default_link = "https://planiactifs.transports.qc/?context=_default"
     # Lien par défaut pour ouvrir SIGO
-    default_link = "https://www.geomsp.qc/igo2/transports-quebec/?context=_default"
+    else: default_link = "https://www.geomsp.qc/igo2/transports-quebec/?context=_default"
     # Ajouter un niveau de zoom
     if zoom_level: default_link += f"&zoom={zoom_level}"
     # Ajouter un point de centre
@@ -32,7 +34,7 @@ def openSIGO(zoom_level:int=None, center_point:QgsPointXY=None, layers_wms={}):
     # Ouvrir SIGO avec le lien
     os.startfile(default_link)
 
-def openMapInSIGO(iface:QgisInterface, layers=None):
+def openMapInSIGO(iface:QgisInterface, layers=None, planiactif=False):
     """
     Fonction qui permet d'ouvrir SIGO selon l'étendue de la carte.
     Des couches peuvent êtres spécifier au besoin
@@ -62,9 +64,9 @@ def openMapInSIGO(iface:QgisInterface, layers=None):
             else: layers_wms[layer.url()] = [type_name]
 
     # Ouvrir SIGO avec les paramètres suivant
-    openSIGO(zoom_level=zoom_level, center_point=center_point, layers_wms=layers_wms)
+    openSIGO(zoom_level=zoom_level, center_point=center_point, layers_wms=layers_wms, planiactif=planiactif)
 
-def openLayersInSIGO(layers:list[WFSLayerMTQ], iface:QgisInterface=None):
+def openLayersInSIGO(layers:list[WFSLayerMTQ], iface:QgisInterface=None, planiactif=False):
     """
     Fonction qui permet d'ouvrir SIGO avec des couches spécifiée
 
@@ -93,4 +95,4 @@ def openLayersInSIGO(layers:list[WFSLayerMTQ], iface:QgisInterface=None):
             if center_point.x() == 0.0 and center_point.y() == 0.0: center_point = None
 
     # Ouvrir la vue sigo sur les couches
-    openSIGO(layers_wms=layers_wms, zoom_level=zoom_level, center_point=center_point)
+    openSIGO(layers_wms=layers_wms, zoom_level=zoom_level, center_point=center_point, planiactif=planiactif)

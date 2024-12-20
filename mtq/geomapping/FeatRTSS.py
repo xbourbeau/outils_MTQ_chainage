@@ -334,11 +334,14 @@ class FeatRTSS(RTSS):
         if on_rtss: offset = 0
         # Le suivi de la mesure de la distance de la ligne le long du RTSS
         dist_along_line = 0
-
         # Définir le premier vertex comme étant le point de début sur le RTSS
         previous_vertex = self.geocoderPointFromChainage(start_point.getChainage()).asPoint()
+        # Définir la géometrie du point de départ sur le RTSS
+        start_point_geom_on_line = self.geocoderPoint(start_point, on_rtss=True) if start_point.getOffset() != 0 else start_point.getGeometry()
+        # Définir la géometrie du point de fin sur le RTSS
+        end_point_geom_on_line = self.geocoderPoint(end_point, on_rtss=True) if end_point.getOffset() != 0 else end_point.getGeometry()
         # Parcourir les vertex entre le dernier point et le point courant
-        for vertex_idx in self.getVertexBetweenPoints(start_point.getGeometry(), end_point.getGeometry(), is_reverse):
+        for vertex_idx in self.getVertexBetweenPoints(start_point_geom_on_line, end_point_geom_on_line, is_reverse):
             # Définir la coordonnée du vertex courant
             vertex_point = QgsPointXY(self.geometry().vertexAt(vertex_idx))
             # Vérifier si la ligne à un offset de défini

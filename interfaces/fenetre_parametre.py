@@ -106,6 +106,8 @@ class fenetreParametre(QDialog, FORM_CLASS):
         self.btn_symblologie_ecusson.setIcon(getIcon("qml"))
         self.btn_symblologie_transect.setIcon(getIcon("qml"))
         self.btn_symblologie_atlas.setIcon(getIcon("qml"))
+        self.rbt_planiactif.setIcon(getIcon("igo"))
+        self.rbt_sigo.setIcon(getIcon("igo"))
 
         # Définir l'icon du checkbox pour montrer le marqueur de direction du RTSS
         self.chx_marqueur_dir.setIcon(getIcon("marker_dir"))
@@ -218,6 +220,7 @@ class fenetreParametre(QDialog, FORM_CLASS):
         self.spx_intervalle_interpolation.setValue(self.params.getValue("intervalle_interpolation"))
         self.gbx_create_layer_chainage.setChecked(self.params.getValue("use_layer_recherche_chainage"))
         self.layer_chainage_name.setText(self.params.getValue("layer_recherche_chainage_name"))
+        self.rbt_planiactif.setChecked(self.params.getValue("open_sigo_plainiactif"))
 
         # Définir les case à cocher du groupe pour afficher un tooltip
         group_box_check = False
@@ -264,6 +267,7 @@ class fenetreParametre(QDialog, FORM_CLASS):
         self.params.setValue("pos_marqueur_arrondi", self.chx_marqueur_exact.isChecked())
         self.params.setValue("use_layer_recherche_chainage", self.gbx_create_layer_chainage.isChecked())
         self.params.setValue("layer_recherche_chainage_name", self.layer_chainage_name.text())
+        self.params.setValue("open_sigo_plainiactif", self.rbt_planiactif.isChecked())
 
         # Save the settings for the context layer tab
         self.saveContextLayerSettings()

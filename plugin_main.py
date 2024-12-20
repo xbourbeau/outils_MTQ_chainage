@@ -23,7 +23,7 @@
 """
 # Import QGIS
 from qgis.PyQt.QtGui import QIcon, QKeySequence
-from qgis.PyQt.QtWidgets import QAction, QToolButton, QMenu
+from qgis.PyQt.QtWidgets import QAction, QToolButton, QMenu, QWidgetAction, QCheckBox
 from qgis.core import (QgsProject, QgsPointXY, QgsApplication, QgsCoordinateTransform,
                        QgsRectangle, Qgis, QgsExpression)
 from qgis.gui import QgsMapMouseEvent, QgisInterface
@@ -205,12 +205,19 @@ class MtqPluginChainage:
         # QFont for lineedits
         font_rep = ToolbarWidjet.createLineEditFont()
         
+        # Ajouter un menu pour désactiver le plugin
+        tool_button_setting = QToolButton(parent=self.iface.mainWindow())
+        tool_button_setting.setMenu(QMenu())
+        tool_button_setting.setToolTip("Test")
+        tool_button_setting.setPopupMode(QToolButton.MenuButtonPopup)
+        self.toolbar_chaine.addWidget(tool_button_setting)
+        
         # ------------------ Action des parametres ------------------
         dlg_params = fenetreParametre(self.iface)
         action_parametre = self.add_action(
             name='Paramètre',
             help_str='Ouvrir la fenêtre des paramètres',
-            add_to_toolbar=True,
+            add_to_toolbar=False,
             add_to_menu=True,
             callback=dlg_params.setInterfaceActive,
             parent=self.iface.mainWindow())
@@ -219,7 +226,15 @@ class MtqPluginChainage:
         dlg_params.generate_index.connect(self.generateContextLayerIndex)
         dlg_params.delete_index.connect(self.deleteContextLayerIndex)
         self.plugin_dlg.append(dlg_params)
-        
+        tool_button_setting.setDefaultAction(action_parametre)
+
+        # ------------------ Widjet checkbox ------------------
+        self.chx_plugin_is_active = QWidgetAction(tool_button_setting)
+        self.chx_plugin_is_active.setDefaultWidget(QCheckBox())
+        self.chx_plugin_is_active.defaultWidget().setText("Désactiver le module de géocodage du plugin")
+        tool_button_setting.menu().addAction(self.chx_plugin_is_active)
+        self.chx_plugin_is_active.defaultWidget().clicked.connect(lambda s: self.setPluginInactive() if s else self.setPluginActive())
+
         # ------------------ Action du suivi du RTSS/chainage ------------------
         self.tracingChainage = self.add_action(
             name='Suivre le chainage',
@@ -414,7 +429,7 @@ class MtqPluginChainage:
         action_open_sigo = self.add_action(
             name="Open SIGO",
             help_str='Ouvrir la vue courante dans SIGO',
-            callback=lambda: openMapInSIGO(self.iface),
+            callback=lambda: openMapInSIGO(self.iface, planiactif=self.params.getValue("open_sigo_plainiactif")),
             parent=self.iface.mainWindow(),
             add_to_menu=False)
             
@@ -432,8 +447,10 @@ class MtqPluginChainage:
  
     def unload(self):
         """ Removes the plugin menu item and icon from QGIS GUI."""
-        # Retirer les scripts
-        if self.provider: QgsApplication.processingRegistry().removeProvider(self.provider)
+        try:
+            # Retirer les scripts
+            if self.provider: QgsApplication.processingRegistry().removeProvider(self.provider)
+        except Exception as e: Utils.warningMessage(self.iface, f"Impossible de retirer les géotraitements: {str(e)}")
         # Désactiver le plugin
         try: self.setPluginInactive()
         except: pass
@@ -507,6 +524,7 @@ class MtqPluginChainage:
         # Load customs expressions using the plugin
         try: self.loadCustomExpressions()
         except: Utils.warningMessage(self.iface, "Les expressions du plugin n'ont pas pu être chargé!")
+        self.chx_plugin_is_active.defaultWidget().setChecked(False)
         # Indicateur que le plugin est actif
         self.plugin_is_active = True
 
@@ -517,6 +535,8 @@ class MtqPluginChainage:
         """
         if not self.plugin_is_active: return None
         self.plugin_is_active = False
+
+        self.chx_plugin_is_active.defaultWidget().setChecked(True)
         
         # Vérifier si le suivi du chainage est connecter
         if self.suivi_chainage_is_connected:
