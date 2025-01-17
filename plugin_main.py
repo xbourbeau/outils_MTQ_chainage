@@ -572,25 +572,29 @@ class MtqPluginChainage:
 
     def unloadCustomExpressions(self):
         if self.params.getValue("load_custom_expressions"):
-            QgsExpression.unregisterFunction('get_rtss')
-            QgsExpression.unregisterFunction('get_rtss_formater')
-            QgsExpression.unregisterFunction('get_chainage')
-            QgsExpression.unregisterFunction('get_chainage_formater')
-            QgsExpression.unregisterFunction('get_distance_to_rtss')
-            QgsExpression.unregisterFunction('geocoder_line')
-            QgsExpression.unregisterFunction('geocoder_point')
-            QgsExpression.unregisterFunction('geocoder_polygon')
+            try:
+                QgsExpression.unregisterFunction('get_rtss')
+                QgsExpression.unregisterFunction('get_rtss_formater')
+                QgsExpression.unregisterFunction('get_chainage')
+                QgsExpression.unregisterFunction('get_chainage_formater')
+                QgsExpression.unregisterFunction('get_distance_to_rtss')
+                QgsExpression.unregisterFunction('geocoder_line')
+                QgsExpression.unregisterFunction('geocoder_point')
+                QgsExpression.unregisterFunction('geocoder_polygon')
+            except: Utils.warningMessage(self.iface, "Les expressions du plugin n'ont pas pu être retiré.")
 
     def loadCustomExpressions(self):
         if self.params.getValue("load_custom_expressions"):
-            QgsExpression.registerFunction(get_rtss)
-            QgsExpression.registerFunction(get_rtss_formater) 
-            QgsExpression.registerFunction(get_chainage) 
-            QgsExpression.registerFunction(get_chainage_formater) 
-            QgsExpression.registerFunction(get_distance_to_rtss)
-            QgsExpression.registerFunction(geocoder_line) 
-            QgsExpression.registerFunction(geocoder_point)
-            QgsExpression.registerFunction(geocoder_polygon) 
+            try:
+                QgsExpression.registerFunction(get_rtss)
+                QgsExpression.registerFunction(get_rtss_formater) 
+                QgsExpression.registerFunction(get_chainage) 
+                QgsExpression.registerFunction(get_chainage_formater) 
+                QgsExpression.registerFunction(get_distance_to_rtss)
+                QgsExpression.registerFunction(geocoder_line) 
+                QgsExpression.registerFunction(geocoder_point)
+                QgsExpression.registerFunction(geocoder_polygon)
+            except: Utils.warningMessage(self.iface, "Les expressions du plugin n'ont pas pu être ajouté.")
 
     def setLayerRTSS(self):
         try:
