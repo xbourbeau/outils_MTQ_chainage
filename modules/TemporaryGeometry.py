@@ -167,10 +167,10 @@ class TemporaryGeometry:
         """
         segment = QgsRubberBand(canvas)
         color = QColor("#df05c6")
-        color.setAlpha(70)
+        color.setAlpha(90)
         segment.setColor(color)
-        segment.setLineStyle(Qt.DashLine)
-        segment.setWidth(1)
+        segment.setLineStyle(Qt.DashDotDotLine)
+        segment.setWidth(2)
         return segment
     
     @staticmethod

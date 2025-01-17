@@ -51,6 +51,16 @@ class fenetreGeocodageInverse(QDialog, FORM_CLASS):
         # Set up l'interface
         self.setupUi(self)
 
+        # Dictionnaire des mots clé à chercher pour chaque champs
+        self.dict_field_search = {
+            self.cbx_champ_rtss: ["rtss", "rts", "route"],
+            self.cbx_champ_chainage_d: ["chainage_d", "ch_d", "chainage", "chaine", "ch"],
+            self.cbx_champ_chainage_f: ["chainage_f", "ch_f", "chainage", "chaine", "ch"],
+            self.cbx_champ_offset_d: ["offset_d", "dist_d", "offset", "dist"],
+            self.cbx_champ_offset_f: ["offset_f", "dist_f", "offset", "dist"],
+            self.cbx_champ_context: []
+        }
+
         # Connections
         self.cbx_layer.layerChanged.connect(self.updateLayerCombobox)
         self.btn_calculer.clicked.connect(self.startGeocodageInverse)
@@ -66,15 +76,6 @@ class fenetreGeocodageInverse(QDialog, FORM_CLASS):
         # Hide the progress bar
         self.progressBar.hide()
 
-        # Dictionnaire des mots clé à chercher pour chaque champs
-        self.dict_field_search = {
-            self.cbx_champ_rtss: ["rtss", "rts", "route"],
-            self.cbx_champ_chainage_d: ["chainage_d", "ch_d", "chainage", "chaine", "ch"],
-            self.cbx_champ_chainage_f: ["chainage_f", "ch_f", "chainage", "chaine", "ch"],
-            self.cbx_champ_offset_d: ["offset_d", "dist_d", "offset", "dist"],
-            self.cbx_champ_offset_f: ["offset_f", "dist_f", "offset", "dist"],
-            self.cbx_champ_context: []
-        }
         # Définir l'image du logo de l'outil
         self.lbl_logo.setPixmap(getPixmap("geocodage_inverse"))
         self.lbl_logo.setScaledContents(True)
