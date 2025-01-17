@@ -9,7 +9,7 @@ from qgis.gui import QgisInterface
 from ..param import (
     C_ALIAS, C_DEFAULT_STYLE, C_CS, C_DT, C_ID_NAME, C_ID_TYPE, C_TYPE_DT,
     C_NAME, C_PROV, C_REQUESTS, C_SOURCE, C_STYLES, C_TAG, C_TYPE_CS, C_SEARCH_FIELDS,
-    C_DESCRIPTION, C_GEOCATALOGUE)
+    C_DESCRIPTION, C_GEOCATALOGUE, C_RECHERCHABLE)
 from ..region.imports import *
 from .LoadLayer import LoadLayer
 
@@ -19,7 +19,8 @@ class LayerMTQ:
     __slots__ = ("layer_id", "layer_name", "layer_provider", "layer_tags",
                  "key_field_name", "key_field_type", "dt_field_name", "dt_field_type",
                  "cs_field_name", "cs_field_type", "layer_styles", "default_style",
-                 "layer_requests", "layer_source", "search_fields", "description", "lien_geocatalogue")
+                 "layer_requests", "layer_source", "search_fields", "description", "lien_geocatalogue",
+                 "recherchable")
 
     def __init__(self,
                  id,
@@ -34,6 +35,7 @@ class LayerMTQ:
                  cs_field_type:str="",
                  description:str="",
                  search_fields:list[str]=[],
+                 recherchable:bool=True,
                  default_style:str=None,
                  request:Dict[str, str]={},
                  styles:Dict[str, str]={},
@@ -65,6 +67,8 @@ class LayerMTQ:
         self.setTags(tags)
         # Set les champs de recherches
         self.setSearchFields(search_fields)
+        # Set si la couche devrait recherchable dans le LayerManager
+        self.setRecherchable(recherchable)
         # Set the layer styles
         self.setStyles(styles, default_style)
         # Set the layer requests
@@ -85,6 +89,11 @@ class LayerMTQ:
             search_fields = LayerMTQ.formatField(layer_info[C_SEARCH_FIELDS], ";")
         else: search_fields = []
 
+        # Définir si la couche devrait être recherchable
+        if C_RECHERCHABLE in layer_info.index:
+            recherchable = not str(layer_info[C_RECHERCHABLE]).lower() == "non"
+        else: recherchable = True
+
         return cls(
             id=layer_name,
             name=layer_info[C_ALIAS],
@@ -98,6 +107,7 @@ class LayerMTQ:
             cs_field_type=layer_info[C_TYPE_CS],
             description=layer_info[C_DESCRIPTION] if C_DESCRIPTION in layer_info.index else "",
             search_fields=search_fields,
+            recherchable=recherchable,
             default_style=layer_info[C_DEFAULT_STYLE] if C_DEFAULT_STYLE in layer_info.index else "",
             request=literal_eval(layer_info[C_REQUESTS]) if C_REQUESTS in layer_info.index else {},
             styles=literal_eval(layer_info[C_STYLES]) if C_STYLES in layer_info.index else {},
@@ -211,6 +221,10 @@ class LayerMTQ:
     def id(self):
         """ Permet de retourner l'identifiant de la couche """
         return self.layer_id
+    
+    def isRecherchable(self):
+        """ Permet de savoir si la couche devrait être recherchable dans le layerManager """
+        return self.recherchable
 
     def getDescription(self):
         """ Permet de retourner la description de la couche si disponible """
@@ -322,6 +336,16 @@ class LayerMTQ:
     def setName(self, name:str):
         """ Permet de définir le nom de la couche """
         self.layer_name = name
+
+    def setRecherchable(self, recherchable=True):
+        """
+        Permet de définir si la couche devrait être recherchable dans le LayerManager
+
+        Args:
+            recherchable (bool): Si la couche devrait être recherchable dans le LayerManager. Defaults to True.
+        """
+        if recherchable is False: self.recherchable = False
+        else: self.recherchable = True
 
     def setRequests(self, requests:Dict[str, str]):
         """

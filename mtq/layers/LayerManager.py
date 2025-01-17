@@ -2,7 +2,7 @@
 import pandas as pd
 import os
 from typing import Union, Dict
-from qgis.core import QgsProject, QgsApplication, QgsVectorLayer
+from qgis.core import QgsProject, QgsApplication, QgsVectorLayer, QgsVectorLayerUtils
 from qgis.gui import QgisInterface
 
 # Module MTQ imports
@@ -74,7 +74,7 @@ class LayerManager:
 
     def __getitem__(self, key): 
         try: return self.layers[key]
-        except: raise KeyError(f"Le RTSS ({key}) n'est pas une couche dans le LayerManager")
+        except: raise KeyError(f"La couche ({key}) n'est pas une couche dans le LayerManager")
 
     def addLayer(self, layer_name, layer_info:pd.Series):
         """ 
@@ -519,3 +519,47 @@ class LayerManager:
         index = {layer.id(): [layer.name()] + layer.tags() for layer in self.getLayers()}
         # Mettre à jour l'engin de recherche avec l'index créer
         self.search_engine.updateSearchingIndex(index, split_word=True)
+
+    def updateLayerFromLayer(self, source_layer:str, destination_layer:str):
+        """
+        Permet de mettre à jour une couche vectoriel de format fichier à partir de la couche
+        WFS équivalente.
+
+        Les noms des champs doivent être les mêmes, mais la couche vectoriel peux avoir moins de 
+        champs que la couche source.
+
+        Args:
+            source_layer (str): Le nom de la couche WFS à utiliser pour la mise à jour dans le manager
+            destination_layer (str): Le nom de la couche à mettre à jour dans le manager
+
+        Returns (bool): Retourne True si des nouvelles entitée on été ajouté, sinon False 
+        """
+        # Déterminer la couche WFS à utiliser pour la mise à jour dans le manager
+        source_layer = self.getLayer(source_layer)
+        # Déterminer la couche à mettre à jour dans le manager
+        destination_layer = self.getLayer(destination_layer)
+        # Vérifier que les couches existe dans le manager
+        if source_layer is None or destination_layer is None: return False
+
+        try:
+            # Définir les références des champs de la couche destination à mettre à jour
+            dest_f = {field.name():i for i, field in enumerate(destination_layer.fields())}
+            # Associer les champs de la couche destination au champs de la couche source
+            ref_field = {i:dest_f[f.name()] for i, f in enumerate(source_layer.fields()) if f.name() in dest_f}
+            # Créer une liste des entitée à ajouter
+            list_of_feats = []
+            # Parcourir toute les entitée de la couche sources
+            for feat in source_layer.getFeatures():
+                # Définir les attributes de l'entité à créer pour l'entité source
+                new_atts = {ref_field[i]: att for i, att in enumerate(feat.attributes()) if i in ref_field}
+                # Créer une nouvelle entité et l'ajouter à liste des entitées de destination
+                list_of_feats.append(QgsVectorLayerUtils.createFeature(destination_layer, feat.geometry(), new_atts))
+            # Assurer que la liste des entitées n'est pas vide
+            if list_of_feats == []: return False
+            
+            # Supprimer toutes les entités de la couche de destination
+            destination_layer.dataProvider().truncate()
+            # Ajouter les nouvelles entitées dans la couche destination
+            destination_layer.dataProvider().addFeatures(list_of_feats)
+        except: return False
+        return True

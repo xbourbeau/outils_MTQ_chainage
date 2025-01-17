@@ -1,6 +1,7 @@
 import os
 import numpy as np
 from shapely.geometry import box
+from scipy.interpolate import interp1d
 
 try: 
     import processing
@@ -136,6 +137,60 @@ class Lidar:
         # Retirer les points avec une élévation Null (extrémitée) 
         return points_z[~np.isnan(points_z).any(axis=1)]
 
+    def exagerationVertical(self, output, exageration=5):
+        # Load the .laz file
+        point_cloud = laspy.read(self.file())
+        
+        z = point_cloud.z
+
+        new_z = z*exageration
+
+        # Create a new point cloud with the modified Z values
+        new_point_cloud = point_cloud
+        # Update the Z values for the filtered points
+        new_point_cloud.z = new_z
+        # Save the modified point cloud to a new .laz file
+        new_point_cloud.write(output)
+
+        return Lidar(output)
+    
+    def interpolatePoints(self, points, points_per_m):
+        """
+        Interpolate points along a 3D polyline defined by multiple points.
+        
+        Parameters:
+        points: array-like, shape (N, 3) - List of points defining the polyline [(x1,y1,z1), (x2,y2,z2), ...]
+        points_per_m: int - Number of points to generate per meters (including endpoints)
+        
+        Returns:
+        numpy.ndarray: Array containing the interpolated points for the entire polyline
+        """
+        # Convert input points to numpy array
+        points = np.array(points)
+        # Check if we have at least 2 points
+        if len(points) < 2: raise ValueError("At least 2 points are required to define a polyline")
+        # Initialize list to store interpolated points
+        interpolated_segments = []
+        # Process each segment
+        for i in range(len(points) - 1):
+            start, end = points[i], points[i + 1]
+            distance = np.sqrt(np.sum((start - end) ** 2))
+            # Create parameter t from 0 to 1
+            t = np.linspace(0, 1, points_per_m*distance)
+            # Interpolate each dimension
+            x = start[0] + (end[0] - start[0]) * t
+            y = start[1] + (end[1] - start[1]) * t
+            z = start[2] + (end[2] - start[2]) * t
+            # Stack coordinates into a single array
+            segment_points = np.column_stack((x, y, z))
+            # For all segments except the last one, exclude the last point
+            # to avoid duplicates at segment joints
+            if i < len(points) - 2: segment_points = segment_points[:-1]
+            interpolated_segments.append(segment_points)
+        
+        # Combine all segments
+        return np.vstack(interpolated_segments)
+
     def applatir(self, output, line_coords):
         # Load the .laz file
         point_cloud = laspy.read(self.file())
@@ -145,12 +200,12 @@ class Lidar:
         z = point_cloud.z
         
         # Sample points along the line
-        sampled_points = np.array(line_coords)
+        sampled_points = np.asarray(line_coords)
         # Create a KD-Tree for efficient nearest neighbor search
-        kdtree = cKDTree(sampled_points[:, :2])
+        kdtree = cKDTree(sampled_points)
         
         # For each filtered point in the point cloud, find the closest sampled point on the line
-        distances, indices = kdtree.query(np.column_stack((x, y)))
+        distances, indices = kdtree.query(np.column_stack((x, y, z)))
         # Subtract the interpolated Z values from the filtered point cloud Z values
         new_z = z - sampled_points[indices, 2]
         

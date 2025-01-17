@@ -54,8 +54,8 @@ def validateLayer(layer_name:str, fields_name=[], geom_type=None, crs_authid=Non
     # Vérifier pour chaque couche avec le même nom laquel est la bonne
     for layer in QgsProject.instance().mapLayersByName(layer_name):
         if layer.type() != 0: continue
-        if layer.geometryType() != geom_type and geom_type is not None: continue
-        if layer.crs().authid() != crs_authid and crs_authid is not None: continue
+        if geom_type is not None and layer.geometryType() != geom_type: continue
+        if crs_authid is not None and layer.crs().authid() != crs_authid: continue
         # Vérifier si le champs se retrouve dans la couche
         liste_fields = [field.name() for field in layer.fields()]
         if set(fields_name).issubset(liste_fields): return layer

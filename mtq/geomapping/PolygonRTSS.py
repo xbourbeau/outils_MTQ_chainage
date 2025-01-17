@@ -5,6 +5,13 @@ from ..fnt.groupeValues import groupeValues
 from ..fnt.getCenterPoint import getCenterPoint
 # Importer la librairie pour des opérations trigo
 from typing import Union
+from collections import Counter
+import numpy as np
+
+try:
+    from shapely.geometry import Polygon, LineString
+    from shapely.ops import unary_union
+except: pass
 
 # Librairie MTQ
 from .RTSS import RTSS
@@ -29,15 +36,20 @@ class PolygonRTSS:
         self.setInterpolation(interpolate_on_rtss)
     
     @classmethod
-    def fromChainages(cls, rtss:Union[str, RTSS], list_chainages:list):
+    def fromChainages(cls, rtss:Union[str, RTSS], list_chainages:list, list_offsets:list, interpolate_on_rtss=True):
         """ 
-        Constructueur de l'objet LineRTSS à partir d'une list de chainage et un RTSS
+        Constructueur de l'objet PolygonRTSS sur un RTSS à partir
+        d'une liste de chainage et de offset.
 
         Args:
             - rtss (RTSS/str): Le RTSS de la ligne
             - list_chainages (list): La liste des chainages de la ligne
+            - list_offsets (list): La liste des offsets de la ligne
+            - interpolate_on_rtss (bool): Interpoler la trace du RTSS entre les points
         """
-        return cls([PointRTSS(rtss, chainage) for chainage in list_chainages])
+        return cls(
+            points=[PointRTSS(rtss, c, o) for c, o in zip(list_chainages, list_offsets)],
+            interpolate_on_rtss=interpolate_on_rtss)
             
     def __str__ (self): return str(self.points)
     
@@ -95,6 +107,10 @@ class PolygonRTSS:
         """ Permet de retourner le chainage le plus grand """
         return max([pt.getChainage() for pt in self.points])
     
+    def getCoordiantes(self):
+        """ Permet de retourner les coordonnées du polygon """
+        return [(pt.getChainage().value(), pt.getOffset()) for pt in self.points]
+    
     def getOffsetMax(self):
         """ Permet de retourner le offset le plus petit """
         return max([pt.getOffset() for pt in self.points])
@@ -107,6 +123,57 @@ class PolygonRTSS:
         """ Permet de retourner la différente maximum des offsets des points du polygon """
         offsets = [pt.getOffset() for pt in self.points]
         return abs(min(offsets) - max(offsets))
+    
+    def calculerLargeur(self):
+        """
+        Calculate the average width of a polygon by sampling multiple cross-sections.
+        
+        Args:
+            polygon_coords: List of (x, y) tuples representing polygon vertices
+            
+        Returns:
+            float: Average width of the polygon
+        """
+        # Create Shapely polygon
+        poly = Polygon(self.getCoordiantes())
+        # Get the minimum rotated rectangle
+        minbox = poly.minimum_rotated_rectangle
+        
+        # Get the major axis (longest side) of the minimum bounding rectangle
+        coords = np.array(minbox.exterior.coords)
+        distances = np.sqrt(np.sum((coords[:-1] - coords[1:]) ** 2, axis=1))
+        major_axis_length = max(distances)
+        
+        # Create evenly spaced points along the major axis
+        num_samples = int(self.getWidth()) * 2
+        major_axis = sorted([(p1, p2) for p1, p2 in zip(coords[:-1], coords[1:])], 
+                        key=lambda x: np.sqrt(np.sum((x[0] - x[1]) ** 2)))[-1]
+        start_point, end_point = major_axis
+        sample_points = np.linspace(start_point, end_point, num_samples)
+        
+        # Calculate perpendicular lines and their intersections
+        widths = []
+        for point in sample_points:
+            # Calculate perpendicular direction
+            direction = np.array([-(end_point[1] - start_point[1]), 
+                                end_point[0] - start_point[0]])
+            direction = direction / np.sqrt(np.sum(direction ** 2))
+            
+            # Create a line that's guaranteed to cross the entire polygon
+            line_length = major_axis_length * 2
+            line_start = point + direction * line_length
+            line_end = point - direction * line_length
+            
+            # Create line and get intersection
+            line = LineString([line_start, line_end])
+            intersection = line.intersection(poly)
+            
+            if not intersection.is_empty:
+                if isinstance(intersection, LineString):
+                    width = intersection.length
+                    widths.append(width)
+        
+        return float(np.mean(widths)) if widths else 0
 
     def getPoints(self):
         """ Permet de retourner la liste des PointRTSS du polygon """
@@ -179,3 +246,15 @@ class PolygonRTSS:
         if points != []:
             if points[0] != points[-1]: points.append(points[0])
         self.points = points
+
+    def side(self):
+        """ 
+        Permet de retourner le côté de la ligne le plus fréquent en terme de nombre de points
+        
+        Return: Le côté le plus fréquent (1 = Droite, -1 = Gauche, 0 = Centre)
+        """
+        # Liste des côtés des points de la ligne
+        sides = [pt.side() for pt in self.points if pt.side() != 0]
+        if not sides: return None
+        # Retourner le côté le plus fréquent
+        return Counter(sides).most_common(1)[0][0]
