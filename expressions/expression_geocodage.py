@@ -1,7 +1,121 @@
+from itertools import chain
 from qgis.core import *
 from qgis.utils import plugins
 
 GROUP_NAME = 'Géocodage MTQ'
+
+@qgsfunction(args='auto', group=GROUP_NAME, referenced_columns=[])
+def formater_rtss(rtss, feature, parent):
+  """
+  Permet de retourner un RTSS ou un RTS formaté avec les tirets<br>
+  
+  <ul>
+    <li>rtss(str) -> Le numéro du RTSS à formater</li>
+  </ul>
+  <h2>Example usage:</h2>
+  <ul>
+    <li>formater_rtss('0002001020000D') -> 00020-01-020-000D</li>
+    <li>formater_rtss('0002001020') -> 00020-01-020</li>
+  </ul>
+  """
+  sections = [sect for sect in [rtss[:5], rtss[5:7], rtss[7:10], rtss[10:]] if sect]
+  # Retourner le RTSS formater
+  return "-".join(sections)
+
+@qgsfunction(args='auto', group=GROUP_NAME, referenced_columns=[])
+def formater_chainage(chainage, feature, parent):
+    """
+    Permet de retourner un chainage formaté avec le signe de "+" qui sépare les miller<br>
+    
+    <ul>
+      <li>chainage(str ou nombre) -> La valeur du chainage à formater</li>
+    </ul>
+    <h2>Example usage:</h2>
+    <ul>
+      <li>formater_chainage('473') -> 0+473</li>
+      <li>formater_chainage(1473.48) -> 1+473,48</li>
+    </ul>
+    """
+    try:
+        if isinstance(chainage, str):
+            if "," in chainage: chainage = chainage.replace(",", ".")
+            if "." in chainage: chainage = float(chainage)
+            else: chainage = int(chainage)
+    except: raise Exception("La valeur text ne peux pas etres converti en chiffre")
+    
+    if isinstance(chainage, float): 
+        # Déterminer la précision si elle n'est pas déterminé
+        precision = [round(chainage, i) == round(chainage,10) for i in range(10)]
+        try: precision = precision.index(True)
+        except: precision = 10
+    elif isinstance(chainage, int): precision = 0
+    else: raise Exception("La valeur doit etre un text ou un chiffre")
+
+    # Determiner si le format est entier ou réel
+    if precision <= 0:
+        # Calculer le chainage arrondie selon la précision définie
+        chainage = int(round(chainage, precision))
+        # Format à appliquer pour un nombre entier
+        number_format = '{:03}'
+    # Format à appliquer pour un nombre réel avec la précision définie
+    else: number_format = '{:0%i.%if}' % (4 + precision, precision)
+    # Déterminer les milliers
+    millier = int(chainage / 1000)
+    # Retourner le nombre selon le formatage définie 
+    return str(millier) + "+" + number_format.format(chainage - (millier*1000)) 
+
+@qgsfunction(args='auto', group=GROUP_NAME, referenced_columns=[])
+def deformater_rtss(rtss, feature, parent):
+  """
+  Permet de retourner un RTSS ou un RTS à partir d'un RTSS ou un RTS formaté<br>
+  
+  <ul>
+    <li>rtss(str) -> Le numéro du RTSS à déformater</li>
+  </ul>
+  <h2>Example usage:</h2>
+  <ul>
+    <li>deformater_rtss('00020-01-020-000D') -> 0002001020000D</li>
+    <li>deformater_rtss('00020-01-020') -> 0002001020</li>
+  </ul>
+  """
+  try: return rtss.replace("-", "")
+  except: raise Exception("Impossible de retirer le tiret du RTSS")
+
+@qgsfunction(args='auto', group=GROUP_NAME, referenced_columns=[])
+def deformater_chainage(chainage, feature, parent):
+    """
+    Permet de retourner un chainage non formaté à partir d'un chainage formaté<br>
+    
+    <ul>
+      <li>chainage(str) -> La valeur du chainage à déformater</li>
+    </ul>
+    <h2>Example usage:</h2>
+    <ul>
+      <li>deformater_chainage(0+473) -> 473</li>
+      <li>deformater_chainage(1+473,48) -> 1473.48</li>
+    </ul>
+    """
+    try:
+        chainage = str(chainage)
+        # Déterminer la précision si elle n'est pas déterminé
+        if ',' in chainage: chainage = chainage.replace(",", ".")
+        if '.' in chainage: precision = len(chainage[chainage.find('.')+1:])
+        else: precision = 0
+
+        if '+' not in chainage: 
+            return int(chainage) if precision <= 0 else float(chainage)  
+        # Séparer les milliers et les centaines par le "+"
+        millier, centaine = chainage.split('+')
+        # Convertir les milliers et les centaines en nombre
+        val_convertie = int(millier) * 1000 + float(centaine)
+        # Arrondir la valeur selon la précision définie
+        val_convertie = round(val_convertie, precision)
+        # Convertir en nombre entier si la précision est de 0 ou moins
+        if precision <= 0: val_convertie = int(val_convertie)
+        
+        # Retourner la valeur formatée
+        return val_convertie
+    except: raise Exception("Impossible de convertir le chainage en chiffre")
 
 @qgsfunction(args='auto', group=GROUP_NAME, referenced_columns=[])
 def get_rtss(geom_point, feature, parent):

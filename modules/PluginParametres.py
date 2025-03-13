@@ -23,7 +23,7 @@
  This script initializes the plugin, making it known to QGIS.
 """
 import os
-from qgis.PyQt.QtGui import QFont
+from qgis.PyQt.QtGui import QFont, QIcon, QPixmap, QTransform, QMovie, QKeySequence
 from ..mtq.plugin_setting.Parametre import Parametre
 from ..mtq.plugin_setting.ParametreAction import ParametreAction
 from ..mtq.plugin_setting.ParametreInt import ParametreInt
@@ -250,6 +250,12 @@ class PluginParametres(GestionParametre):
                 categorie=categorie_option,
                 setting_name="keep_marker_suivi_chainage",
                 default_value=False),
+            # Paramètre: Montrer la direction du rtss sur l'indicateur de chainage
+            "show_marker_direction": ParametreBool(
+                plugin_name=plugin_name,
+                categorie=categorie_option,
+                setting_name="show_marker_direction",
+                default_value=False),
             # Paramètre: Précision utilisé pour de l'outil de mesure
             "precision_mesure": ParametreInt(
                 plugin_name=plugin_name,
@@ -346,6 +352,12 @@ class PluginParametres(GestionParametre):
                 categorie=categorie_config,
                 setting_name="layer_recherche_chainage_name",
                 default_value="Recherche chainage MTQ"),
+            # Paramètre: Indicateur d'ouvrir PlaniActif à la place de SIGO
+            "open_sigo_plainiactif": ParametreBool(
+                plugin_name=plugin_name,
+                categorie=categorie_option,
+                setting_name="open_sigo_plainiactif",
+                default_value=False),
             # Paramètre: Chemin vers le répertoire des fichier ZIP des versions du plugin
             "dossier_plugin_update": Parametre(
                 plugin_name=plugin_name,
@@ -463,6 +475,36 @@ class PluginParametres(GestionParametre):
             self.getValue("show_copie_menu_info"),
             self.getValue("show_copie_menu_non_formater"),
             self.getValue("show_copie_menu_formater")])
+    
+    def pluginDir(self):
+        """ Permet de retourner le chemin du plugin """
+        return self.plugin_dir
+
+    def getPixmap(self, icon_name, ext=".png"):
+        return QPixmap(os.path.realpath(os.path.join(self.plugin_dir, f"icons/{icon_name}{ext}")))
+
+    def getRotatatedIcon(self, icon_name, rotation, ext=".png"):
+        return QIcon(self.getPixmap(icon_name, ext=ext).transformed(QTransform().rotate(rotation)))
+
+    def getGifIcon(self, icon_name, ext=".gif"):
+        return QMovie((os.path.realpath(os.path.join(self.plugin_dir, f"icons/{icon_name}{ext}"))))
+
+    def getIcon(self, icon_name, ext=".png"):
+        return QIcon(os.path.realpath(os.path.join(self.plugin_dir, f"icons/{icon_name}{ext}")))
+    
+    def getKeySequence(self, param):
+        return QKeySequence(self.getValue(param))
+
+    def getHelpFile(self, file_name:str):
+        """
+        Permet de retourner le chemin vers le fichier HTML d'aide.
+
+        Args:
+            file_name (str): Le nom du fichier d'aide du plugin dans le dossier Aide. (sans l'extention)
+
+        Returns: Le chemin vers le fichier HTML d'aide
+        """
+        return os.path.realpath(os.path.join(self.pluginDir(), f"aide/{file_name}.html"))
         
 
     

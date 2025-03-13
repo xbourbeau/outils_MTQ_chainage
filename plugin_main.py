@@ -23,7 +23,7 @@
 """
 # Import QGIS
 from qgis.PyQt.QtGui import QIcon, QKeySequence
-from qgis.PyQt.QtWidgets import QAction, QToolButton, QMenu
+from qgis.PyQt.QtWidgets import QAction, QToolButton, QMenu, QWidgetAction, QCheckBox
 from qgis.core import (QgsProject, QgsPointXY, QgsApplication, QgsCoordinateTransform,
                        QgsRectangle, Qgis, QgsExpression)
 from qgis.gui import QgsMapMouseEvent, QgisInterface
@@ -62,8 +62,8 @@ from .modules.PluginTemporaryLayer import PluginTemporaryLayer
 
 from .tasks.TaskGenerateReseauSegementation import TaskGenerateReseauSegementation
 
-from .mtq.core import Geocodage, Chainage, PointRTSS, ReseauSegmenter
-from .mtq.functions import openMapInSIGO, validateLayer
+from .mtq.core import Geocodage, Chainage, PointRTSS, ReseauSegmenter, SIGO, PlaniActif
+from .mtq.functions import validateLayer
 from .mtq.utils import Utilitaire as Utils
 
 from .functions.getVisibleFeatures import getVisibleFeatures
@@ -85,7 +85,7 @@ class MtqPluginChainage:
         self.plugin_dir = os.path.dirname(__file__)
 
         # ******  À CHANGER LORS DE NOUVELLE MISE À JOUR **********
-        version = "3.3.2"
+        version = "3.3.3"
         self.documentation = "file://sstao00-adm005/TridentAnalyst/Plugin_chainage_mtq/Documentation/Index.html"
         # *********************************************************
 
@@ -135,6 +135,9 @@ class MtqPluginChainage:
         # Define le pointeur du chainage
         self.vertex_marker_snap = TemporaryGeometry.createMarkerChainage(self.canvas)
         self.vertex_marker_snap.hide()
+        # Define l'indicateur de direction du RTSS
+        self.vertex_marker_dir = TemporaryGeometry.createMarkerDirection(self.canvas)
+        self.vertex_marker_dir.hide()
         
         # Définir le text pour le suivi du chainage
         self.mouse_text = self.canvas.scene().addText("")
@@ -202,12 +205,19 @@ class MtqPluginChainage:
         # QFont for lineedits
         font_rep = ToolbarWidjet.createLineEditFont()
         
+        # Ajouter un menu pour désactiver le plugin
+        tool_button_setting = QToolButton(parent=self.iface.mainWindow())
+        tool_button_setting.setMenu(QMenu())
+        tool_button_setting.setToolTip("Test")
+        tool_button_setting.setPopupMode(QToolButton.MenuButtonPopup)
+        self.toolbar_chaine.addWidget(tool_button_setting)
+        
         # ------------------ Action des parametres ------------------
         dlg_params = fenetreParametre(self.iface)
         action_parametre = self.add_action(
             name='Paramètre',
             help_str='Ouvrir la fenêtre des paramètres',
-            add_to_toolbar=True,
+            add_to_toolbar=False,
             add_to_menu=True,
             callback=dlg_params.setInterfaceActive,
             parent=self.iface.mainWindow())
@@ -216,7 +226,15 @@ class MtqPluginChainage:
         dlg_params.generate_index.connect(self.generateContextLayerIndex)
         dlg_params.delete_index.connect(self.deleteContextLayerIndex)
         self.plugin_dlg.append(dlg_params)
-        
+        tool_button_setting.setDefaultAction(action_parametre)
+
+        # ------------------ Widjet checkbox ------------------
+        self.chx_plugin_is_active = QWidgetAction(tool_button_setting)
+        self.chx_plugin_is_active.setDefaultWidget(QCheckBox())
+        self.chx_plugin_is_active.defaultWidget().setText("Désactiver le module de géocodage du plugin")
+        tool_button_setting.menu().addAction(self.chx_plugin_is_active)
+        self.chx_plugin_is_active.defaultWidget().clicked.connect(lambda s: self.setPluginInactive() if s else self.setPluginActive())
+
         # ------------------ Action du suivi du RTSS/chainage ------------------
         self.tracingChainage = self.add_action(
             name='Suivre le chainage',
@@ -410,8 +428,8 @@ class MtqPluginChainage:
         # ------------------ Ouvrir une fenêtre SIGO ------------------
         action_open_sigo = self.add_action(
             name="Open SIGO",
-            help_str='Ouvrir la vue courante dans SIGO',
-            callback=lambda: openMapInSIGO(self.iface),
+            help_str='Ouvrir la vue courante dans SIGO ou PlaniActif',
+            callback=self.openSIGO,
             parent=self.iface.mainWindow(),
             add_to_menu=False)
             
@@ -429,8 +447,10 @@ class MtqPluginChainage:
  
     def unload(self):
         """ Removes the plugin menu item and icon from QGIS GUI."""
-        # Retirer les scripts
-        if self.provider: QgsApplication.processingRegistry().removeProvider(self.provider)
+        try:
+            # Retirer les scripts
+            if self.provider: QgsApplication.processingRegistry().removeProvider(self.provider)
+        except Exception as e: Utils.warningMessage(self.iface, f"Impossible de retirer les géotraitements: {str(e)}")
         # Désactiver le plugin
         try: self.setPluginInactive()
         except: pass
@@ -444,6 +464,7 @@ class MtqPluginChainage:
         self.canvas.layersChanged.disconnect(self.setPluginActive)
         # Retirer de la carte les géometries temporaire
         self.canvas.scene().removeItem(self.vertex_marker_snap)
+        self.canvas.scene().removeItem(self.vertex_marker_dir)
         self.canvas.scene().removeItem(self.mouse_text)
         # remove the toolbar
         del self.toolbar_chaine
@@ -503,6 +524,7 @@ class MtqPluginChainage:
         # Load customs expressions using the plugin
         try: self.loadCustomExpressions()
         except: Utils.warningMessage(self.iface, "Les expressions du plugin n'ont pas pu être chargé!")
+        self.chx_plugin_is_active.defaultWidget().setChecked(False)
         # Indicateur que le plugin est actif
         self.plugin_is_active = True
 
@@ -513,6 +535,8 @@ class MtqPluginChainage:
         """
         if not self.plugin_is_active: return None
         self.plugin_is_active = False
+
+        self.chx_plugin_is_active.defaultWidget().setChecked(True)
         
         # Vérifier si le suivi du chainage est connecter
         if self.suivi_chainage_is_connected:
@@ -548,25 +572,35 @@ class MtqPluginChainage:
 
     def unloadCustomExpressions(self):
         if self.params.getValue("load_custom_expressions"):
-            QgsExpression.unregisterFunction('get_rtss')
-            QgsExpression.unregisterFunction('get_rtss_formater')
-            QgsExpression.unregisterFunction('get_chainage')
-            QgsExpression.unregisterFunction('get_chainage_formater')
-            QgsExpression.unregisterFunction('get_distance_to_rtss')
-            QgsExpression.unregisterFunction('geocoder_line')
-            QgsExpression.unregisterFunction('geocoder_point')
-            QgsExpression.unregisterFunction('geocoder_polygon')
+            try:
+                QgsExpression.unregisterFunction('get_rtss')
+                QgsExpression.unregisterFunction('get_rtss_formater')
+                QgsExpression.unregisterFunction('get_chainage')
+                QgsExpression.unregisterFunction('get_chainage_formater')
+                QgsExpression.unregisterFunction('get_distance_to_rtss')
+                QgsExpression.unregisterFunction('geocoder_line')
+                QgsExpression.unregisterFunction('geocoder_point')
+                QgsExpression.unregisterFunction('geocoder_polygon')
+            except: Utils.warningMessage(self.iface, "Les expressions du plugin n'ont pas pu être retiré.")
 
     def loadCustomExpressions(self):
         if self.params.getValue("load_custom_expressions"):
-            QgsExpression.registerFunction(get_rtss)
-            QgsExpression.registerFunction(get_rtss_formater) 
-            QgsExpression.registerFunction(get_chainage) 
-            QgsExpression.registerFunction(get_chainage_formater) 
-            QgsExpression.registerFunction(get_distance_to_rtss)
-            QgsExpression.registerFunction(geocoder_line) 
-            QgsExpression.registerFunction(geocoder_point)
-            QgsExpression.registerFunction(geocoder_polygon) 
+            try:
+                QgsExpression.registerFunction(get_rtss)
+                QgsExpression.registerFunction(get_rtss_formater) 
+                QgsExpression.registerFunction(get_chainage) 
+                QgsExpression.registerFunction(get_chainage_formater) 
+                QgsExpression.registerFunction(get_distance_to_rtss)
+                QgsExpression.registerFunction(geocoder_line) 
+                QgsExpression.registerFunction(geocoder_point)
+                QgsExpression.registerFunction(geocoder_polygon)
+            except: Utils.warningMessage(self.iface, "Les expressions du plugin n'ont pas pu être ajouté.")
+
+    def openSIGO(self):
+        """ Méthode qui permet d'ouvrir la vue courante dans SIGO ou Planiactif """
+        if self.params.getValue("open_sigo_plainiactif"): app = PlaniActif()
+        else: app = SIGO()
+        app.openFromMap(self.iface)
 
     def setLayerRTSS(self):
         try:
@@ -638,7 +672,9 @@ class MtqPluginChainage:
             self.suivi_chainage_is_connected = False
             self.canvas.xyCoordinates.disconnect(self.updateSuiviDuChainage)
             # Retirer de la carte les géometries temporaire
-            if not self.params.getValue("keep_marker_suivi_chainage"): self.vertex_marker_snap.hide()
+            if not self.params.getValue("keep_marker_suivi_chainage"):
+                self.vertex_marker_snap.hide()
+                self.vertex_marker_dir.hide()
             self.mouse_text.hide()
     
     def setReseauSegementation(self):
@@ -711,15 +747,27 @@ class MtqPluginChainage:
                 precision=self.params.getValue("precision_chainage"))
             # Changer la position du marqueur pour le chainage arrondi
             if self.params.getValue("pos_marqueur_arrondi"): point_rtss.setChainage(chainage)
+            # Définir l'angle de la route au point
+            angle = self.geocode.getAngle(point_rtss) + self.canvas.rotation()
             # Géocoder le point sur le RTSS
             point_on_rtss = self.geocode.geocoderPoint(point_rtss, on_rtss=True).asPoint()
+
             message = "Oups! Un problème est survenu dans la reprojection..."
             # Reprojecter le point sur le rtss si nécéssaire
             if self.need_reprojection: point_on_rtss = self.crs_reverse_transform.transform(point_on_rtss)
-            message = "Oups! Le point n'a pas pu être placer..."
+            message = "Oups! Le point n'a pas pu être placé..."
             # Place le pointeur au chainage
             self.vertex_marker_snap.setCenter(point_on_rtss)
+            self.vertex_marker_snap.setRotation(angle)
             self.vertex_marker_snap.show()
+
+            message = "Oups! Le marqueur de la direction du RTSS n'a pas pu être placé..."
+            # Vérifier si le marqueur de la direction du RTSS devrait être afficher
+            if self.params.getValue("show_marker_direction"):
+                self.vertex_marker_dir.setCenter(point_on_rtss)
+                self.vertex_marker_dir.setRotation(angle)
+                self.vertex_marker_dir.show()
+            else: self.vertex_marker_dir.hide()
             
             message = "Oups! Un problème est avec le tooltip..."
             # Définir le format en fonction de la précision
@@ -741,8 +789,7 @@ class MtqPluginChainage:
                 self.mouse_text.setHtml(self.html_tooltip.format('<br>'.join(text_a_afficher)))
                 # Postion du chainage sur la carte en pixel
                 pos = self.canvas.getCoordinateTransform().transform(point_on_rtss)
-                 # Définir l'angle de la route au point
-                angle = self.geocode.getAngle(point_rtss) + self.canvas.rotation()
+                # Calculer la position X, Y du text
                 x, y = getToolTipPosition(pos, text_a_afficher, angle)
                 # Placer le text avec un offset
                 self.mouse_text.setPos(x, y)

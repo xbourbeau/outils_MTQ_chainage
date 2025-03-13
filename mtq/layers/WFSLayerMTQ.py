@@ -24,6 +24,7 @@ class WFSLayerMTQ(LayerMTQ):
                  description:str="",
                  search_fields:str="",
                  default_style:str=None,
+                 recherchable:bool=True,
                  request:Dict[str, str]={},
                  styles:Dict[str, str]={},
                  tags:list[str]=[],
@@ -48,6 +49,7 @@ class WFSLayerMTQ(LayerMTQ):
             cs_field_type=cs_field_type,
             description=description,
             search_fields=search_fields,
+            recherchable=recherchable,
             default_style=default_style,
             styles=styles,
             request=request,
@@ -110,8 +112,9 @@ class WFSLayerMTQ(LayerMTQ):
 
     def hasSameSource(self, source:QgsDataSourceUri):
         """ Permet de vérifier si la couche à la même source de fichier qu'une source en entrée """
-        # TODO: Add the URL verification also
-        return self.typename() == source.param("typename")
+        type_name_1 = WFSLayerMTQ.typenameFormat(source.param("typename"), ms=False)
+        type_name_2 = WFSLayerMTQ.typenameFormat(self.typename(), ms=False)
+        return type_name_1 == type_name_2
 
     def setSource(self, source:str):
         """ Permet de définir la source de la couche """
@@ -157,6 +160,26 @@ class WFSLayerMTQ(LayerMTQ):
         
     def srsname(self):
         return self.layer_srsname
+
+    @classmethod
+    def typenameFormat(cls, type_name, ms=False):
+        """
+        Méthode qui permet de convertir un nom de couche WFS avec ou sans le préfix "ms:"
+
+        Args:
+            type_name (str): Le nom de la couche WFS
+            ms (bool, optional): Indicateur de si le format devrait incule le préfix "ms:". Defaults to False.
+
+        Returns: Le nom de la couche WFS avec ou sans le préfix "ms:" selon l'indicateur "ms"
+        """
+        # Indiquer si le nom de la couche a le préfix "ms:"
+        has_ms = type_name[:3] == "ms:"
+        # Retrouner le nom pas modifié, si l'indicateur est le même que celui du nom
+        if has_ms == ms: return type_name
+        # Retirer le préfix "ms:" du nom
+        elif has_ms and not ms: return type_name.replace("ms:", "")
+        # Ajouter le préfix "ms:" au nom
+        else: return "ms:" + type_name
 
     def typename(self):
         return self.layer_typename

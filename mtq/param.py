@@ -39,6 +39,8 @@ C_CS = "code_cs_field"
 C_TYPE_CS = "type_code_cs_field"
 # recherche = La liste des champs à utiliser pour la recherche dans la couche (text séparéer par des ";")
 C_SEARCH_FIELDS = "recherche"
+# recherchable = Indicateur de si la couche devrait être recherchable dans le LayerManager
+C_RECHERCHABLE = "recherchable"
 # requests = Un dictionnaire des requetes de la couche
 C_REQUESTS = "requests"
 # styles = Un dictionnaire des styles de la couche
@@ -88,6 +90,19 @@ DEFAULT_NOM_CHAMP_LIDAR_ID = "id_index"
 DEFAULT_NOM_CHAMP_LIDAR_DATE = "date"
 # Nom du champs du lien de téléchargement dans l'index du lidar mobile
 DEFAULT_NOM_CHAMP_LIDAR_TELECHARGEMENT = "fichier1_u"
+
+# Nom de la couche de AQ parcours pour l'analyse réseau
+DEFAULT_NOM_COUCHE_ROUTE = "AQ Parcours"
+# Nom du champ de l'identifiant de la route AQ
+DEFAULT_KEY_FIELD = "idrte"
+# Nom du champ de la direction de la route AQ
+DEFAULT_DIRECTION_FIELD = "directntq"
+# Nom du champ de la vitesse de la route AQ
+DEFAULT_SPEED_FIELD = "vitessetq"
+# Nom du champ de la gestion de la route AQ
+DEFAULT_GESTION_FIELD = "gestiontq"
+# Nom du champ de la classe fonctionnelle de la route AQ
+DEFAULT_CAMIONNAGE_FIELD = "descclasse"
 
 # Dictionnaire contenant toute les DT et toute les CS pour la creation d'une Province
 DICT_PROVINCE:dict[str, dict[str, dict[str, str]]] = {

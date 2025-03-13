@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from ..fnt.interpolateOffsetOnLine import interpolateOffsetOnLine
 from typing import Union
+from collections import Counter
 
 # Librairie MTQ
 from .RTSS import RTSS
@@ -235,3 +236,16 @@ class LineRTSS:
         """ Permet de retourner le premier point de la ligne """
         if self.isEmpty(): return None
         else: return self.points[0]
+
+    def side(self):
+        """
+        Permet de retourner le côté de la ligne le plus fréquent en terme de nombre de points.
+        
+        Return: Le côté le plus fréquent (1 = Droite, -1 = Gauche, 0 = Centre)
+        """
+        if self.startOffset() == 0 and self.endOffset() == 0: return 0
+        # Liste des côtés des points de la ligne
+        sides = [pt.side() for pt in self.points if pt.side() != 0]
+        if not sides: return None
+        # Retourner le côté le plus fréquent
+        return Counter(sides).most_common(1)[0][0]

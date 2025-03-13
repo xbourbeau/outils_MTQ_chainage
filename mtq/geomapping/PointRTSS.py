@@ -92,3 +92,13 @@ class PointRTSS:
     def setRTSS(self, rtss):
         if isinstance(rtss, RTSS): self.rtss = rtss
         else: self.rtss = RTSS(rtss)
+
+    def side(self):
+        """
+        Permet de retourner le côté du point par rapport à la trace
+        
+        Return: Le côté le plus fréquent (1 = Droite, -1 = Gauche, 0 = Centre)
+        """
+        if self.offset > 0: return 1
+        elif self.offset < 0: return -1
+        return 0

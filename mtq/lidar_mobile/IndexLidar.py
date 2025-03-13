@@ -1,9 +1,10 @@
 # Import général
 import os
 from datetime import datetime
-
 # Import QGIS
-from qgis.core import QgsGeometry, QgsFeature, QgsPointXY, QgsCoordinateReferenceSystem
+from qgis.core import (QgsGeometry, QgsFeature, QgsPointXY, QgsVectorLayer,
+    QgsCoordinateReferenceSystem, QgsPoint, QgsSpatialIndex)
+
 
 # Import du module
 from ..param import (

@@ -164,10 +164,6 @@ class RTSS:
         Args:
             - value (str/int): Le rtss à définir
         """
-        #if not isinstance(value, str): value = str(value)
-        #if " " in value: value = value.replace(" ", "")
-        #if "-" in value: value = value.replace('-', '')
-        #if len(value) >= 11:  value = value.rjust(14, '0')
         value = RTSS.verifyFormatRTSS(value)
         if len(value) != 14: raise ValueError("Le numero du RTSS est invalide, il doit contenir 14 caracteres")
         self.num_rts = value
