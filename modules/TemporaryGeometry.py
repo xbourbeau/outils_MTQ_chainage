@@ -198,6 +198,48 @@ class TemporaryGeometry:
         return marker
     
     @staticmethod
+    def createMarkerSnap(canvas:QgsMapCanvas):
+        """
+        Méthode qui permet de créer un QgsVertexMarker pour montrer la localisation
+        du résultat du snap.
+
+        Args:
+            canvas (QgsMapCanvas): La référence de la carte
+
+        Returns:
+            QgsVertexMarker: Le marker pour le snap
+        """
+        # Define le pointeur du chainage
+        marker = QgsVertexMarker(canvas)
+        marker.setIconType(QgsVertexMarker.ICON_BOX)
+        color = QColor("#ff01dd")
+        marker.setColor(color)
+        marker.setIconSize(10)
+        marker.setPenWidth(3)
+        return marker
+    
+    @staticmethod
+    def createIntersectionMarkerSnap(canvas:QgsMapCanvas):
+        """
+        Méthode qui permet de créer un QgsVertexMarker pour montrer la localisation
+        du résultat du snap pour l'intersection seulement.
+
+        Args:
+            canvas (QgsMapCanvas): La référence de la carte
+
+        Returns:
+            QgsVertexMarker: Le marker pour le snap d'intersection
+        """
+        # Define le pointeur du chainage
+        marker = QgsVertexMarker(canvas)
+        marker.setIconType(QgsVertexMarker.ICON_X)
+        color = QColor("#ff01dd")
+        marker.setColor(color)
+        marker.setIconSize(14)
+        marker.setPenWidth(2)
+        return marker
+    
+    @staticmethod
     def createNewGeom(canvas:QgsMapCanvas):
         """
         Méthode qui permet de créer un QgsRubberBand pour montrer la ligne

@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
-from qgis.core import QgsGeometry, QgsApplication, QgsProject, QgsFeature, QgsWkbTypes, Qgis, QgsVectorLayerUtils, QgsPointXY
-from qgis.gui import QgsMapTool, QgsMapToolEdit, QgisInterface, QgsMapCanvas, QgsAttributeEditorContext
+from qgis.core import (QgsGeometry, QgsApplication, QgsProject, QgsFeature, QgsTolerance,
+    QgsWkbTypes, Qgis, QgsVectorLayerUtils, QgsPointXY, QgsSnappingUtils, QgsSnappingConfig,
+    QgsPointLocator)
+from qgis.gui import (QgsMapTool, QgsMapToolEdit, QgisInterface, QgsVertexMarker,
+    QgsMapCanvas, QgsAttributeEditorContext, QgsMapCanvasSnappingUtils)
 from PyQt5.QtCore import Qt
 from qgis.PyQt.QtWidgets import QMenu
 from qgis.PyQt.QtGui import QKeySequence
@@ -35,7 +38,8 @@ class MtqMapToolCreerGeometry(QgsMapToolEdit):
         # Définition du curseur
         self.mCursor = QgsApplication.getThemeCursor(4)
         self.layer_rtss = None
-    
+        self.snapping_utils = QgsMapCanvasSnappingUtils(self.canvas())
+
     def activate(self):
         # Définir les variables utilisé pour le snap parralèl
         self.show_parralel_snap, self.snap_offset = False, 0
@@ -60,29 +64,36 @@ class MtqMapToolCreerGeometry(QgsMapToolEdit):
         self.snap_line_parralel = TemporaryGeometry.createSnappingLine(self.canvas())
         self.snap_line_perpendiculair = TemporaryGeometry.createSnappingLine(self.canvas())
 
+        self.snap_marker = TemporaryGeometry.createMarkerSnap(self.canvas())
+        self.snap_intersect_marker = TemporaryGeometry.createIntersectionMarkerSnap(self.canvas())
+
         self.iface.currentLayerChanged.connect(self.setActiveLayer)
         self.setActiveLayer()
 
+        self.snapping_utils.setConfig(QgsProject.instance().snappingConfig())
+        QgsProject.instance().snappingConfigChanged.connect(lambda: self.snapping_utils.setConfig(QgsProject.instance().snappingConfig()))
         #self.dlg_geom.setInterfaceActive()
 
         self.reset()
     
-    def reset(self, all=True):
+    def reset(self):
         """ Réinitialiser l'outil """
         # Cacher les géometries temporaire
         self.new_geom.hide()
         self.new_geom_prolg.hide()
         self.new_point_marker.hide()
         self.info_text.hide()
+        self.snap_marker.hide()
+        self.snap_intersect_marker.hide()
         self.previous_pt_rtss = None
         self.stop_moving = False
         self.list_points = []
         self.line_rtss = LineRTSS([])
         self.polygon_rtss = PolygonRTSS([])
         self.new_geom.setToGeometry(QgsGeometry())
-        # Redéfinir les Géometries RTSS des nouvelles entitées
-        #if all:
+
         self.feat_rtss = None
+        self.check_rtss = False
         self.current_pt_rtss = None
 
     def setActiveLayer(self):
@@ -92,6 +103,52 @@ class MtqMapToolCreerGeometry(QgsMapToolEdit):
         self.reset()
 
     def setLayer(self, layer_id): self.layer_rtss = self.layer(layer_id)
+
+    def getSnappedPoint(self, e):
+        """ Obtenir le point de snap """
+        # Effectuer le snap avec la position de la souris
+        snap_match = self.snapping_utils.snapToMap(e.pos())
+        # Indicateur pour savoir si le snap est sur un RTSS
+        self.check_rtss = False
+
+        # Vérifier si le snap est valide (trouvée un résultat)
+        if snap_match.isValid():
+            # Définir le type de snap
+            type_snap = snap_match.type()
+            # Indicatueur pour savoir si le snap est une intersection
+            use_intersection = False
+            # Vérifier le type de snap pour définir le synmbole du marker
+            if type_snap == QgsPointLocator.Vertex: 
+                # Check intesection in a weird way 
+                use_intersection = snap_match.featureId() == 0
+                self.snap_marker.setIconType(QgsVertexMarker.ICON_BOX)
+
+            elif type_snap == QgsPointLocator.Edge: self.snap_marker.setIconType(QgsVertexMarker.ICON_X)
+            elif type_snap == QgsPointLocator.Centroid: self.snap_marker.setIconType(QgsVertexMarker.ICON_CIRCLE)
+            else: self.snap_marker.setIconType(QgsVertexMarker.ICON_BOX)
+
+            # Vérifier si le snap est sur un RTSS
+            if snap_match.layer() == self.layer_rtss: self.check_rtss = True
+
+            # Vérifier si le snap est une intersection
+            if use_intersection:
+                # Définir le snap marker à l'intersection
+                self.snap_intersect_marker.setCenter(snap_match.point())
+                self.snap_intersect_marker.show()
+                self.snap_marker.hide()
+            # Sinon afficher le marker de snap normal
+            else:
+                self.snap_marker.setCenter(snap_match.point())
+                self.snap_marker.show()
+                self.snap_intersect_marker.hide()
+            # Retourner le point de snap
+            return snap_match.point()
+        
+        # Sinon cacher les markers de snap
+        self.snap_intersect_marker.hide()
+        self.snap_marker.hide()
+        # Retourner la position du curseur
+        return self.toLayerCoordinates(self.layer_rtss, e.pos())
 
     def canvasPressEvent(self, e):
         """
@@ -123,11 +180,20 @@ class MtqMapToolCreerGeometry(QgsMapToolEdit):
         """
         # Rien faire
         if self.stop_moving: return None
+
+        point = self.getSnappedPoint(e)
+        
         # Geometrie du point du cursor dans la projection de la couche des RTSS
-        geom = QgsGeometry.fromPointXY(self.toLayerCoordinates(self.layer_rtss, e.pos()))
+        geom = QgsGeometry.fromPointXY(point)
         # Get infos du RTSS le plus proche du cursor
         if self.feat_rtss: self.current_pt_rtss = self.feat_rtss.geocoderInversePoint(geom)
-        else: self.current_pt_rtss = self.geocode.geocoderInversePoint(geom)
+        else: 
+            # Si le snap est fait sur un RTSS, utilisé celui le plus proche du cursor
+            if self.check_rtss: 
+                feat_rtss = self.geocode.nearestRTSSFromPoint(QgsGeometry.fromPointXY(self.toLayerCoordinates(self.layer_rtss, e.pos())))
+                self.current_pt_rtss = feat_rtss.geocoderInversePoint(geom)
+            # Sinon, utilisé le RTSS le plus proche du point snapper
+            else: self.current_pt_rtss = self.geocode.geocoderInversePoint(geom)
         # Ne pas afficher le curseur s'il n'est pas assez proche d'un RTSS
         if self.current_pt_rtss is None : return self.new_point_marker.hide()
         self.setPoint()
@@ -241,13 +307,13 @@ class MtqMapToolCreerGeometry(QgsMapToolEdit):
             # Créer le formulaire pour les attibuts
             attribute_form = self.iface.getFeatureForm(self.active_layer, new_feat)
             attribute_form.setMode(QgsAttributeEditorContext.AddFeatureMode)
-            attribute_form.accepted.connect(lambda: self.reset(all=False))
-            attribute_form.rejected.connect(lambda: self.reset(all=False))
+            attribute_form.accepted.connect(self.reset)
+            attribute_form.rejected.connect(self.reset)
             attribute_form.show()
         # Sinon ajouter l'entité à la couche
         else:
             self.active_layer.addFeature(new_feat)
-            self.reset(all=False)
+            self.reset()
 
     def setSnapParralelLine(self):
         if self.show_parralel_snap:
@@ -303,10 +369,12 @@ class MtqMapToolCreerGeometry(QgsMapToolEdit):
             # Retirer de la carte les géometries créées
             self.canvas().scene().removeItem(self.snap_line_perpendiculair)
             self.canvas().scene().removeItem(self.snap_line_parralel)
+            self.canvas().scene().removeItem(self.snap_marker)
             self.canvas().scene().removeItem(self.new_point_marker)
             self.canvas().scene().removeItem(self.new_geom_prolg)
             self.canvas().scene().removeItem(self.new_geom)
             self.canvas().scene().removeItem(self.info_text)
+            self.canvas().scene().removeItem(self.snap_intersect_marker)
 
             self.iface.currentLayerChanged.disconnect(self.setActiveLayer)
 
