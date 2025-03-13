@@ -62,8 +62,8 @@ from .modules.PluginTemporaryLayer import PluginTemporaryLayer
 
 from .tasks.TaskGenerateReseauSegementation import TaskGenerateReseauSegementation
 
-from .mtq.core import Geocodage, Chainage, PointRTSS, ReseauSegmenter
-from .mtq.functions import openMapInSIGO, validateLayer
+from .mtq.core import Geocodage, Chainage, PointRTSS, ReseauSegmenter, SIGO, PlaniActif
+from .mtq.functions import validateLayer
 from .mtq.utils import Utilitaire as Utils
 
 from .functions.getVisibleFeatures import getVisibleFeatures
@@ -428,8 +428,8 @@ class MtqPluginChainage:
         # ------------------ Ouvrir une fenêtre SIGO ------------------
         action_open_sigo = self.add_action(
             name="Open SIGO",
-            help_str='Ouvrir la vue courante dans SIGO',
-            callback=lambda: openMapInSIGO(self.iface, planiactif=self.params.getValue("open_sigo_plainiactif")),
+            help_str='Ouvrir la vue courante dans SIGO ou PlaniActif',
+            callback=self.openSIGO,
             parent=self.iface.mainWindow(),
             add_to_menu=False)
             
@@ -595,6 +595,12 @@ class MtqPluginChainage:
                 QgsExpression.registerFunction(geocoder_point)
                 QgsExpression.registerFunction(geocoder_polygon)
             except: Utils.warningMessage(self.iface, "Les expressions du plugin n'ont pas pu être ajouté.")
+
+    def openSIGO(self):
+        """ Méthode qui permet d'ouvrir la vue courante dans SIGO ou Planiactif """
+        if self.params.getValue("open_sigo_plainiactif"): app = PlaniActif()
+        else: app = SIGO()
+        app.openFromMap(self.iface)
 
     def setLayerRTSS(self):
         try:
