@@ -2,7 +2,9 @@ from itertools import chain
 from qgis.core import *
 from qgis.utils import plugins
 
-GROUP_NAME = 'Géocodage MTQ'
+from ..modules.PluginParametres import PluginParametres
+
+GROUP_NAME = PluginParametres().getValue("expression_group_name")
 
 @qgsfunction(args='auto', group=GROUP_NAME, referenced_columns=[])
 def formater_rtss(rtss, feature, parent):

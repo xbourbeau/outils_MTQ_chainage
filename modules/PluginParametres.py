@@ -358,6 +358,12 @@ class PluginParametres(GestionParametre):
                 categorie=categorie_option,
                 setting_name="open_sigo_plainiactif",
                 default_value=False),
+            # Paramètre: Le nom à utiliser pour les expressions personnalisé du plugin
+            "expression_group_name": Parametre(
+                plugin_name=plugin_name,
+                categorie=categorie_config,
+                setting_name="expression_group_name",
+                default_value="Géocodage MTQ"),
             # Paramètre: Chemin vers le répertoire des fichier ZIP des versions du plugin
             "dossier_plugin_update": Parametre(
                 plugin_name=plugin_name,

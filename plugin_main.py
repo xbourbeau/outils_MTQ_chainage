@@ -71,6 +71,7 @@ from .functions.getToolTipPosition import getToolTipPosition
 from .functions.getIcon import getIcon
 
 from .expressions.expression_geocodage import *
+from .expressions.expression_sigo import *
 
 # DEV: Ajouter l'option d'ouvrir la fenêtre de Géocodage
 # DEV: Add link to open folder of installation
@@ -581,6 +582,10 @@ class MtqPluginChainage:
                 QgsExpression.unregisterFunction('geocoder_line')
                 QgsExpression.unregisterFunction('geocoder_point')
                 QgsExpression.unregisterFunction('geocoder_polygon')
+                QgsExpression.unregisterFunction('lien_sigo')
+                QgsExpression.unregisterFunction('lien_sigo_complet')
+                QgsExpression.unregisterFunction('lien_planiactif')
+                QgsExpression.unregisterFunction('lien_planiactif_complet')
             except: Utils.warningMessage(self.iface, "Les expressions du plugin n'ont pas pu être retiré.")
 
     def loadCustomExpressions(self):
@@ -594,6 +599,11 @@ class MtqPluginChainage:
                 QgsExpression.registerFunction(geocoder_line) 
                 QgsExpression.registerFunction(geocoder_point)
                 QgsExpression.registerFunction(geocoder_polygon)
+                QgsExpression.registerFunction(lien_sigo)
+                QgsExpression.registerFunction(lien_sigo_complet)
+                QgsExpression.registerFunction(lien_planiactif)
+                QgsExpression.registerFunction(lien_planiactif_complet)
+                
             except: Utils.warningMessage(self.iface, "Les expressions du plugin n'ont pas pu être ajouté.")
 
     def openSIGO(self):
