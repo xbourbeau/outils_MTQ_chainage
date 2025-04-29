@@ -32,8 +32,8 @@ class TaskGenerateReseauSegementation(QgsTask):
         QgsMessageLog.logMessage('Création du réseau...', MESSAGE_CATEGORY, Qgis.Info)
         try:
             # Créer le réseau
-            self.reseau_context = ReseauSegmenter(self.geocode)
-            self.reseau_context.addFromInterpolation(
+            self.reseau_context = ReseauSegmenter.fromInterpolation(
+                geocode=self.geocode,
                 layer=self.layer_context,
                 field_value=self.field_value,
                 fields_route=self.field_rtss,
@@ -58,7 +58,7 @@ class TaskGenerateReseauSegementation(QgsTask):
         QgsMessageLog.logMessage('"{name}" was canceled'.format(name=self.description()), MESSAGE_CATEGORY, Qgis.Info)
         super().cancel()
 
-    def getReseau(self): return self.reseau_context.getReseau()
+    def getReseau(self): return self.reseau_context
 
 
         

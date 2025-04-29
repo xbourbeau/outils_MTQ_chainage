@@ -24,12 +24,7 @@
 """
 import os
 from qgis.PyQt.QtGui import QFont, QIcon, QPixmap, QTransform, QMovie, QKeySequence
-from ..mtq.plugin_setting.Parametre import Parametre
-from ..mtq.plugin_setting.ParametreAction import ParametreAction
-from ..mtq.plugin_setting.ParametreInt import ParametreInt
-from ..mtq.plugin_setting.ParametreBool import ParametreBool
-from ..mtq.plugin_setting.ParametreFont import ParametreFont
-from ..mtq.plugin_setting.GestionParametre import GestionParametre
+from ..mtq.utils import Parametre, ParametreAction, ParametreInt, ParametreBool, ParametreFont, GestionParametre
 
 class PluginParametres(GestionParametre):
     """

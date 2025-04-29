@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 from qgis.gui import QgsVertexMarker, QgsMapCanvas, QgsRubberBand
-from qgis.core import QgsSymbol
-from qgis.PyQt.QtGui import QColor, QTransform
+from qgis.PyQt.QtGui import QColor
 from PyQt5.QtGui import QPen, QBrush
 from PyQt5.QtCore import Qt, QPointF
 

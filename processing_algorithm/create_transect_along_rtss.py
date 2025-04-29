@@ -3,8 +3,6 @@ from PyQt5.QtCore import (  QCoreApplication,
                             QVariant)
 from qgis.core import (QgsProcessing,
                        QgsFeatureSink,
-                       QgsPointXY,
-                       QgsGeometry,
                        QgsProcessingException,
                        QgsProcessingAlgorithm,
                        QgsProcessingParameterFeatureSource,
@@ -16,8 +14,7 @@ from qgis.core import (QgsProcessing,
                        QgsField,
                        QgsFields,
                        QgsFeature,
-                       QgsWkbTypes,
-                       NULL)
+                       QgsWkbTypes)
 import numpy as np
 
 from ..mtq.core import Geocodage, Chainage

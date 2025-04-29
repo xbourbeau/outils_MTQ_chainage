@@ -35,3 +35,5 @@ class Parametre:
     def get(self)->str:
         """ Permet de retourner la valeur du parmamètre """
         return QSettings().value(self.setting, self.default_value)
+    
+    def getDefaultValue(self): return self.default_value

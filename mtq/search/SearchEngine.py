@@ -1,8 +1,8 @@
 from typing import Dict
 
-from rapidfuzz import process
-from rapidfuzz import fuzz
-from rapidfuzz import utils
+from ..packages.rapidfuzz import process
+from ..packages.rapidfuzz import fuzz
+from ..packages.rapidfuzz import utils
 
 class SearchEngine:
     

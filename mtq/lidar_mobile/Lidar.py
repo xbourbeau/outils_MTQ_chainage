@@ -21,6 +21,8 @@ try:
     LASPY_LIB = True
 except: LASPY_LIB = False
 
+# DEV: Ajouter la possibilité de générer des Devers
+
 class Lidar:
     """ Un objet Lidar qui représente un fichier .las ou .laz qui contient un nuage de point """
 
@@ -176,7 +178,7 @@ class Lidar:
             start, end = points[i], points[i + 1]
             distance = np.sqrt(np.sum((start - end) ** 2))
             # Create parameter t from 0 to 1
-            t = np.linspace(0, 1, points_per_m*distance)
+            t = np.linspace(0, 1, int(points_per_m*distance))
             # Interpolate each dimension
             x = start[0] + (end[0] - start[0]) * t
             y = start[1] + (end[1] - start[1]) * t

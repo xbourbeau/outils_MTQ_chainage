@@ -24,16 +24,14 @@
 import os
 from qgis.gui import QgisInterface, QgsDockWidget
 from qgis.PyQt import uic
-from qgis.core import QgsVectorLayer, NULL
-from qgis.PyQt.QtCore import pyqtSignal, QVariant
+from qgis.PyQt.QtCore import pyqtSignal
 from PyQt5.QtCore import Qt
-from PyQt5 import QtWidgets, QtCore, QtGui
-from qgis.PyQt.QtWidgets import QDockWidget, QToolButton, QMenu, QCheckBox, QWidgetAction, QAction
+from PyQt5 import QtWidgets, QtCore
+from qgis.PyQt.QtWidgets import QDockWidget, QAction
 
 from ..modules.PluginParametres import PluginParametres
 from ..modules.CompleterRTSS import CompleterRTSS
-from ..mtq.core import Geocodage, Utilitaire
-from ..functions.getIcon import getPixmap, getIcon
+from ..mtq.core import Geocodage
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(os.path.dirname(__file__), 'fenetre_create_geometry.ui'))
 

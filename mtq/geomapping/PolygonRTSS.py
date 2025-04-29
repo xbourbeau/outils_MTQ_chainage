@@ -8,6 +8,8 @@ from typing import Union
 from collections import Counter
 import numpy as np
 
+from qgis.core import QgsGeometry
+
 try:
     from shapely.geometry import Polygon, LineString
     from shapely.ops import unary_union
@@ -21,7 +23,7 @@ from .LineRTSS import LineRTSS
 class PolygonRTSS:
     """ Définition d'un polygon selon le référencement linéaire RTSS/chainage du MTQ """
 
-    __slots__ = ("points", "interpolate_on_rtss")
+    __slots__ = ("points", "interpolate_on_rtss", "geom")
     
     def __init__ (self, points:list[PointRTSS]=[], interpolate_on_rtss=True):
         """
@@ -34,6 +36,7 @@ class PolygonRTSS:
         """
         self.setPoints(points)
         self.setInterpolation(interpolate_on_rtss)
+        self.setGeometry(None)
     
     @classmethod
     def fromChainages(cls, rtss:Union[str, RTSS], list_chainages:list, list_offsets:list, interpolate_on_rtss=True):
@@ -124,6 +127,9 @@ class PolygonRTSS:
         offsets = [pt.getOffset() for pt in self.points]
         return abs(min(offsets) - max(offsets))
     
+    def getGeometry(self)->QgsGeometry:
+        return self.geom
+
     def calculerLargeur(self):
         """
         Calculate the average width of a polygon by sampling multiple cross-sections.
@@ -219,6 +225,10 @@ class PolygonRTSS:
     def setInterpolation(self, interpolate_on_rtss):
         """ Permet de définir si le polygon doit être interpolé sur le RTSS """
         self.interpolate_on_rtss = interpolate_on_rtss
+
+    def setGeometry(self, geometry:QgsGeometry):
+        """ Permet de définir une attribut de géometrie """
+        self.geom = geometry
 
     def setPoint(self, idx, point_rtss:PointRTSS):
         """

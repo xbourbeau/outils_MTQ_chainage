@@ -22,14 +22,13 @@
  ***************************************************************************/
 """
 import os
+import processing
 from qgis.PyQt import QtWidgets, uic
 from qgis.core import QgsProcessingFeatureSourceDefinition
 from qgis.gui import QgsMapCanvas
 from qgis.PyQt.QtCore import pyqtSignal
-import processing
 
 from ..functions.addLayerToMap import addLayerToMap
-from ..functions.getIcon import getPixmap
 # Class pour la gestion des paramètre du plugin
 from ..modules.PluginParametres import PluginParametres
 
@@ -46,7 +45,7 @@ class fenetreSelectionInterval(QtWidgets.QDialog, FORM_CLASS):
         self.setupUi(self)
         self.params = PluginParametres()
         # Définir l'image du logo de l'outil
-        self.lbl_logo.setPixmap(getPixmap("chainage"))
+        self.lbl_logo.setPixmap(self.params.getPixmap("chainage"))
         self.lbl_logo.setScaledContents(True)
 
         # Apppler la fonction lorsque l'interval est accepter par l'utilisateur

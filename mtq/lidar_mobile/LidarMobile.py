@@ -3,7 +3,6 @@ import os
 from qgis.core import (QgsGeometry, QgsPointXY, QgsVectorLayer, QgsField, QgsRectangle,
                         QgsCoordinateReferenceSystem, QgsSpatialIndex, QgsFeature, QgsWkbTypes, QgsFeatureIterator)
 from typing import Union, Dict
-import numpy as np
 
 from ..fnt.reprojections import reprojectPoints
 from .IndexLidar import IndexLidar
@@ -15,16 +14,12 @@ class LidarMobile:
     Le module contient les références vers les indexes de téléchargement et les nuage de points.
     """
 
-    def __init__(self, feats_index:QgsFeatureIterator, crs:QgsCoordinateReferenceSystem):
+    def __init__(self, layer_index:QgsVectorLayer):
         self.dict_index:Dict[str, IndexLidar] = {}
         self.dict_index_id: Dict[int, str] = {}
         self.dict_lidar:Dict[str, Lidar] = {}
-
-        self.updateIndex(feats_index, crs)
-
-    @classmethod
-    def fromLayer(cls, layer_index:QgsVectorLayer):
-        return cls(layer_index.getFeatures(), layer_index.crs())
+        # Mettre à jour l'index à partir de la couche
+        self.updateIndex(layer_index)
 
     def __repr__ (self): return f"LidarMobile ({len(self)} indexs)"
 
@@ -105,16 +100,14 @@ class LidarMobile:
 
     def listIndex(self): return list(self.dict_index.values())
 
-    def updateIndex(self, feats_index:QgsFeatureIterator, crs:QgsCoordinateReferenceSystem):
-        self.crs = crs
+    def updateIndex(self, layer_index:QgsVectorLayer):
+        self.crs = layer_index.crs()
         # Index spatial des géometries des index
-        self.spatial_index = QgsSpatialIndex(flags=QgsSpatialIndex.FlagStoreFeatureGeometries)
+        self.spatial_index = QgsSpatialIndex(layer_index.getFeatures())
         # Parcourir toutes les entités de la couche d'index
-        for feat_index in feats_index:
-            # Ajouter la trajectoire à l'index spatial
-            self.spatial_index.addFeature(feat_index)
+        for feat_index in layer_index.getFeatures():
             # Créer l'objet IndexLidar pour la trajectoire
-            index = IndexLidar.fromFeat(feat_index, crs)
+            index = IndexLidar.fromFeat(feat_index, self.crs)
             # Ajouter l'objet IndexLidar au dictionnaire
             self.dict_index[index.id()] = index
             self.dict_index_id[feat_index.id()] = index.id()

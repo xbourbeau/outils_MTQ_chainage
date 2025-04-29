@@ -1,5 +1,5 @@
 from itertools import chain
-from qgis.core import *
+from qgis.core import QgsGeometry, qgsfunction
 from qgis.utils import plugins
 
 from ..modules.PluginParametres import PluginParametres
@@ -287,3 +287,30 @@ def geocoder_polygon(rtss, list_chainage, list_offset, feature, parent):
         geom_polygon = geocode.geocoderPolygon(polygon_rtss)
     except: geom_polygon = QgsGeometry()
     return geom_polygon
+
+@qgsfunction(args='auto', group=GROUP_NAME, referenced_columns=[])
+def rtss_side(rtss, geom_point, feature, parent):
+    """
+    Permet de retourner de qu'elle côté d'un RTSS est un point. 
+    Le côté est défini avec le RTSS dans le sense du chainage. <br>
+    * Les rtss peuvent être formater.<br>
+    <ul>
+      <li>rtss(str) -> Le rtss de la géometry</li>
+    </ul>
+    <ul>
+      <li>geom_point (QgsGeometry|QgsPoint) -> -> La géometrie du point à utiliser</li>
+    </ul>
+    <h2> Retourne (int):</h2>
+    <ul>
+      <li>Le côté du RTSS dans le sense du chainage. 1 = Droite | -1 = Gauche | 0 = Centre</li>
+    </ul>
+    <h2>Example usage:</h2>
+    <ul>
+      <li>rtss_side('0013901020000C', $geometry) -> -1</li>
+    </ul>
+    """
+    geocode = plugins['outils_MTQ_chainage'].getModuleGeocodage()
+    try: 
+        feat_rtss = geocode.nearestRTSSFromPoint(rtss, geom_point)
+        return feat_rtss.side()
+    except: return None

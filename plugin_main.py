@@ -25,7 +25,7 @@
 from qgis.PyQt.QtGui import QIcon, QKeySequence
 from qgis.PyQt.QtWidgets import QAction, QToolButton, QMenu, QWidgetAction, QCheckBox
 from qgis.core import (QgsProject, QgsPointXY, QgsApplication, QgsCoordinateTransform,
-                       QgsRectangle, Qgis, QgsExpression)
+                       QgsRectangle, Qgis, QgsExpression, QgsVectorLayerUtils)
 from qgis.gui import QgsMapMouseEvent, QgisInterface
 
 # Import General
@@ -63,12 +63,11 @@ from .modules.PluginTemporaryLayer import PluginTemporaryLayer
 from .tasks.TaskGenerateReseauSegementation import TaskGenerateReseauSegementation
 
 from .mtq.core import Geocodage, Chainage, PointRTSS, ReseauSegmenter, SIGO, PlaniActif
-from .mtq.functions import validateLayer
+from .mtq.fnt import validateLayer
 from .mtq.utils import Utilitaire as Utils
 
 from .functions.getVisibleFeatures import getVisibleFeatures
 from .functions.getToolTipPosition import getToolTipPosition
-from .functions.getIcon import getIcon
 
 from .expressions.expression_geocodage import *
 from .expressions.expression_sigo import *
@@ -586,6 +585,7 @@ class MtqPluginChainage:
                 QgsExpression.unregisterFunction('lien_sigo_complet')
                 QgsExpression.unregisterFunction('lien_planiactif')
                 QgsExpression.unregisterFunction('lien_planiactif_complet')
+                QgsExpression.unregisterFunction('rtss_side')
             except: Utils.warningMessage(self.iface, "Les expressions du plugin n'ont pas pu être retiré.")
 
     def loadCustomExpressions(self):
@@ -603,6 +603,7 @@ class MtqPluginChainage:
                 QgsExpression.registerFunction(lien_sigo_complet)
                 QgsExpression.registerFunction(lien_planiactif)
                 QgsExpression.registerFunction(lien_planiactif_complet)
+                QgsExpression.registerFunction(rtss_side)
                 
             except: Utils.warningMessage(self.iface, "Les expressions du plugin n'ont pas pu être ajouté.")
 
@@ -689,9 +690,8 @@ class MtqPluginChainage:
     
     def setReseauSegementation(self):
         """ Permet de définir le module du réseau segmenté à partir de la tache terminer """
-        self.reseau_context.setModuleGeocodage(self.task_generate_reseau.geocode)
-        self.reseau_context.setReseau(self.task_generate_reseau.getReseau())
-        self.task_generate_reseau = None
+        self.reseau_context = self.task_generate_reseau.getReseau()
+        del self.task_generate_reseau
         Utils.succesMessage(self.iface, "Le réseau a été généré avec succès!", subject="Réseau segmentation linéaire: ")
 
     def generateContextLayerIndex(self):
@@ -722,7 +722,7 @@ class MtqPluginChainage:
         except Exception as error:
             Utils.criticalMessage(
                 iface=self.iface,
-                message="Oups! Un problème est survenu en créant le module du réseau de segmentation linéaire pour la couche de context",
+                message=f"Oups! Un problème est survenu en créant le module du réseau de segmentation linéaire pour la couche de context : {error}",
                 subject="Réseau segmentation linéaire: ")
             return False
 
@@ -964,9 +964,9 @@ class MtqPluginChainage:
                         layer.editingStarted.connect(self.updateActionIcon)
                         layer.editingStopped.connect(self.updateActionIcon)
                         # Change icon
-                        if layer.geometryType() == 0: self.action_create_geometrie.setIcon(getIcon("create_point"))
-                        elif layer.geometryType() == 1: self.action_create_geometrie.setIcon(getIcon("create_line"))
-                        elif layer.geometryType() == 2: self.action_create_geometrie.setIcon(getIcon("create_polygon"))
+                        if layer.geometryType() == 0: self.action_create_geometrie.setIcon(self.params.getIcon("create_point"))
+                        elif layer.geometryType() == 1: self.action_create_geometrie.setIcon(self.params.getIcon("create_line"))
+                        elif layer.geometryType() == 2: self.action_create_geometrie.setIcon(self.params.getIcon("create_polygon"))
             return True
         except Exception as e: 
             Utils.warningMessage(

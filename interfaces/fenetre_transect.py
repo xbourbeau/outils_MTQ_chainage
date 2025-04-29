@@ -32,9 +32,7 @@ from ..functions.addLayerToMap import addLayerToMap
 # Class pour la gestion des paramètre du plugin
 from ..modules.PluginParametres import PluginParametres
 
-
 FORM_CLASS, _ = uic.loadUiType(os.path.join(os.path.dirname(__file__), 'fenetre_transect.ui'))
-
 
 class fenetreTransect(QtWidgets.QDialog, FORM_CLASS):
 

@@ -26,16 +26,15 @@ import os
 from qgis.core import QgsMapLayerProxyModel, QgsFieldProxyModel
 from qgis.gui import QgisInterface
 from qgis.PyQt.QtWidgets import QDialog
-from qgis.PyQt.QtGui import QIcon, QKeySequence, QColor, QTransform
+from qgis.PyQt.QtGui import QIcon, QKeySequence, QColor
 from qgis.PyQt import uic
 from qgis.PyQt.QtCore import pyqtSignal
 
 # Class pour la gestion des paramètre du plugin
 from ..modules.PluginParametres import PluginParametres
-from ..mtq.fnt.imports import choisirFichier
+from ..mtq.fnt import choisirFichier
 from ..mtq.utils import Utilitaire
 from ..functions.checkIfKeySequenceExists import checkIfKeySequenceExists
-from ..functions.getIcon import getIcon, getPixmap
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(os.path.dirname(__file__), 'fenetre_parametre.ui'))
     
@@ -102,15 +101,18 @@ class fenetreParametre(QDialog, FORM_CLASS):
         self.setTabsIcons()
         
         # Définir l'icon des boutons pour choisir le fichier de sybologie
-        self.btn_symblologie_chainage.setIcon(getIcon("qml"))
-        self.btn_symblologie_ecusson.setIcon(getIcon("qml"))
-        self.btn_symblologie_transect.setIcon(getIcon("qml"))
-        self.btn_symblologie_atlas.setIcon(getIcon("qml"))
-        self.rbt_planiactif.setIcon(getIcon("igo"))
-        self.rbt_sigo.setIcon(getIcon("igo"))
+        qml_icon = self.params.getIcon("qml")
+        for w in [
+                self.btn_symblologie_chainage,
+                self.btn_symblologie_ecusson,
+                self.btn_symblologie_transect,
+                self.btn_symblologie_atlas]:
+            w.setIcon(qml_icon)
+        self.rbt_planiactif.setIcon(self.params.getIcon("igo"))
+        self.rbt_sigo.setIcon(self.params.getIcon("igo"))
 
         # Définir l'icon du checkbox pour montrer le marqueur de direction du RTSS
-        self.chx_marqueur_dir.setIcon(getIcon("marker_dir"))
+        self.chx_marqueur_dir.setIcon(self.params.getIcon("marker_dir"))
 
         # Parcourir les widget de case a cocher et définir son état et l'icon de l'action associé
         for action_name, widget in self.widgets_action.items():
@@ -136,15 +138,15 @@ class fenetreParametre(QDialog, FORM_CLASS):
     
     def setTabsIcons(self):
         # Définir les image des tabs
-        self.tabWidget.setTabIcon(0, getIcon("parametres"))
-        self.tabWidget.setTabIcon(1, QIcon(getPixmap("chaine").transformed(QTransform().rotate(90))))
-        self.tabWidget.setTabIcon(2, QIcon(getPixmap("chainage").transformed(QTransform().rotate(90))))
-        self.tabWidget.setTabIcon(3, QIcon(getPixmap("mesure").transformed(QTransform().rotate(90))))
-        self.tabWidget.setTabIcon(4, QIcon(getPixmap("ecusson").transformed(QTransform().rotate(90))))
-        self.tabWidget.setTabIcon(5, QIcon(getPixmap("create_line").transformed(QTransform().rotate(90))))
-        self.tabWidget.setTabIcon(6, QIcon(getPixmap("geocodage_inverse").transformed(QTransform().rotate(90))))
-        self.tabWidget.setTabIcon(7, QIcon(getPixmap("context_layer").transformed(QTransform().rotate(90))))
-        self.tabWidget.setTabIcon(8, QIcon(getPixmap("file").transformed(QTransform().rotate(90))))
+        self.tabWidget.setTabIcon(0, self.params.getIcon("parametres"))
+        self.tabWidget.setTabIcon(1, self.params.getRotatatedIcon("chaine", 90))
+        self.tabWidget.setTabIcon(2, self.params.getRotatatedIcon("chainage", 90))
+        self.tabWidget.setTabIcon(3, self.params.getRotatatedIcon("mesure", 90))
+        self.tabWidget.setTabIcon(4, self.params.getRotatatedIcon("ecusson", 90))
+        self.tabWidget.setTabIcon(5, self.params.getRotatatedIcon("create_line", 90))
+        self.tabWidget.setTabIcon(6, self.params.getRotatatedIcon("geocodage_inverse", 90))
+        self.tabWidget.setTabIcon(7, self.params.getRotatatedIcon("context_layer", 90))
+        self.tabWidget.setTabIcon(8, self.params.getRotatatedIcon("file", 90))
 
     def setComboBoxFilters(self):
         self.cbx_layer_context.setFilters(QgsMapLayerProxyModel.LineLayer)

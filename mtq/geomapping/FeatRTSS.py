@@ -26,8 +26,8 @@ class FeatRTSS(RTSS):
     Class qui défini un objet FeatRTSS.
     Elle permet ainsi de regrouper les méthodes pouvant être associer au RTSS (géocodage)
     """
-    __slots__ = ("num_rts", "chainage_d", "chainage_f", "attributs", "geom")
-    
+    __slots__ = ("num_rts", "chainage_d", "chainage_f", "attributs", "geom", "geom_densify", "use_densify_geom")
+
     def __init__ (self, num_rtss, chainage_f, geometry:QgsGeometry, chainage_d=0, **kwargs):
         """
         Méthode d'initialitation de la class. Le RTSS et chainage de fin peuvent être formater, mais sont stockée
@@ -44,6 +44,9 @@ class FeatRTSS(RTSS):
         self.setChainageDebut(chainage_d)
         self.setChainageFin(chainage_f)
         self.geom = geometry
+        self.geom_densify = self.geom.densifyByDistance(5)
+        self.use_densify_geom = False
+
         RTSS.__init__(self, num_rtss, **kwargs)
         
     @classmethod
@@ -289,6 +292,7 @@ class FeatRTSS(RTSS):
         line_geom = QgsGeometry().fromPolylineXY(line_points)
         # Retirer des vertex qui serait doublé
         line_geom.removeDuplicateNodes()
+        line_geom = line_geom.simplify(0.01)
         # Retourner la géometrie de la ligne
         return line_geom
     
@@ -332,6 +336,10 @@ class FeatRTSS(RTSS):
         if not interpolate_offset: offset = start_point.getOffset()
         # Définir le offset à 0 si c'est sur le RTSS
         if on_rtss: offset = 0
+
+        if interpolate_offset: self.use_densify_geom = True
+        elif offset != 0: self.use_densify_geom = True
+
         # Le suivi de la mesure de la distance de la ligne le long du RTSS
         dist_along_line = 0
         # Définir le premier vertex comme étant le point de début sur le RTSS
@@ -357,13 +365,19 @@ class FeatRTSS(RTSS):
                     offset_d=start_point.getOffset(),
                     offset_f=end_point.getOffset())
             # Appliquer un offset au point du vertex
-            if offset != 0: vertex_point = offsetPoint(
-                point=vertex_point,
-                offset=offset,
-                angle=self.geometry().angleAtVertex(vertex_idx))
+            if offset != 0:
+                vertex_point = offsetPoint(
+                    point=vertex_point,
+                    offset=offset,
+                    angle=self.geometry().angleAtVertex(vertex_idx))
+            
+            # BUG: Fix pour des offset différent
+            vals = self.geometry().closestSegmentWithContext(vertex_point)
+            dist = vals[1].distance(vertex_point)
             # Ajouter le vertex à la ligne géocoder
-            line_points.append(vertex_point)
+            if dist+0.01 >= abs(offset): line_points.append(vertex_point)
 
+        self.use_densify_geom = False
         # Retourner la liste des points de la ligne
         return line_points
 
@@ -474,8 +488,13 @@ class FeatRTSS(RTSS):
 
     def geometry(self)->QgsGeometry:
         """ Méthode qui renvoie la géometrie du RTSS """
+        if self.use_densify_geom: return self.geom_densify
         return self.geom
  
+    def densifyGeometry(self)->QgsGeometry:
+        """ Méthode qui renvoie la géometrie du RTSS densifié """
+        return self.geom_densify
+
     def getChainageOnRTSS(self, chainage:Union[int, float, Chainage, str]):
         """ 
         Méthode qui renvoie le chainage en entrée sur RTSS. 
@@ -500,22 +519,8 @@ class FeatRTSS(RTSS):
         Return (float): La distance du point par rapport au RTSS (positif = droite / négatif = gauche)
         """
         point_geom = FeatRTSS.verifyFormatPoint(point)
-        point = point_geom.asPoint()
-        # Trouver les vertex du RTSS à proximité du point (avant, plus proche et après)
-        id, vertex_id, previous_vertex_id, nextVertexIndex, sqr_dist = self.geometry().closestVertex(point)
-        # Verifier si le vertex avant existe donc que le point n'est pas au début complétement de la ligne
-        if previous_vertex_id == -1:
-            # Trouver le côté (vertex proche => vertex après)
-            side = QgsGeometryUtils.segmentSide(self.geometry().vertexAt(vertex_id),
-                                                self.geometry().vertexAt(nextVertexIndex),
-                                                QgsPoint(point))
-        else:
-            # Trouver le côté ligne(vertex avant => vertex proche)
-            side = QgsGeometryUtils.segmentSide(self.geometry().vertexAt(previous_vertex_id),
-                                                self.geometry().vertexAt(vertex_id),
-                                                QgsPoint(point))
         # Retourner la distance et appliquer le coté (1=droit ; -1=gauche)
-        return self.geometry().distance(point_geom) * side
+        return self.geometry().distance(point_geom) * self.side(point_geom)
         
     def getChainageFromPoint(self, point:Union[QgsPointXY, QgsGeometry]):
         """ 
@@ -648,6 +653,23 @@ class FeatRTSS(RTSS):
         if partial: return self.num_rts in line.listRTSS()
         else: return line.hasOneRTSS() and line.startPoint().getRTSS() == self.num_rts
 
+    def isOnExtremities(self, obj_rtss:Union[PointRTSS, LineRTSS, PolygonRTSS], tolerance=0):
+        """
+        Permet de vérifier si un objet RTSS se trouve sur une des extremitées du RTSS.
+
+        Args:
+            obj_rtss (Union[PointRTSS, LineRTSS, PolygonRTSS]): L'objet RTSS à vérifier
+            tolerance (int, optional): Tolérence des chainages. Defaults to 0.
+        """
+        if isinstance(obj_rtss, PointRTSS): chainages = [obj_rtss.getChainage()]
+        elif isinstance(obj_rtss, LineRTSS): chainages = [obj_rtss.startChainage(), obj_rtss.endChainage()]
+        elif isinstance(obj_rtss, PolygonRTSS): chainages = [obj_rtss.getChainageDebut(), obj_rtss.getChainageFin()]
+        else: return None
+        
+        if any([c <= self.chainageDebut()+tolerance for c in chainages]): return True
+        if any([c >= self.chainageFin()-tolerance for c in chainages]): return True
+        return False
+
     def length(self, in_chainage=False)->float:
         """
         Permet de retourner la longeur du RTSS
@@ -669,6 +691,31 @@ class FeatRTSS(RTSS):
             raise ValueError("Le chainage de fin doit etre plus grand que le chainage de debut")
         self.chainage_f = Chainage(chainage)
 
+    def side(self, point:Union[QgsPointXY, QgsGeometry]):
+        """
+        Méthode qui permet de retourner le côté du RTSS par rapport à un point.
+
+        Args:
+            point (Union[QgsPointXY, QgsGeometry]): Le point à vérifier
+
+        Returns (int):
+            Le côté du RTSS dans le sense du chainage. [1 = Droite] | [-1 = Gauche] | [0 = Centre]
+        """
+        point = FeatRTSS.verifyFormatPoint(point).asPoint()
+        # Trouver les vertex du RTSS à proximité du point (avant, plus proche et après)
+        id, vertex_id, previous_vertex_id, nextVertexIndex, sqr_dist = self.geometry().closestVertex(point)
+        
+        # Verifier si le vertex avant existe donc que le point n'est pas au début complétement de la ligne
+        # Trouver le côté (vertex proche => vertex après)
+        if previous_vertex_id == -1: return QgsGeometryUtils.segmentSide(
+            self.geometry().vertexAt(vertex_id),
+            self.geometry().vertexAt(nextVertexIndex),
+            QgsPoint(point))
+        # Trouver le côté ligne(vertex avant => vertex proche)
+        else: return QgsGeometryUtils.segmentSide(
+            self.geometry().vertexAt(previous_vertex_id),
+            self.geometry().vertexAt(vertex_id),
+            QgsPoint(point))
 
     def verifyFormatPoint(point:Union[QgsPointXY, QgsPoint, QgsGeometry]) -> QgsGeometry:
         """

@@ -579,7 +579,7 @@ class Geocodage:
         Convertir une geometry en objet PolygonRTSS
 
         Args:
-            - geom_line (QgsGeometry) = La géometrie du polygon
+            - geom_poly (QgsGeometry) = La géometrie du polygon
             - rtss (RTSS) = Indiquer un RTSS spécifique
         
         Return: PolygonRTSS = L'objet PolygonRTSS qui représente le mieux la géometrie
@@ -602,6 +602,18 @@ class Geocodage:
         """
         return self.dict_rtss == {}
 
+    def isOnExtremities(self, obj_rtss:Union[PointRTSS, LineRTSS, PolygonRTSS], tolerance=0):
+        """
+        Permet de vérifier si un objet RTSS se trouve sur une des extremitées du RTSS.
+
+        Args:
+            obj_rtss (Union[PointRTSS, LineRTSS, PolygonRTSS]): L'objet RTSS à vérifier
+            tolerance (int, optional): Tolérence des chainages. Defaults to 0.
+        """
+        feat_rtss = self.get(obj_rtss.getRTSS())
+        return feat_rtss.isOnExtremities(obj_rtss, tolerance=tolerance)
+
+
     def nearestRTSS(self, geometry:QgsGeometry, dist_max=0)->FeatRTSS:
         """
         Retourner le FeatRTSS le plus proche d'une géometry
@@ -614,7 +626,8 @@ class Geocodage:
         if list_rtss == []: return None
         else: return list_rtss[0]
 
-    def nearestRTSSFromPoint(self, geometry:QgsGeometry, dist_max=0)->FeatRTSS:
+    def nearestRTSSFromPoint(self, geometry:Union[QgsPointXY, QgsGeometry], dist_max=0)->FeatRTSS:
+        geometry = verifyFormatPoint(geometry)
         # Parcourir la liste des id de RTSS les plus proche de la geometrie en entrée
         for id in self.spatial_index.nearestNeighbor(geometry, neighbors=1, maxDistance=dist_max):
             return self.getRTSSById(id)

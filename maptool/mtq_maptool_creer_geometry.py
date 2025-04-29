@@ -14,7 +14,7 @@ from ..modules.TemporaryGeometry import TemporaryGeometry
 from ..interfaces.fenetre_create_geometry import fenetreCreationGeometrie
 
 from ..mtq.core import Geocodage, PointRTSS, LineRTSS, PolygonRTSS
-from ..mtq.functions import reprojectGeometry
+from ..mtq.fnt import reprojectGeometry
 
 class MtqMapToolCreerGeometry(QgsMapToolEdit):
     

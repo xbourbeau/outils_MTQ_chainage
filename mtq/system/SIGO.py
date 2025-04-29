@@ -110,11 +110,10 @@ class SIGO:
         
         Args:
             extent (QgsRectangle): The extent to calculate parameters for in Epsg:4326
+            tile_size (int): The tile size in pixels (default 256)
             max_zoom (int): Maximum zoom level to consider (default 19)
             offset (int): Ajouter des niveau de zoom a celui calculer
-            layers_wms (dict, optional): Dictionnaire qui contient les URL et les noms des couche à ajouter. Defaults to {}.
             crs (int): Le CRS de l'étendu
-            search (str): Un argument à rechercher dans la barre de recherche SIGO
         
         Returns:
             tuple: (center_lon, center_lat, zoom_level)

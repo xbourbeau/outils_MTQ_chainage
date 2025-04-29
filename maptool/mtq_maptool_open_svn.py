@@ -4,7 +4,7 @@ from qgis.core import QgsApplication
 from qgis.gui import QgsMapTool, QgsMapCanvas
 
 from ..mtq.core import  Geocodage
-from ..mtq.functions import reprojectGeometry
+from ..mtq.fnt import reprojectGeometry
 
 class MtqMapToolOpenSVN(QgsMapTool):  
     def __init__(self, canvas:QgsMapCanvas, geocode:Geocodage):
@@ -24,7 +24,7 @@ class MtqMapToolOpenSVN(QgsMapTool):
     def canvasPressEvent(self, e):
         default_link = """http://ws.sigvideo.mtq.min.intra/Interface/VisionneuseVideo.aspx?"""
         # Geometrie du point dans la projection de la couche des RTSS
-        #TODO: Check projection error
+        # TODO: Check projection error
         point_on_rtss = self.geocode.geocoderPointOnRTSS(self.toLayerCoordinates(self.layer_rtss, e.pos()))
         center_point = reprojectGeometry(point_on_rtss.getGeometry(), self.layer_rtss.crs(), 4326).asPoint()
         if center_point.x() != 0.0 or center_point.y() != 0.0:

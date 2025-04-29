@@ -10,7 +10,7 @@ from ..region.Province import Province
 from ..param import DEFAULT_LAYER_REFERENCE, DEFAULT_AUTHID, C_PROV, C_SOURCE
 from ..utils import Utilitaire
 from ..search.SearchEngine import SearchEngine
-from ..fnt.openSIGO import openLayersInSIGO
+from ..system.SIGO import SIGO
 
 # Layers imports
 from .LoadLayers import LoadLayers
@@ -478,8 +478,8 @@ class LayerManager:
             # Ajouter la couche à SIGO
             layers_wfs.append(layer)
         # Ouvrir SIGO
-        if use_map: openLayersInSIGO(layers=layers_wfs, iface=self.iface)
-        else: openLayersInSIGO(layers=layers_wfs)
+        if use_map: SIGO().openFromLayers(layers=layers_wfs, iface=self.iface)
+        else: SIGO().openFromLayers(layers=layers_wfs)
 
     def removeLayerFromProject(self, layer_name, use_name=True, use_source=False):
         """ Méthode qui permet de retirer une couche, qui se trouve dans un QgsProject """

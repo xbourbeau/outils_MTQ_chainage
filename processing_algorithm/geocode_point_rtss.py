@@ -14,26 +14,16 @@
 from qgis.PyQt.QtCore import QCoreApplication, QVariant
 from qgis.core import (QgsProcessing,
                        QgsFeatureSink,
-                       QgsPropertyDefinition,
                        QgsWkbTypes,
-                       QgsGeometry,
                        QgsField,
                        QgsFeature,
-                       QgsRaster,
-                       QgsPointXY,
                        QgsProcessingException,
                        QgsProcessingAlgorithm,
-                       QgsCoordinateTransform,
-                       QgsProject,
-                       QgsCoordinateReferenceSystem,
                        QgsProcessingParameterFeatureSource,
                        QgsProcessingParameterField,
-                       QgsProcessingParameterString,
-                       QgsProcessingParameterDistance,
-                       QgsProcessingParameterFile,
                        QgsProcessingParameterFeatureSink)
 
-from ..mtq.core import Geocodage, Chainage, PointRTSS
+from ..mtq.core import Geocodage, PointRTSS
 
 class GeocodePoint(QgsProcessingAlgorithm):
 

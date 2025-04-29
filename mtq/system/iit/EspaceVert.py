@@ -1,7 +1,7 @@
 # -- coding: utf-8 --
 from .ElementInventaire import ElementInventaire
-from ..geomapping.RTSS import RTSS
-from ..geomapping.PolygonRTSS import PolygonRTSS 
+from ...geomapping.RTSS import RTSS
+from ...geomapping.PolygonRTSS import PolygonRTSS 
 
 class EspaceVert(ElementInventaire):
 

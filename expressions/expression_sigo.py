@@ -1,10 +1,5 @@
-from itertools import chain
-
 from ast import literal_eval
-from matplotlib.transforms import offset_copy
-from mtq import search
-from qgis.core import *
-from qgis.utils import plugins
+from qgis.core import QgsGeometry, qgsfunction, QgsCoordinateReferenceSystem
 
 from ..mtq.core import SIGO, PlaniActif
 from ..modules.PluginParametres import PluginParametres
