@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-from ..fnt.interpolateOffsetOnLine import interpolateOffsetOnLine
-from ..fnt.identifyPolygonCorners import identifyPolygonCorners
-from ..fnt.groupeValues import groupeValues
-from ..fnt.getCenterPoint import getCenterPoint
+from ..functions.interpolateOffsetOnLine import interpolateOffsetOnLine
+from ..functions.identifyPolygonCorners import identifyPolygonCorners
+from ..functions.groupeValues import groupeValues
+from ..functions.getCenterPoint import getCenterPoint
 # Importer la librairie pour des opérations trigo
 from typing import Union
 from collections import Counter

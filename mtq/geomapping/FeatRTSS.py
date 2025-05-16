@@ -3,8 +3,8 @@
 from qgis.core import QgsGeometry, QgsPointXY, QgsGeometryUtils, QgsPoint, QgsFeature
 
 # Importer les fonction de formatage du module
-from ..fnt.interpolateOffsetOnLine import interpolateOffsetOnLine
-from ..fnt.offsetPoint import offsetPoint
+from ..functions.interpolateOffsetOnLine import interpolateOffsetOnLine
+from ..functions.offsetPoint import offsetPoint
 
 # Importer la librairie pour des opérations trigo
 import math
@@ -173,19 +173,21 @@ class FeatRTSS(RTSS):
         # Créer le polygon sur le RTSS
         return self.createPolygon(chainages, offsets, interpolate_on_rtss=interpolate_on_rtss)
 
-    def geocoder(self, obj_rtss:Union[PointRTSS, LineRTSS, PolygonRTSS]):
+    def geocoder(self, obj_rtss:Union[PointRTSS, LineRTSS, PolygonRTSS], on_rtss=False, interpolate_on_rtss=None):
         """
         Permet de géocoder un objet de localition RTSS (PointRTSS, LineRTSS ou PolygonRTSS)
         sur le RTSS
         
         Args:
             - obj_rtss (PointRTSS, LineRTSS, PolygonRTSS): L'objet à géocoder sur le RTSS
+            - on_rtss(bool): Permet d'overide la valeur de offset en géocodant l'objet_rtss sur le RTSS
+            - interpolate_on_rtss(bool): Permet d'overide l'interpolation de l'objet_rtss sur le RTSS 
         
         Return (QgsGeometry): La géometry géocoder sur le RTSS
         """
-        if isinstance(obj_rtss, PointRTSS): return self.geocoderPoint(obj_rtss)
-        elif isinstance(obj_rtss, LineRTSS): return self.geocoderLine(obj_rtss)
-        elif isinstance(obj_rtss, PolygonRTSS): return self.geocoderPolygon(obj_rtss)
+        if isinstance(obj_rtss, PointRTSS): return self.geocoderPoint(obj_rtss, on_rtss=on_rtss)
+        elif isinstance(obj_rtss, LineRTSS): return self.geocoderLine(obj_rtss, on_rtss=on_rtss, interpolate_on_rtss=interpolate_on_rtss)
+        elif isinstance(obj_rtss, PolygonRTSS): return self.geocoderPolygon(obj_rtss, on_rtss=on_rtss, interpolate_on_rtss=interpolate_on_rtss)
 
     def geocoderInverse(self, geometry:QgsGeometry):
         """
@@ -255,10 +257,9 @@ class FeatRTSS(RTSS):
             # Géocodage inverse de l'extremitées
             list_point_rtss.append(self.geocoderInversePoint(QgsGeometry.fromPointXY(QgsPointXY(point))))
             # TODO: Remove unecessary points 
-        
         return PolygonRTSS(list_point_rtss)
 
-    def geocoderLine(self, line:LineRTSS, on_rtss=False):
+    def geocoderLine(self, line:LineRTSS, on_rtss=False, interpolate_on_rtss=None):
         """
         Méthode qui permet de géocoder une ligne sur un RTSS à partir d'un objet LineRTSS.
         La ligne peux être géocoder en interpolant la trace du RTSS entres les points de la ligne ou
@@ -267,12 +268,15 @@ class FeatRTSS(RTSS):
         Args:
             - line (LineRTSS): La ligne à géocoder
             - on_rtss(bool): Permet d'overide la valeur de offset en géocodant le point sur le RTSS 
+            - interpolate_on_rtss(bool): Permet d'overide l'interpolation de l'objet LineRTSS sur le RTSS 
         
         Return (QgsGeometry): La géometrie linéaire géocoder
         """
         # Vérifier que la ligne contient un seule RTSS
         if not self.isLineOnRTSS(line): 
             raise Exception("La ligne doit etre entierement sur le RTSS")
+        # Indentifier si la ligne doit être interpoler sur le RTSS entre les 2 PointRTSS de la ligne
+        if interpolate_on_rtss is None: interpolate_on_rtss = line.interpolate()
         # Géocoder le premier point de la ligne
         start_point_geom = self.geocoderPoint(line.startPoint(), on_rtss=on_rtss)
         line.startPoint().setGeometry(start_point_geom)
@@ -283,8 +287,10 @@ class FeatRTSS(RTSS):
             point_geom = self.geocoderPoint(line_point, on_rtss=on_rtss)
             # Géocoder le point de la ligne 
             line[idx+1].setGeometry(point_geom)
-            # Ajouter les points des vertex entre les deux dernier PointRTSS de la ligne
-            line_points.extend(self.geocoderLineFromExtremities(line[idx], line[idx+1], on_rtss=on_rtss))
+            # Vérifier si la ligne doit être interpoler sur le RTSS entre les 2 PointRTSS de la ligne
+            if interpolate_on_rtss:
+                # Ajouter les points des vertex entre les deux dernier PointRTSS de la ligne
+                line_points.extend(self.geocoderLineFromExtremities(line[idx], line[idx+1], on_rtss=on_rtss))
             # Ajouter le dernier points à la liste
             line_points.append(point_geom.asPoint())
         
@@ -438,7 +444,7 @@ class FeatRTSS(RTSS):
         """
         return self.geocoderPoint(self.createPoint(chainage, offset))
     
-    def geocoderPolygon(self, polygon:PolygonRTSS):
+    def geocoderPolygon(self, polygon:PolygonRTSS, interpolate_on_rtss=None):
         """
         Méthode qui permet de géocoder un polygon sur un RTSS à partir d'un objet PolygonRTSS.
         Le polygon peux être géocoder en interpolant la trace du RTSS entres les points ou
@@ -446,11 +452,14 @@ class FeatRTSS(RTSS):
         
         Args:
             - line (PolygonRTSS): Le polygon à géocoder
+            - interpolate_on_rtss(bool): Permet d'overide l'interpolation de l'objet PolygonRTSS sur le RTSS 
         
         Return (QgsGeometry): La géometrie polygonal géocoder
         """
         # Vérifier que le polygon est valide
         if not polygon.isValide(): raise ValueError(f"{polygon} is not valide. It needs at least 4 points and should be closed")
+        # Indentifier si la ligne doit être interpoler sur le RTSS entre les 2 PointRTSS de la ligne
+        if interpolate_on_rtss is None: interpolate_on_rtss = polygon.interpolate()
         # Définir une liste de points géocoder du polygon
         list_polygon_points = []
         # Nombre de points que contient le polygon
@@ -463,7 +472,7 @@ class FeatRTSS(RTSS):
             # Geocoder la ligne pour avoir les points entre les deux points du polygon
             else: list_polygon_points.extend(
                 self.geocoderLine(
-                    LineRTSS([point, polygon[idx+1]], interpolate_on_rtss=polygon.interpolate()),
+                    LineRTSS([point, polygon[idx+1]], interpolate_on_rtss=interpolate_on_rtss),
                     ).asPolyline()[:-1])
         # Retourn la géometrie polygonal (Si moins de 3 point la géometrie est NULL)
         return QgsGeometry().fromPolygonXY([list_polygon_points]).makeValid()

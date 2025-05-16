@@ -7,7 +7,9 @@ Couriel: xavier.bourbeau@transport.gouv.qc.ca
 
 """
 
-__all__ = ["EspaceVert", "SystemIIT"]
+__all__ = ["EspaceVert", "SystemIIT", "ElementInventaire", "Marquage"]
 
-from .EspaceVert import EspaceVert
-from .SystemIIT import SystemIIT
+#from .EspaceVert import EspaceVert
+#from .SystemIIT import SystemIIT
+#from .ElementInventaire import ElementInventaire
+#from .Marquage import Marquage

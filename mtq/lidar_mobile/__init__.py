@@ -1,4 +1,1 @@
-__all__ = ["IndexLidar", "LidarMobile"]
-
-from .IndexLidar import IndexLidar
-from .LidarMobile import LidarMobile
+__all__ = ["IndexLidar", "LidarMobile", "Lidar"]

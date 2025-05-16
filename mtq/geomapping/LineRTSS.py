@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from ..fnt.interpolateOffsetOnLine import interpolateOffsetOnLine
+from ..functions.interpolateOffsetOnLine import interpolateOffsetOnLine
 from typing import Union
 from collections import Counter
 from qgis.core import QgsGeometry

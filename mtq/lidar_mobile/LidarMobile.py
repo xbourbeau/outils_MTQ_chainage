@@ -4,7 +4,7 @@ from qgis.core import (QgsGeometry, QgsPointXY, QgsVectorLayer, QgsField, QgsRec
                         QgsCoordinateReferenceSystem, QgsSpatialIndex, QgsFeature, QgsWkbTypes, QgsFeatureIterator)
 from typing import Union, Dict
 
-from ..fnt.reprojections import reprojectPoints
+from ..functions.reprojections import reprojectPoints
 from .IndexLidar import IndexLidar
 from .Lidar import Lidar
 

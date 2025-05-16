@@ -34,7 +34,6 @@ class ReseauSegmenter(Geocodage):
             - geocode (geocodage): L'objet geocodage sur lequel baser le réseau 
             - reseau (dict): Dictionnaire des objet de LinearReferencing
         """
-
         Geocodage.__init__(
             self,
             rtss_features=None,

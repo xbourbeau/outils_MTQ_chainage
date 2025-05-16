@@ -8,7 +8,7 @@ from qgis.core import (QgsVectorFileWriter, QgsFields, QgsField, QgsFeature,
                        QgsCoordinateTransformContext, QgsProject)
 from PyQt5.QtCore import QVariant
 
-from ...fnt.reprojections import reprojectGeometry
+from ...functions.reprojections import reprojectGeometry
 from .ElementInventaire import ElementInventaire
 from .EspaceVert import EspaceVert
 
@@ -101,6 +101,36 @@ class SystemIIT:
         """ Retourne la date du jour pour les fichiers de chargement """
         return datetime.today().strftime("%Y-%m-%d")
     
+    @staticmethod
+    def getMRCByCode(code):
+        """ Permet de retourner le nom de la MRC selon le code inscrit dans IIT """
+        code = str(code)
+        if code == '30': return "Le Granit"
+        elif code == '40': return "Les Sources"
+        elif code == '41': return "Le Haut-Saint-François"
+        elif code == '42': return "Le Val-Saint-François"
+        elif code == '43': return "Sherbrooke"
+        elif code == '44': return "Coaticook"
+        elif code == '45': return "Memphrémagog"
+        elif code == '46': return "Brome-Missisquoi"
+        elif code == '47': return "La Haute-Yamaska"
+        else: return None
+
+    @staticmethod
+    def getCEPByCode(code):
+        """ Permet de retourner le nom du CEP selon le code inscrit dans IIT """
+        code = str(code)
+        if code == '104': return "Mégantic"
+        elif code == '110': return "Saint-François"
+        elif code == '116': return "Sherbrooke"
+        elif code == '120': return "Orford"
+        elif code == '126': return "Johnson"
+        elif code == '132': return "Richmond"
+        elif code == '204': return "Brome-Missisquoi"
+        elif code == '206': return "Granby"
+        elif code == '802': return "Beauce-Sud"
+        else: return None
+
     def getMethodeReleve(self, methode_releve:str):
         """ Retourne la méthode de relevé selon le code spécifié """
         # Ajouter un zéro devant le code si nécessaire

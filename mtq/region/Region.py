@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from ..fnt.reprojections import reprojectGeometry
+from ..functions.reprojections import reprojectGeometry
 from typing import Union
 from qgis.core import QgsGeometry, QgsCoordinateReferenceSystem
 

@@ -275,6 +275,12 @@ class PluginParametres(GestionParametre):
                 categorie=categorie_config,
                 setting_name="raccourcis_clavier_perpendiculaire",
                 default_value='O'),
+            # Paramètre: Raccourci clavier pour l'interpolation sur le rtss lors de numérisation
+            "raccourcis_clavier_interpolate_rtss": Parametre(
+                plugin_name=plugin_name,
+                categorie=categorie_config,
+                setting_name="raccourcis_clavier_interpolate_rtss",
+                default_value='I'),
             # Paramètre: Affichier les options de copies des informations générale dans le menu
             "show_copie_menu_info": ParametreBool(
                 plugin_name=plugin_name,
@@ -364,7 +370,20 @@ class PluginParametres(GestionParametre):
                 plugin_name=plugin_name,
                 categorie=categorie_config,
                 setting_name="dossier_plugin_update",
-                default_value=r"//sstao00-adm005/TridentAnalyst/Plugin_chainage_mtq/Plugin")}
+                default_value=r"//sstao00-adm005/TridentAnalyst/Plugin_chainage_mtq/Plugin"),
+            # Paramètre: La dernière valueur de la précision du offset dans la fenêtre de géometrie
+            "last_edit_chainage_precision": ParametreInt(
+                plugin_name=plugin_name,
+                categorie=categorie_option,
+                setting_name="last_edit_chainage_precision",
+                default_value=0),
+            # Paramètre: La dernière valueur de la précision du offset dans la fenêtre de géometrie
+            "last_edit_offset_precision": ParametreInt(
+                plugin_name=plugin_name,
+                categorie=categorie_option,
+                setting_name="last_edit_offset_precision",
+                default_value=1)
+            }
         
         # =================== Définir les action du plugin =================
         # Dictionnaire des objets action de la barre d'outils du plugin

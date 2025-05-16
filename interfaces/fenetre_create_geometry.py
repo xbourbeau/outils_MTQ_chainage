@@ -22,24 +22,27 @@
  ***************************************************************************/
 """
 import os
+from mtq.geomapping.PointRTSS import PointRTSS
 from qgis.gui import QgisInterface, QgsDockWidget
 from qgis.PyQt import uic
 from qgis.PyQt.QtCore import pyqtSignal
 from PyQt5.QtCore import Qt
-from PyQt5 import QtWidgets, QtCore
-from qgis.PyQt.QtWidgets import QDockWidget, QAction
+from qgis.PyQt.QtWidgets import (QDockWidget, QAction, QMenu, QCheckBox, QToolButton,
+                                 QWidgetAction, QSpinBox, QLabel )
 
 from ..modules.PluginParametres import PluginParametres
 from ..modules.CompleterRTSS import CompleterRTSS
-from ..mtq.core import Geocodage
+from ..mtq.core import Geocodage, PointRTSS
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(os.path.dirname(__file__), 'fenetre_create_geometry.ui'))
 
 class fenetreCreationGeometrie(QDockWidget, FORM_CLASS):
 
     closing_window = pyqtSignal()
-    set_lock_chainage = pyqtSignal()
-    set_lock_offset = pyqtSignal()
+    set_lock_chainage = pyqtSignal('float')
+    set_lock_offset = pyqtSignal('float')
+    set_interpolate_on_rtss = pyqtSignal('bool')
+    update_moving_point = pyqtSignal(PointRTSS)
     
     def __init__(self, iface:QgisInterface, geocode:Geocodage, parent=None):
         # Référence de l'interface QGIS
@@ -50,31 +53,18 @@ class fenetreCreationGeometrie(QDockWidget, FORM_CLASS):
         super(fenetreCreationGeometrie, self).__init__(parent)
         # Set up l'interface
         self.setupUi(self)
-        
         # Class de gestion des paramètres
         self.params = PluginParametres()
+        
+        self.hey = True
 
-        # Install event filter for cycling
-        self.installEventFilter(self)
-        self.tab_widgets = [self.txt_rtss, self.spx_chainage, self.spx_offset, self.btn_add]
+        self.spx_chainage.valueChanged.connect(self.setValuesFromPoint)
+        self.spx_offset.valueChanged.connect(self.setValuesFromPoint)
 
-        # Set Action to zoom on exutoire IITs
-        action = QAction(self.params.getIcon("loc"), "Lock", self)
-        action.setCheckable(True)
-        action.triggered.connect(lambda: self.set_lock_chainage.emit())
-        self.act_lock_chainage.setDefaultAction(action)
+        self.txt_rtss.textChanged.connect(lambda: self.btn_add.setEnabled(self.isCurrentRTSSValide()))
+        self.btn_add.setEnabled(False)
 
-        # Set Action to zoom on exutoire IITs
-        action = QAction(self.params.getIcon("loc"), "Lock", self)
-        action.setCheckable(True)
-        action.triggered.connect(lambda: self.set_lock_offset.emit())
-        self.act_lock_offset.setDefaultAction(action)
-
-        #self.btn_add.setIcon(getIcon("qml"))
-
-        # Définir l'image du logo de l'outil
-        #self.btn_add.setPixmap(getPixmap("geocodage_inverse"))
-        #self.btn_add.setScaledContents(True)
+        self.setActions()
 
     def closeEvent(self, event):
         if self.isVisible():
@@ -88,8 +78,7 @@ class fenetreCreationGeometrie(QDockWidget, FORM_CLASS):
         else:
             # Get all dock widgets in left area
             left_docks = self.iface.mainWindow().findChildren(QgsDockWidget)
-            left_docks = [d for d in left_docks if 
-                        self.iface.mainWindow().dockWidgetArea(d) == Qt.LeftDockWidgetArea]
+            left_docks = [d for d in left_docks if self.iface.mainWindow().dockWidgetArea(d) == Qt.LeftDockWidgetArea]
             # Tabify with last dock widget
             if len(left_docks) > 1: self.iface.mainWindow().tabifyDockWidget(left_docks[-2], self)
             self.iface.addDockWidget(Qt.LeftDockWidgetArea, self)
@@ -97,14 +86,75 @@ class fenetreCreationGeometrie(QDockWidget, FORM_CLASS):
             completer = CompleterRTSS(self.geocode, parent=self.txt_rtss, formater_rtss=False)
             # Appliquer le Completer au LineEdit
             self.txt_rtss.setCompleter(completer)
+
+            self.lockOffset(False)
+            self.lockChainage(False)
+
             self.show()
 
-    def eventFilter(self, obj, event):
-        if event.type() == 7: 
-            if event.key() == QtCore.Qt.Key_Tab:
-                current = QtWidgets.QApplication.focusWidget()
-                if current == self.btn_add: self.txt_rtss.setFocus()
-        return super().eventFilter(obj, event)
+    def setActions(self):
+        # Set Action to lock chainage
+        action = QAction(self.params.getIcon("loc"), "Lock", self)
+        action.setCheckable(True)
+        action.triggered.connect(lambda: self.set_lock_chainage.emit(self.spx_chainage.value()))
+        self.act_lock_chainage.setDefaultAction(action)
+
+        # Set Action to lock offset
+        action = QAction(self.params.getIcon("loc"), "Lock", self)
+        action.setCheckable(True)
+        action.triggered.connect(lambda: self.set_lock_offset.emit(self.spx_offset.value()))
+        self.act_lock_offset.setDefaultAction(action)
+
+        # Set Action to lock interpolation on RTSS
+        action = QAction(self.params.getIcon("chainage"), "intrepoler_on_rtss", self)
+        action.setToolTip("Interpoler la géometrie en suivant le RTSS")
+        action.setCheckable(True)
+        action.setChecked(True)
+        action.triggered.connect(lambda state: self.set_interpolate_on_rtss.emit(state))
+        self.act_interpolate_rtss.setDefaultAction(action)
+
+        def createSpinBox(param_name):
+            spx = QSpinBox()
+            spx.setMinimum(0)
+            spx.setMaximum(6)
+            spx.setValue(self.params.getValue(param_name))
+            return spx
+
+        self.chx_precision_chainage = createSpinBox("last_edit_chainage_precision")
+        self.chx_precision_chainage.valueChanged.connect(self.updatePrecisionChainage)
+        self.updatePrecisionChainage(self.params.getValue("last_edit_chainage_precision"))
+
+        self.chx_precision_offset = createSpinBox("last_edit_offset_precision")
+        self.chx_precision_offset.valueChanged.connect(self.updatePrecisionOffset)
+        self.updatePrecisionOffset(self.params.getValue("last_edit_offset_precision"))
+
+        # Définir le menu d'option du Chainage ========================
+        self.act_param_chainage.setMenu(QMenu())
+        self.act_param_chainage.setToolTip("Options")
+        self.act_param_chainage.setPopupMode(QToolButton.InstantPopup)
+        self.act_param_chainage.setIcon(self.params.getIcon("parametres"))
+
+        widget_action_chainage1 = QWidgetAction(self.act_param_chainage.menu())
+        widget_action_chainage1.setDefaultWidget(QLabel("   Précision du chainage   "))
+        self.act_param_chainage.menu().addAction(widget_action_chainage1)
+
+        widget_action_chainage = QWidgetAction(self.act_param_chainage.menu())
+        widget_action_chainage.setDefaultWidget(self.chx_precision_chainage)
+        self.act_param_chainage.menu().addAction(widget_action_chainage)
+
+        # Définir le menu d'option du Offset ========================
+        self.act_param_offset.setMenu(QMenu())
+        self.act_param_offset.setToolTip("Options")
+        self.act_param_offset.setPopupMode(QToolButton.InstantPopup)
+        self.act_param_offset.setIcon(self.params.getIcon("parametres"))
+
+        widget_action_offset1 = QWidgetAction(self.act_param_offset.menu())
+        widget_action_offset1.setDefaultWidget(QLabel("   Précision du offset   "))
+        self.act_param_offset.menu().addAction(widget_action_offset1)
+
+        widget_action_offset = QWidgetAction(self.act_param_offset.menu())
+        widget_action_offset.setDefaultWidget(self.chx_precision_offset)
+        self.act_param_offset.menu().addAction(widget_action_offset)
 
     def lockOffset(self, lock:bool):
         self.act_lock_offset.setChecked(lock)
@@ -114,23 +164,31 @@ class fenetreCreationGeometrie(QDockWidget, FORM_CLASS):
         self.act_lock_chainage.setChecked(lock)
         self.spx_chainage.setEnabled(not lock)
 
-    def setValuesFromPoint(self, point_rtss, is_signal=True):
-        if not is_signal:
-            self.setRTSS(point_rtss.getRTSS().value(), False)
-            self.setChainage(point_rtss.getChainage().value(), False)
-            self.setOffset(point_rtss.getOffset(), False)
+    def updatePrecisionChainage(self, value:int):
+        """ Méthode pour mettre à jour la précision du QSpinBox du chainage """
+        self.spx_chainage.setDecimals(value)
+        self.params.setValue("last_edit_chainage_precision", value)
 
-    def setRTSS(self, rtss, is_signal=True):
-        if is_signal: pass
-        else: self.txt_rtss.setText(rtss)
+    def updatePrecisionOffset(self, value:int):
+        """ Méthode pour mettre à jour la précision du QSpinBox du offset """
+        self.spx_offset.setDecimals(value)
+        self.params.setValue("last_edit_offset_precision", value)
 
-    def setChainage(self, chainage, is_signal=True):
-        if is_signal: pass
-        else: self.spx_chainage.setValue(chainage)
+    def isCurrentRTSSValide(self):
+        """ Méthode pour verifier si le RTSS dans le LineEdit est valide """
+        feat_rtss = self.geocode.get(self.txt_rtss.text())
+        return not feat_rtss is None
 
-    def setOffset(self, offset, is_signal=True):
-        if is_signal: pass
-        else: self.spx_offset.setValue(offset)
+    def getPointRTSS(self):
+        """ Méthode qui perment de retourner le PointRTSS courant dans la fenêtre"""
+        return self.geocode.createPoint(self.txt_rtss.text(), self.spx_chainage.value(), self.spx_offset.value())
 
-    #def updateOffset(self, is_signal=True):
-    #    if is_signal
+    def setValuesFromPoint(self, point_rtss:PointRTSS, from_mouse=False):
+        if from_mouse:
+            self.hey = False
+            self.txt_rtss.setText(point_rtss.getRTSS().value())
+            self.spx_chainage.setValue(point_rtss.getChainage().value())
+            self.spx_offset.setValue(point_rtss.getOffset())
+            self.hey = True
+        elif self.hey:
+            self.update_moving_point.emit(self.getPointRTSS())

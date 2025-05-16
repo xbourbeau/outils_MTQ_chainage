@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from qgis.core import QgsGeometry, QgsCoordinateReferenceSystem, QgsVectorLayer
 from typing import Union
-from ..fnt.layer import validateLayer
+from ..functions.layer import validateLayer
 from .Region import Region
 from .CS import CS
 from .DT import DT

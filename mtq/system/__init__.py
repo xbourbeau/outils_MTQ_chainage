@@ -8,7 +8,3 @@ Couriel: xavier.bourbeau@transport.gouv.qc.ca
 """
 
 __all__ = ["GSR", "SIGO", "PlaniActif"]
-
-from .GSR import GSR
-from .SIGO import SIGO, PlaniActif
-from .iit import *
