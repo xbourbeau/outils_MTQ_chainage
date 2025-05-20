@@ -24,11 +24,10 @@ class MtqMapToolOpenSVN(QgsMapTool):
     def canvasPressEvent(self, e):
         default_link = """http://ws.sigvideo.mtq.min.intra/Interface/VisionneuseVideo.aspx?"""
         # Geometrie du point dans la projection de la couche des RTSS
-        # TODO: Check projection error
         point_on_rtss = self.geocode.geocoderPointOnRTSS(self.toLayerCoordinates(self.layer_rtss, e.pos()))
-        center_point = reprojectGeometry(point_on_rtss.getGeometry(), self.layer_rtss.crs(), 4326).asPoint()
+        center_point = reprojectGeometry(point_on_rtss.getGeometry(), self.layer_rtss.crs(), 4269).asPoint()
         if center_point.x() != 0.0 or center_point.y() != 0.0:
-            default_link = f'''http://ws.sigvideo.mtq.min.intra/Interface/VisionneuseVideo.aspx?x={center_point.x()}&y={center_point.y()}&projection=EPSG_4269_DEC&zoneTampon=5'''
+            default_link = f'''{default_link}x={center_point.x()}&y={center_point.y()}&projection=EPSG_4269_DEC&zoneTampon=5'''
         webbrowser.open_new(default_link)
     
     def deactivate(self):

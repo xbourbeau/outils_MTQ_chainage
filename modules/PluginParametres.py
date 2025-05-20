@@ -227,12 +227,6 @@ class PluginParametres(GestionParametre):
                 categorie=categorie_config,
                 setting_name="layer_transect_style",
                 default_value=path_to_default_style_transect),
-            # Paramètre: Suivre les mise à jour du plugin
-            "suivi_plugin_update": ParametreBool(
-                plugin_name=plugin_name,
-                categorie=categorie_config,
-                setting_name="suivi_plugin_update",
-                default_value=True),
             # Paramètre: Couleur de la ligne de mesure
             "mesure_line_color": Parametre(
                 plugin_name=plugin_name,
@@ -484,7 +478,6 @@ class PluginParametres(GestionParametre):
             }
     
         GestionParametre.__init__(self, dict_parametre=dict_parametre, dict_actions=dict_actions)
-
 
     def setIcon(self, icon_name):
         return os.path.join(self.plugin_dir, f"icons/{icon_name}")

@@ -23,6 +23,8 @@
 """
 import os
 
+from numpy import short
+
 from qgis.core import QgsMapLayerProxyModel, QgsFieldProxyModel
 from qgis.gui import QgisInterface
 from qgis.PyQt.QtWidgets import QDialog
@@ -74,9 +76,18 @@ class fenetreParametre(QDialog, FORM_CLASS):
             "show_distance_on_map": self.chx_tooltip_offset,
             "show_context_on_map": self.chx_tooltip_context}
         
+        # TODO: Ajouter les autres raccourci clavier et laisser faire le parametre use_raccourci
+        # Définir les raccourcis clavier
+        self.raccourci = {
+            "raccourcis_clavier_parralele": {"chx": self.chk_shorcut_parallele, "key": self.key_shortcut_parallele},
+            "raccourcis_clavier_perpendiculaire": {"chx": self.chk_shorcut_perpendiculaire, "key": self.key_shortcut_perpendiculaire},
+            "raccourcis_clavier_interpolate_rtss": {"chx": self.chk_shorcut_interpolate, "key": self.key_shortcut_interpolate}
+        }
+        
         # Connections
         self.btn_enregistrer.clicked.connect(self.saveSettings)
         self.btn_annuler.clicked.connect(self.initialisePresentValues)
+        self.btn_set_default_values.clicked.connect(lambda: self.initialisePresentValues(set_default_values=True))
         self.btn_generate_index.clicked.connect(self.generateContextLayerIndex)
         self.btn_delete_index.clicked.connect(lambda: self.delete_index.emit())
 
@@ -96,6 +107,8 @@ class fenetreParametre(QDialog, FORM_CLASS):
         self.key_shortcut_parallele.keySequenceChanged.connect(set_seq_length)
         set_seq_length = lambda k: self.key_shortcut_perpendiculaire.setKeySequence(QKeySequence(k.toString().split(", ")[0]))
         self.key_shortcut_perpendiculaire.keySequenceChanged.connect(set_seq_length)
+        set_seq_length = lambda k: self.key_shortcut_interpolate.setKeySequence(QKeySequence(k.toString().split(", ")[0]))
+        self.key_shortcut_interpolate.keySequenceChanged.connect(set_seq_length)
 
         # Définir les image des tabs
         self.setTabsIcons()
@@ -175,59 +188,62 @@ class fenetreParametre(QDialog, FORM_CLASS):
             idx = cbx.findText(self.params.getValue(param))
             if idx != -1: cbx.setCurrentIndex(idx)
     
-    def initialisePresentValues(self):
+    def initialisePresentValues(self, set_default_values=False):
         # Initialisé les valeurs selon les paramètres du plugin
         # Set Layer comboBox 
-        idx = self.cbx_layer_rtss.findText(self.params.getValue("layer_rtss"))
+        idx = self.cbx_layer_rtss.findText(self.params.getValue("layer_rtss", set_default_values))
         if idx != -1: self.cbx_layer_rtss.setCurrentIndex(idx)
         self.setLayerRTSSCombobox(self.cbx_layer_rtss.currentLayer())
         
-        idx = self.cbx_layer_context.findText(self.params.getValue("context_layer"))
+        idx = self.cbx_layer_context.findText(self.params.getValue("context_layer", set_default_values))
         if idx != -1: self.cbx_layer_context.setCurrentIndex(idx)
         self.setLayerContextCombobox(self.cbx_layer_context.currentLayer())
         
-        self.chx_follow_update.setChecked(self.params.getValue("suivi_plugin_update"))
-        self.chx_add_expressions.setChecked(self.params.getValue("load_custom_expressions"))
-        self.chx_format_rtss.setChecked(self.params.getValue("formater_rtss"))
-        self.chx_format_chainage.setChecked(self.params.getValue("formater_chainage"))
-        self.chx_marqueur_dir.setChecked(self.params.getValue("show_marker_direction"))
-        self.chk_copie_info_rtss.setChecked(self.params.getValue("show_copie_menu_info"))
-        self.chk_copie_formater.setChecked(self.params.getValue("show_copie_menu_formater"))
-        self.chk_copie_non_formater.setChecked(self.params.getValue("show_copie_menu_non_formater"))
-        self.chx_use_visible.setChecked(self.params.getValue("use_only_on_visible"))
-        self.spx_precision.setValue(self.params.getValue("precision_chainage"))
-        self.spx_precision_mesure.setValue(self.params.getValue("precision_mesure"))
-        self.spx_precision_dist.setValue(self.params.getValue("precision_distance"))
-        self.txt_layer_ecusson.setText(self.params.getValue("layer_ecusson_name"))
-        self.txt_champ_route.setText(self.params.getValue("layer_ecusson_field_route"))
-        self.txt_champ_classe.setText(self.params.getValue("layer_ecusson_field_classe"))
-        self.txt_sybologie_ecusson.setText(self.params.getValue("layer_ecusson_style"))
-        self.txt_sybologie_chainage.setText(self.params.getValue("layer_chainage_style"))
-        self.txt_sybologie_transect.setText(self.params.getValue("layer_transect_style"))
-        self.txt_sybologie_atlas.setText(self.params.getValue("layer_atlas_style"))
-        self.chk_shorcut_chainage.setChecked(self.params.getValue("use_raccourcis_chainage"))
-        self.key_shortcut.setKeySequence(QKeySequence(self.params.getValue("raccourcis_clavier")))
-        self.chk_shorcut_ecusson.setChecked(self.params.getValue("use_raccourcis_ecusson"))
-        self.key_shortcut_ecusson.setKeySequence(QKeySequence(self.params.getValue("raccourcis_clavier_ecusson")))
-        self.chk_shorcut_distance.setChecked(self.params.getValue("use_raccourcis_distance"))
-        self.key_shortcut_distance.setKeySequence(QKeySequence(self.params.getValue("raccourcis_clavier_distance")))
-        self.key_shortcut_parallele.setKeySequence(QKeySequence(self.params.getValue("raccourcis_clavier_parralele")))
-        self.key_shortcut_perpendiculaire.setKeySequence(QKeySequence(self.params.getValue("raccourcis_clavier_perpendiculaire")))
-        self.mFontButton.setCurrentFont(self.params.getValue("font_on_map"))
-        self.btn_color_chaine.setColor(QColor(self.params.getValue("color_font_on_map")))
-        self.btn_color_dist.setColor(QColor(self.params.getValue("mesure_line_color")))
-        self.chk_keep_marker.setChecked(self.params.getValue("keep_marker_suivi_chainage"))
-        self.chx_marqueur_exact.setChecked(self.params.getValue("pos_marqueur_arrondi"))
-        self.spx_dist_interpolation.setValue(self.params.getValue("dist_interpolation"))
-        self.spx_intervalle_interpolation.setValue(self.params.getValue("intervalle_interpolation"))
-        self.gbx_create_layer_chainage.setChecked(self.params.getValue("use_layer_recherche_chainage"))
-        self.layer_chainage_name.setText(self.params.getValue("layer_recherche_chainage_name"))
-        self.rbt_planiactif.setChecked(self.params.getValue("open_sigo_plainiactif"))
+        self.chx_add_expressions.setChecked(self.params.getValue("load_custom_expressions", set_default_values))
+        self.chx_format_rtss.setChecked(self.params.getValue("formater_rtss", set_default_values))
+        self.chx_format_chainage.setChecked(self.params.getValue("formater_chainage", set_default_values))
+        self.chx_marqueur_dir.setChecked(self.params.getValue("show_marker_direction", set_default_values))
+        self.chk_copie_info_rtss.setChecked(self.params.getValue("show_copie_menu_info", set_default_values))
+        self.chk_copie_formater.setChecked(self.params.getValue("show_copie_menu_formater", set_default_values))
+        self.chk_copie_non_formater.setChecked(self.params.getValue("show_copie_menu_non_formater", set_default_values))
+        self.chx_use_visible.setChecked(self.params.getValue("use_only_on_visible", set_default_values))
+        self.spx_precision.setValue(self.params.getValue("precision_chainage", set_default_values))
+        self.spx_precision_mesure.setValue(self.params.getValue("precision_mesure", set_default_values))
+        self.spx_precision_dist.setValue(self.params.getValue("precision_distance", set_default_values))
+        self.txt_layer_ecusson.setText(self.params.getValue("layer_ecusson_name", set_default_values))
+        self.txt_champ_route.setText(self.params.getValue("layer_ecusson_field_route", set_default_values))
+        self.txt_champ_classe.setText(self.params.getValue("layer_ecusson_field_classe", set_default_values))
+        self.txt_sybologie_ecusson.setText(self.params.getValue("layer_ecusson_style", set_default_values))
+        self.txt_sybologie_chainage.setText(self.params.getValue("layer_chainage_style", set_default_values))
+        self.txt_sybologie_transect.setText(self.params.getValue("layer_transect_style", set_default_values))
+        self.txt_sybologie_atlas.setText(self.params.getValue("layer_atlas_style", set_default_values))
+        self.chk_shorcut_chainage.setChecked(self.params.getValue("use_raccourcis_chainage", set_default_values))
+        self.key_shortcut.setKeySequence(QKeySequence(self.params.getValue("raccourcis_clavier", set_default_values)))
+        self.chk_shorcut_ecusson.setChecked(self.params.getValue("use_raccourcis_ecusson", set_default_values))
+        self.key_shortcut_ecusson.setKeySequence(QKeySequence(self.params.getValue("raccourcis_clavier_ecusson", set_default_values)))
+        self.chk_shorcut_distance.setChecked(self.params.getValue("use_raccourcis_distance", set_default_values))
+        self.key_shortcut_distance.setKeySequence(QKeySequence(self.params.getValue("raccourcis_clavier_distance", set_default_values)))
+        self.mFontButton.setCurrentFont(self.params.getValue("font_on_map", set_default_values))
+        self.btn_color_chaine.setColor(QColor(self.params.getValue("color_font_on_map", set_default_values)))
+        self.btn_color_dist.setColor(QColor(self.params.getValue("mesure_line_color", set_default_values)))
+        self.chk_keep_marker.setChecked(self.params.getValue("keep_marker_suivi_chainage", set_default_values))
+        self.chx_marqueur_exact.setChecked(self.params.getValue("pos_marqueur_arrondi", set_default_values))
+        self.spx_dist_interpolation.setValue(self.params.getValue("dist_interpolation", set_default_values))
+        self.spx_intervalle_interpolation.setValue(self.params.getValue("intervalle_interpolation", set_default_values))
+        self.gbx_create_layer_chainage.setChecked(self.params.getValue("use_layer_recherche_chainage", set_default_values))
+        self.layer_chainage_name.setText(self.params.getValue("layer_recherche_chainage_name", set_default_values))
+        self.rbt_planiactif.setChecked(self.params.getValue("open_sigo_plainiactif", set_default_values))
+
+        # Définir les raccourcis clavier à partir du dictionnaire
+        for param_name, widjet in self.raccourci.items():
+            shortcut = self.params.getValue(param_name, set_default_values)
+            widjet["chx"].setChecked(shortcut != "")
+            widjet["key"].setKeySequence(QKeySequence(shortcut))
 
         # Définir les case à cocher du groupe pour afficher un tooltip
         group_box_check = False
         for param_name, widget in self.checkbox_tooltip.items():
-            state = self.params.getValue(param_name)
+            state = self.params.getValue(param_name, set_default_values)
             widget.setChecked(state)
             if state: group_box_check = True
         self.gbx_show_tooltip.setChecked(group_box_check)
@@ -237,7 +253,7 @@ class fenetreParametre(QDialog, FORM_CLASS):
             # Action associé au widjet
             action = self.params.getAction(action_name)
             # Définir son état (coché/décoché)
-            if action: widget.setChecked(action.get())
+            if action: widget.setChecked(action.get(defaut=set_default_values))
     
     def saveSettings(self):
         self.params.setValue("layer_rtss", self.cbx_layer_rtss.currentText())
@@ -246,7 +262,6 @@ class fenetreParametre(QDialog, FORM_CLASS):
         self.params.setValue("field_classification", self.cbx_field_class.currentField())
         self.params.setValue("field_chainage_debut", self.cbx_field_chainage_d.currentField())
         
-        self.params.setValue("suivi_plugin_update", self.chx_follow_update.isChecked())
         self.params.setValue("load_custom_expressions", self.chx_add_expressions.isChecked())
         self.params.setValue("formater_rtss", self.chx_format_rtss.isChecked())
         self.params.setValue("formater_chainage", self.chx_format_chainage.isChecked())
@@ -286,14 +301,11 @@ class fenetreParametre(QDialog, FORM_CLASS):
         set_raccourci = self.chk_shorcut_distance.isChecked()
         self.params.setValue("use_raccourcis_distance", set_raccourci)
         if set_raccourci: self.params.setValue("raccourcis_clavier_distance", self.key_shortcut_distance.keySequence().toString())
-        # Set raccourci pour le snapping parralele
-        if self.chk_shorcut_parallele.isChecked(): raccourci = self.key_shortcut_parallele.keySequence().toString()
-        else: raccourci = ""
-        self.params.setValue("raccourcis_clavier_parralele", raccourci)
-        # Set raccourci pour le snapping perpendiculaire
-        if self.chk_shorcut_perpendiculaire.isChecked(): raccourci = self.key_shortcut_perpendiculaire.keySequence().toString()
-        else: raccourci = ""
-        self.params.setValue("raccourcis_clavier_perpendiculaire", raccourci)
+        
+        # Définir les raccourcis clavier à partir du dictionnaire
+        for param_name, widjet in self.raccourci.items():
+            if widjet["chx"].isChecked(): self.params.setValue(param_name, widjet["key"].keySequence().toString())
+            else:  self.params.setValue(param_name, "")
 
         self.params.setValue("font_on_map", self.mFontButton.currentFont())
         self.params.setValue("color_font_on_map", self.btn_color_chaine.color().name())

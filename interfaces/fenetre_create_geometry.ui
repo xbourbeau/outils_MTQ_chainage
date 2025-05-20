@@ -46,13 +46,10 @@
        </font>
       </property>
       <property name="focusPolicy">
-       <enum>Qt::StrongFocus</enum>
+       <enum>Qt::ClickFocus</enum>
       </property>
       <property name="text">
        <string>Ajouter le point</string>
-      </property>
-      <property name="shortcut">
-       <string>Return</string>
       </property>
      </widget>
     </item>

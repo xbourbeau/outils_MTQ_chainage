@@ -53,7 +53,6 @@ from .maptool.mtq_maptool_open_svn import MtqMapToolOpenSVN
 from .maptool.mtq_maptool_open_svn_360 import MtqMapToolOpenSVN360
 from .maptool.mtq_maptool_creer_geometry import MtqMapToolCreerGeometry
 
-from .modules.PluginUpdates import PluginUpdates
 from .modules.ToolbarWidjet import ToolbarWidjet
 from .modules.TemporaryGeometry import TemporaryGeometry
 from .modules.PluginParametres import PluginParametres
@@ -86,7 +85,7 @@ class MtqPluginChainage:
 
         # ******  À CHANGER LORS DE NOUVELLE MISE À JOUR **********
         version = "3.3.4"
-        self.documentation = "file://sstao00-adm005/TridentAnalyst/Plugin_chainage_mtq/Documentation/Index.html"
+        self.documentation = "file://mtq.min.intra/fic/QC/Depot/Img/Courant/Geomatique/QgisPlugin/documentation/outils_MTQ_chainage/index.html"
         # *********************************************************
 
         # Declare instance attributes
@@ -142,10 +141,6 @@ class MtqPluginChainage:
         # Définir le text pour le suivi du chainage
         self.mouse_text = self.canvas.scene().addText("")
         self.mouse_text.hide()
-        
-        # Module qui verifie les nouvelles versions du plugin
-        self.plugin_updates = PluginUpdates(self.iface, version)
-        self.plugin_updates.checkForPluginUpdate()
 
     def add_action(
         self,
@@ -231,7 +226,7 @@ class MtqPluginChainage:
         # ------------------ Widjet checkbox ------------------
         self.chx_plugin_is_active = QWidgetAction(tool_button_setting)
         self.chx_plugin_is_active.setDefaultWidget(QCheckBox())
-        self.chx_plugin_is_active.defaultWidget().setText("Désactiver le module de géocodage du plugin")
+        self.chx_plugin_is_active.defaultWidget().setText("Désactiver temporairement le module de géocodage du plugin")
         tool_button_setting.menu().addAction(self.chx_plugin_is_active)
         self.chx_plugin_is_active.defaultWidget().clicked.connect(lambda s: self.setPluginInactive() if s else self.setPluginActive())
 
@@ -486,7 +481,6 @@ class MtqPluginChainage:
             # Connecter les changement de CRS du canvas
             self.canvas.destinationCrsChanged.connect(self.updateTransformContext)
             self.layer_rtss.selectionChanged.connect(self.afficherActionWithSelection)
-            # TODO check if other layer can be use after
             self.layer_rtss.willBeDeleted.connect(self.setPluginInactive)
             if self.params.getValue("use_only_on_visible"): self.layer_rtss.repaintRequested.connect(self.updateGeocode)
             if self.action_create_geometrie: self.iface.currentLayerChanged.connect(self.updateActionIcon)
@@ -546,7 +540,6 @@ class MtqPluginChainage:
         try:
             # Déconnecter la couche des RTSS
             self.layer_rtss.selectionChanged.disconnect(self.afficherActionWithSelection)
-            # BUG: Crash if layer delete and expressions are used
             self.layer_rtss.willBeDeleted.disconnect(self.setPluginInactive)
             if self.params.getValue("use_only_on_visible"): self.layer_rtss.repaintRequested.disconnect(self.updateGeocode)
             if self.params.showContextMenu(): self.canvas.contextMenuAboutToShow.disconnect(self.populateContextMenu)

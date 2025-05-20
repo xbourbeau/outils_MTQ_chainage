@@ -406,6 +406,8 @@ class MtqMapToolCreerGeometry(QgsMapToolEdit):
         # Vérifier le raccourci clavier pour l'interpolation sur le rtss
         if self.params.getKeySequence("raccourcis_clavier_interpolate_rtss").matches(key) == 2: self.updateInterpolationOnRTSS(not self.interpolate_on_rtss, update_tool_button=True)
 
+        return super().keyPressEvent(e)
+
     def lockSnapParralelLine(self, offset=None):
         self.show_parralel_snap = not self.show_parralel_snap
         if self.previous_pt_rtss: self.snap_offset = self.previous_pt_rtss.getOffset()

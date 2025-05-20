@@ -21,6 +21,7 @@
  *                                                                         *
  ***************************************************************************/
 """
+from math import e
 import os
 from mtq.geomapping.PointRTSS import PointRTSS
 from qgis.gui import QgisInterface, QgsDockWidget
@@ -28,7 +29,7 @@ from qgis.PyQt import uic
 from qgis.PyQt.QtCore import pyqtSignal
 from PyQt5.QtCore import Qt
 from qgis.PyQt.QtWidgets import (QDockWidget, QAction, QMenu, QCheckBox, QToolButton,
-                                 QWidgetAction, QSpinBox, QLabel )
+                                 QWidgetAction, QSpinBox, QLabel, QApplication )
 
 from ..modules.PluginParametres import PluginParametres
 from ..modules.CompleterRTSS import CompleterRTSS
@@ -53,6 +54,10 @@ class fenetreCreationGeometrie(QDockWidget, FORM_CLASS):
         super(fenetreCreationGeometrie, self).__init__(parent)
         # Set up l'interface
         self.setupUi(self)
+        
+        self.installEventFilter(self)
+        self.spx_offset.installEventFilter(self)
+        
         # Class de gestion des paramètres
         self.params = PluginParametres()
         
@@ -60,11 +65,17 @@ class fenetreCreationGeometrie(QDockWidget, FORM_CLASS):
 
         self.spx_chainage.valueChanged.connect(self.setValuesFromPoint)
         self.spx_offset.valueChanged.connect(self.setValuesFromPoint)
-
         self.txt_rtss.textChanged.connect(lambda: self.btn_add.setEnabled(self.isCurrentRTSSValide()))
         self.btn_add.setEnabled(False)
-
         self.setActions()
+
+    def eventFilter(self, source, event):
+        if event.type() == event.KeyPress:
+            if event.key() == Qt.Key_Return:
+                self.btn_add.animateClick()
+            if event.key() == Qt.Key_Tab:
+                self.txt_rtss.setFocus()
+        return super().eventFilter(source, event)
 
     def closeEvent(self, event):
         if self.isVisible():
