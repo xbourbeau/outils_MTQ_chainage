@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
-
 from qgis.core import QgsGeometry, QgsApplication
-from qgis.gui import QgsMapToolEmitPoint, QgsMapTool, QgsMapCanvas, QgsVertexMarker
+from qgis.gui import QgsMapToolEmitPoint, QgsMapTool, QgsMapCanvas
 from qgis.PyQt.QtWidgets import QMenu
 
-from ..mtq.geomapping.imports import Geocodage, Chainage, LineRTSS, FeatRTSS
+from ..mtq.core import Geocodage, Chainage, LineRTSS, FeatRTSS
 from ..modules.PluginParametres import PluginParametres
 from ..modules.TemporaryGeometry import TemporaryGeometry
 

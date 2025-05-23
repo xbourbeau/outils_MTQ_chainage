@@ -4,7 +4,7 @@ from qgis.core import QgsApplication
 from qgis.gui import QgsMapTool, QgsMapCanvas
 
 from ..mtq.core import  Geocodage
-from ..mtq.functions import reprojectGeometry
+from ..mtq.fnt import reprojectGeometry
 
 class MtqMapToolOpenSVN360(QgsMapTool):  
     def __init__(self, canvas:QgsMapCanvas, geocode:Geocodage):

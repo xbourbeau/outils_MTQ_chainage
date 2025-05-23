@@ -10,7 +10,8 @@ from ..param import (
     C_ALIAS, C_DEFAULT_STYLE, C_CS, C_DT, C_ID_NAME, C_ID_TYPE, C_TYPE_DT,
     C_NAME, C_PROV, C_REQUESTS, C_SOURCE, C_STYLES, C_TAG, C_TYPE_CS, C_SEARCH_FIELDS,
     C_DESCRIPTION, C_GEOCATALOGUE, C_RECHERCHABLE)
-from ..region.imports import *
+from ..region.CS import CS
+from ..region.DT import DT
 from .LoadLayer import LoadLayer
 
 class LayerMTQ:

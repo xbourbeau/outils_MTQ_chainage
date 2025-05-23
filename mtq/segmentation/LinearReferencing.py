@@ -4,15 +4,14 @@ import copy
 from typing import Union, Dict
 
 # Importer les objects du module core de QGIS 
-from qgis.core import QgsGeometry
+from qgis.core import QgsGeometry, QgsFeature, QgsVectorLayer, QgsVectorLayerUtils
 
-from .FeatRTSS import FeatRTSS
-from .Chainage import Chainage
-from .RTSS import RTSS
+from ..geomapping.FeatRTSS import FeatRTSS
+from ..geomapping.Chainage import Chainage
+from ..geomapping.RTSS import RTSS
+
 from .SegmentationPoint import SegmentationPoint
 from .LineSegmentationElement import LineSegmentationElement
-
-# DEV: Ajouter une méthode pour générée une couche qui permet de visionner le résultat
 
 class LinearReferencing(FeatRTSS):
     """ Représente un objet FeatRTSS sur lequel il y a une segmentation linéaire. """
@@ -37,8 +36,22 @@ class LinearReferencing(FeatRTSS):
     def fromFeatRTSS(cls, feat_rtss:FeatRTSS, list_segmentation_points=[]):
         """ Construire un objet LinearReferencing à partir d'un objet FeatRTSS """
         return cls(feat_rtss.getRTSS(), feat_rtss.chainageFin(), feat_rtss.geometry(), list_segmentation_points)
+    
+    @classmethod
+    def fromGeometry(cls, id, geometry:QgsGeometry, list_segmentation_points=[]):
+        """
+        Construire un objet LinearReferencing à partir d'une geometry linéaire.
 
-    def __repr__(self): return f"LinearReferencing {self.value()}: {len(self)} points de segmentation"
+        Args:
+            - id (str/int): Un identifiant qui prendra la place du RTSS (pas nécéssairement un RTSS) Ex: 1 => 00000000000001
+            - geometry (QgsGeometry): La géométrie linéaire à utiliser 
+            - list_segmentation_points (list): Liste des points de segmentation à ajouter
+        """
+        return cls(str(id).zfill(14), 0, geometry.length(), list_segmentation_points=list_segmentation_points)
+
+    def __str__(self): return f"{super().__str__()}: {len(self)} points de segmentation"
+
+    def __repr__(self): return f"LinearReferencing {self.__str__()}"
     
     def __iter__ (self): return sorted(list(self.segmentation_points.values()), key=lambda p: p.getChainage()).__iter__()
 
@@ -63,26 +76,33 @@ class LinearReferencing(FeatRTSS):
 
         return new_obj
 
-    # TODO: Séparer la méthode pour ajouter un élément et ajouter un élement avec chainage début et fin
-    def addElement(self, element:LineSegmentationElement, chainage_debut, chainage_fin, copy_elements=True):
+    def addElement(self, element:LineSegmentationElement, chainage_debut=None, chainage_fin=None, copy_elements=True):
         """
         Méthode qui permet d'ajouter un élément sur le RTSS
         
         Args:
             - element (LineSegmentationElement): Élement à ajouter
-            - chainage_debut (reel/str): Chainage de début de l'élément
-            - chainage_fin (reel/str): Chainage de fin de l'élément
+            - chainage_debut (Chainage): Chainage de début de l'élément. None => le chainage sera celui du RTSS
+            - chainage_fin (Chainage): Chainage de fin de l'élément. None => le chainage sera celui du RTSS
             - copy_elements (bool): Conserver les éléments de la segmentation intersectée
         """
         # Ajouter un point de segmentation au chainage de début s'il y en a pas déjà une
-        try: self.addSegmentationFromChainage(chainage_debut, copy_elements=copy_elements)
+        try: 
+            if chainage_debut is None: chainage_debut = self.chainageDebut()
+            self.addSegmentationFromChainage(chainage_debut, copy_elements=copy_elements)
         except NameError: pass
         # Ajouter un point de segmentation au chainage de fin s'il y en a pas déjà une
-        try: self.addSegmentationFromChainage(chainage_fin, copy_elements=copy_elements)
+        try: 
+            if chainage_fin is None: chainage_fin = self.chainageFin()
+            self.addSegmentationFromChainage(chainage_fin, copy_elements=copy_elements)
         except NameError: pass
         # Ajouter l'élément pour toutes les points de segmentations sur le RTSS
-        for chainage in self.getListChainage(start=chainage_debut, end=chainage_fin)[:-1]:
+        for chainage in self.getListChainage(start=chainage_debut, end=chainage_fin):
             self[chainage].addElement(element)
+
+    def addEnd(self, chainage):
+        """ Méthode qui permet d'ajouter une point de segmentation qui représente une fin d'information. """
+        self.addSegmentationFromChainage(chainage, copy_elements=False)
 
     def addSegmentation(self, segmentation_point:SegmentationPoint, copy_elements=False):
         """
@@ -101,7 +121,6 @@ class LinearReferencing(FeatRTSS):
         
         # Ajouter la segmentation au RTSS
         self.segmentation_points[segmentation_point.getChainage()] = segmentation_point
-        # OPTIMISATION: Mettre dans une méthode à part
         if copy_elements:
             # Définir la segmentation précédant 
             previous_segmentation = self.getPreviousSegmentation(segmentation_point)
@@ -110,9 +129,9 @@ class LinearReferencing(FeatRTSS):
         
         self.updateElementsOffsets(segmentation_point, update_current=copy_elements)
     
-    def addSegmentationFromChainage(self, chainage, copy_elements=False):
+    def addSegmentationFromChainage(self, chainage, copy_elements=False, **kwargs):
         """ Méthode qui permet d'ajouter un point de segmentation sur le RTSS à partir d'un chainage. """
-        segmentation_point = self.createSegmentationPoint(chainage)
+        segmentation_point = self.createSegmentation(chainage, **kwargs)
         self.addSegmentation(segmentation_point, copy_elements=copy_elements)
 
     def addSegmentations(self, list_segmentation_points):
@@ -133,14 +152,160 @@ class LinearReferencing(FeatRTSS):
             - list_chainage (list): Liste de chainages
         """
         for chainage in list_chainage: self.addSegmentationFromChainage(chainage)
+
+    def addValues(self, chainage_debut=None, chainage_fin=None, copy_elements=True, **kwargs):
+        """
+        Méthode qui permet d'ajouter des valeurs entre 2 chainage
+
+        Args:
+            chainage_debut (Chainage): Le chainage de début qui corespond aux valeur. None => le chainage sera celui du RTSS
+            chainage_fin (Chainage): Le chainage de fin qui corespond aux valeur. None => le chainage sera celui du RTSS
+            copy_elements (bool): Conserver les éléments de la segmentation intersectée
+
+            **kwargs:
+            offset_d (float, optional): Le offset de début de l'élément. Defaults to 0.
+            offset_f (float, optional): Le offset de fin de l'élément ou None représente une ligne parralèle. Defaults to None.
+            intepolate_on_rtss (bool, optional): Indiquateur que le géocodage devrait se faire en suivant le RTSS. Defaults to True.
+            Toutes les autres valeurs de l'élément à ajouter
+
+        Returns (bool): True: L'élément avec les valeurs est ajouter False: L'élément n'a pas pu être ajouter
+        """
+        elem = LineSegmentationElement(**kwargs)
+        if elem.isEmpty(): return False
+        self.addElement(elem, chainage_debut, chainage_fin, copy_elements=copy_elements)
+        return True
     
+    def addValuesFromFeat(
+            self,
+            feat:QgsFeature,
+            fields:list[str],
+            field_chainage_d:str=None,
+            field_chainage_f:str=None,
+            field_offset_d:str=None,
+            field_offset_f:str=None,
+            copy_elements=True,
+            **kwargs):
+        """
+        Méthode qui permet d'ajouter des valeurs à partir d'un entité
+
+        Args:
+            feat (QgsFeature): L'entitée à ajouter
+            fields (list[str]): Liste des champs des valeurs de l'entité
+            field_chainage_d (str, optional): Nom du champs qui contients le chainage de début. Defaults to None.
+            field_chainage_f (str, optional): Nom du champs qui contients le chainage de fin. Defaults to None.
+            field_offset_d (str, optional): Nom du champs qui contients le offset de début. Defaults to None.
+            field_offset_f (str, optional): Nom du champs qui contients le offset de fin. Defaults to None.
+            copy_elements (bool, optional): Conserver les éléments des segmentations intersectées. Defaults to True.
+
+            **kwargs:
+            offset_d (float, optional): Le offset de début de l'élément. Defaults to 0.
+            offset_f (float, optional): Le offset de fin de l'élément ou None représente une ligne parralèle. Defaults to None.
+            intepolate_on_rtss (bool, optional): Indiquateur que le géocodage devrait se faire en suivant le RTSS. Defaults to True.
+            Toutes les autres valeurs de l'élément à ajouter
+
+        Returns (bool): True: L'élément avec les valeurs est ajouter False: L'élément n'a pas pu être ajouter
+        """
+        
+        has_chainage_d = "chainage_debut" in kwargs or field_chainage_d is not None
+        has_chainage_f = "chainage_fin" in kwargs or field_chainage_f is not None
+        has_offset_d = "offset_d" in kwargs or field_offset_d is not None
+        has_offset_f = "offset_f" in kwargs or field_offset_f is not None
+        
+        if not all([has_chainage_d, has_chainage_f, has_offset_d, has_offset_f]):
+            line_rtss = self.geocoderInverseLine(feat.geometry())
+            if not has_chainage_d: cd = line_rtss.startChainage()
+            if not has_chainage_f: cf = line_rtss.endChainage()
+            if not has_offset_d: od = line_rtss.startOffset()
+            if not has_offset_f: of = line_rtss.endOffset()
+
+        def getValue(arg, field):
+            if arg in kwargs: return kwargs[arg]
+            else: return feat[field]
+        
+        if has_chainage_d: cd = getValue("chainage_debut", field_chainage_d)
+        if has_chainage_f: cf = getValue("chainage_fin", field_chainage_f)
+        if has_offset_d: od = getValue("offset_d", field_offset_d)
+        if has_offset_f: of = getValue("offset_f", field_offset_f)
+
+        vals = {field:feat[field] for field in fields}
+
+        return self.addValues(chainage_debut=cd, chainage_fin=cf, copy_elements=copy_elements, offset_d=od, offset_f=of, **vals, **kwargs)            
+
     def chainageExists(self, chainage): 
         """ Méthode qui permet de vérifier si le chainage est unique dans le RTSS """
         return Chainage(chainage) in self.segmentation_points
     
-    def createSegmentationPoint(self, chainage, list_elements=[], attributs={}):
-        """ Méthode qui permet de créer un objet SegmentationPoint associer au RTSS """
-        return SegmentationPoint(self.getRTSS(), chainage, list_elements, attributs)
+    def createFeatures(self, layer:QgsVectorLayer) -> list[QgsFeature]:
+        """
+        Crée une liste d'entités linéaires (QgsFeature) correspondant aux segments du RTSS.
+ 
+        Pour chaque point de segmentation (sauf le dernier) possédant des éléments,
+        la géométrie de la ligne est générée à l'aide de la méthode geocoderElement.
+        Les attributs sont automatiquement ajoutés sans avoir à être explicitement listés,
+        et les attributs à None sont ignorés.
+ 
+        Args:
+            layer (QgsVectorLayer): La couche vectorielle dans laquelle les entités seront créées.
+
+        Returns:
+            list[QgsFeature]: Liste des entités linéaires créées.
+        """
+        # Définir la liste des features à créer 
+        features = []
+        # Définir le dictionnaire des attributs de la couche
+        dict_attrs = {i:field.name() for i, field in enumerate(layer.fields())}
+        # Créer les entités avec uniquement les champs utilisés
+        for seg_point in self:
+            # Skip si le point de segmentation est une fin
+            if seg_point.isEnd(): continue
+
+            # Définir le chainage suivant pour la ligne 
+            next_chainage = self.getNextChainage(seg_point)
+            if next_chainage is None: continue
+
+            # Parcourir toutes les LineSegmentationElement du SementationPoint
+            for elem in seg_point:
+                # Géocoder la géométrie de l'élément
+                geom = self.geocoderElement(seg_point, elem, interpolate_on_rtss=True)
+                # Dictinaires de attributs du features à créer
+                atts = {}
+                # Parcourir les champs de la couche 
+                for idx, name in dict_attrs.items():
+                    # Vérifier si l'élément possède une valeur pour le champ
+                    value = elem.getAttribut(name)
+                    # Ajouter la valeur de l'élément seulement si elle est non-nulles
+                    if value is not None: atts[idx] = value
+                # Définir l'attribut du RTSS
+                atts[0] = self.getRTSS().valueFormater()
+                # Définir l'attribut du Chainage de début
+                atts[1] = seg_point.getChainage().value(precision=0)
+                # Définir l'attribut du Chainage de fin
+                atts[2] = next_chainage.value(precision=0)
+                # Créer et ajouter le feature à la liste
+                features.append(QgsVectorLayerUtils.createFeature(layer, geom, atts))
+        # Retourner la liste des feautures
+        return features
+
+    def createSegmentation(self, chainage, list_elements=[], **kwargs):
+        """
+        Méthode qui permet de créer un objet SegmentationPoint associer au RTSS.
+        Le chainage est assuré d'être sur le RTSS
+        """
+        return SegmentationPoint(
+            self.getRTSS(),
+            self.getChainageOnRTSS(chainage),
+            list_elements,
+            **kwargs)
+
+    def info(self, chainage_d:Chainage=None, chainage_f:Chainage=None):
+        """ Méthode qui permet de print dans la consoles les informations du LinearReferencing """
+        print(self.__str__())
+        for point_seg in self.getSegmentations(chainage_d=chainage_d, chainage_f=chainage_f):
+            if point_seg.isEnd(): continue
+            print(f"{point_seg.getChainage().formaterChainage()} -> {self.getNextChainage(point_seg).formaterChainage()}")
+            point_seg.infoAttributs()
+            point_seg.infoElements()
+            print()
 
     def geocoderElement(self, segmentation_point:SegmentationPoint, elem:LineSegmentationElement, interpolate_on_rtss=True):
         """
@@ -191,14 +356,20 @@ class LinearReferencing(FeatRTSS):
         if last_dist > dist_max and dist_max != -1: return None
         return last_point
 
+    def getElements(self, chainage:Chainage)->list[LineSegmentationElement]:
+        """ Permet de retourner la liste des éléments présent au chainage. """
+        point_seg = self.getSegmentation(chainage)
+        if point_seg is None: return []
+        return point_seg.getElements()
+
     def getListChainage(self, start=None, end=None):
         """
         Méthode qui permet de retourner une liste de toutes les chainages des segmentations 
-        entre un chainage de début et fin. Le début et la fin sont inclus.
+        entre un chainage de début et fin. Le début est inclus et le fin n'est pas inclus.
         
         Args:
             - start (str/real): Le chainage de début de la recherche
-            - end (str/real): Le chainage de fin de la recherche
+            - end (str/real): Le chainage de fin de la recherche qui n'est pas inclus
         """
         # Retourner la liste de toutes les chainages des segmentations du RTSS si aucun début ou fin n'est défini
         if start is None and end is None: return sorted(list(self.segmentation_points.keys()))
@@ -208,7 +379,7 @@ class LinearReferencing(FeatRTSS):
         elif end is None: start, end = Chainage(start), self.chainageFin()
         else: start, end = Chainage(start), Chainage(end)
         # Retourner toutes les chainages entres le début et la fin des chainage
-        return sorted([chainage for chainage in self.segmentation_points.keys() if chainage >= start and chainage <= end])
+        return sorted([chainage for chainage in self.segmentation_points.keys() if chainage >= start and chainage < end])
     
     def getNextSegmentation(self, segmentation_point:SegmentationPoint, check_end=False):
         """
@@ -283,8 +454,7 @@ class LinearReferencing(FeatRTSS):
         Args:
             - value (str/real): La valeur à rechercher
         """
-        # TODO: Vérifier si on devrais retourner un SegmentationPoint quand c'est le dernier du RTSS
-        chainage = Chainage(chainage)
+        chainage = self.getChainageOnRTSS(chainage)
         # Retourner le point de segmentation exact seulement
         if chainage in self.segmentation_points: segmentation_point = self[chainage]
         # Retourner le point de segmentation d'un element
@@ -302,10 +472,26 @@ class LinearReferencing(FeatRTSS):
         
         return segmentation_point
     
-    def getSegmentations(self, reverse=False):
+    def getSegmentations(self, chainage_d:Chainage=None, chainage_f:Chainage=None, reverse=False):
         """ Permet de retourner un iterateur sur les points de segmentations """
-        # Liste des points de segmentation
-        list_points = list(self.__iter__())
+        # Liste completes des points de segmentation si aucun chainage n'est spécifié
+        if chainage_d is None and chainage_f is None: list_points = list(self.__iter__())
+        else:
+            # Liste des points de segmentation à retourner 
+            list_points = []
+            # Aller chercher un point de segmentation au chainage de début
+            first_pt = self.getSegmentation(chainage_d)
+            # Vérifier si on point de segmentation à été trouvé
+            if not first_pt is None: 
+                # Ajouter le point de segmentation s'il n'est pas une fin
+                if not first_pt.isEnd(): list_points.append(first_pt)
+            # Parcourir les chainages des points de segmentation présent entre les 2 chainage
+            for chainage in self.getListChainage(start=chainage_d, end=chainage_f):
+                # Aller chercher un point de segmentation au chainage
+                pt = self.getSegmentation(chainage)
+                # Ajouter le point de segmentation s'il n'est pas une fin et qu'il n'est pas déjà dans la liste
+                if pt not in list_points and not pt.isEnd(): list_points.append(pt)
+        
         # Inverser la ligne si indiqué en paramêtre
         if reverse: list_points.reverse()
         # Retourner l'itérateur des points de segmentation
@@ -315,6 +501,47 @@ class LinearReferencing(FeatRTSS):
         """ Méthode qui permet de retourner la liste des points de segmentation avec une valeur d'attribut """
         return [pt for pt in self.getSegmentations() if pt.getAttribut(attribut) == value] 
     
+    def getAllValues(self, elem_attribut_name):
+        """ Permet de retourner toutes les valeurs d'une element sur le RTSS """
+        return self.getValues(self.chainageDebut(), elem_attribut_name, self.chainageFin())
+
+    def getValues(self, chainage:Chainage, elem_attribut_name:str, chainage_f:Chainage=None):
+        """
+        Méthode qui perment de retourner la valeur d'un attibut des l'éléments
+        pour le chainage donnée.
+        
+        Un chainage de fin peux aussi être spécifier pour retourner les valeurs entre 2 chainages.
+
+        Args:
+            chainage (Chainage): Le chainage à vérifier 
+            elem_attribut_name (str): Le nom de l'attribut
+            chainage_f (Chainage): Spécifier un chainage de fin
+        """
+        # Définir le point de segmentation
+        if chainage_f is None: points = [self.getSegmentation(chainage)]
+        else: points = self.getSegmentations(chainage_d=chainage, chainage_f=chainage_f)
+        
+        values = []
+        # Étendre la liste des valeurs avec les valeurs des éléments du point de segmentation
+        for pt in points: values.extend(pt.getValues(elem_attribut_name))
+
+        # Retourner la valeur de l'élément
+        return list(set(values))
+
+    def getUniqueValue(self, chainage:Chainage, elem_attribut_name:str):
+        """
+        Méthode qui perment de retourner la valeur d'un attibut unique de l'élément
+        pour le chainage donnée.
+
+        Args:
+            chainage (Chainage): Le chainage à vérifier 
+            elem_attribut_name (str): Le nom de l'attribut unique 
+        """
+        # Définir le point de segmentation
+        point_segmentation = self.getSegmentation(chainage)
+        # Retourner la valeur de l'élément
+        return point_segmentation.getUniqueValue(elem_attribut_name)
+
     def hasNextSegmentation(self, segmentation_point:SegmentationPoint, check_end=True):
         """ Méthode qui permet de verifier si une segmentation à une segmentation suivant sur le RTSS """ 
         return segmentation_point != self.getNextSegmentation(segmentation_point, check_end=check_end)
@@ -337,6 +564,21 @@ class LinearReferencing(FeatRTSS):
         return not segmentation_point.getChainage() in self
 
     def keepOffset(self): return self.keep_offset
+
+    def merge(self, lineaire_ref):
+        """
+        Méthode qui permet d'ajouter les elements d'un autre LinearReferencing au 
+        LinearReferencing courant.
+
+        Args:
+            - lineaire_referencing(LinearReferencing) = Le LinearReferencing qui contient les éléments à ajouter
+        """
+        if lineaire_ref.getRTSS() != self.getRTSS(): return None
+        # Parcourir les points de segmentation du LinearReferencing à combiner
+        for seg_pt in lineaire_ref:
+            # Parcourir les éléments du point de segmentation
+            for elem in seg_pt.getElements():
+                self.addElement(elem, chainage_debut=seg_pt.getChainage(), chainage_fin=lineaire_ref.getNextChainage(seg_pt))
 
     def moveSegmentation(self, segmentation_point:SegmentationPoint, new_chainage):
         """ 
@@ -392,6 +634,24 @@ class LinearReferencing(FeatRTSS):
                     offset_d=elem.getOffsetDebut(),
                     offset_f=elem.getOffsetFin())
                 elem.setOffsetDebut(new_offset)
+
+    def updateValues(self, chainage_debut=None, chainage_fin=None, **kwargs):
+        """ 
+        Méthode qui permet de mettre à jour les valeurs d'un attribut des éléments
+        contenues entre les 2 chainages.
+        """
+        if chainage_debut is None: chainage_debut = self.chainageDebut()
+        if chainage_fin is None: chainage_fin = self.chainageFin()
+        # Ajouter l'élément pour toutes les points de segmentations sur le RTSS
+        for pt_seg in self.getSegmentations(chainage_d=chainage_debut, chainage_f=chainage_fin):
+            attribute_exists=False
+            for elem in pt_seg.getElements():
+                for att_name in elem.getAttributsName():
+                    if att_name in kwargs:
+                        elem.setAttribut(att_name, kwargs[att_name])
+                        attribute_exists=True
+            if not attribute_exists:
+                pt_seg.addElement(LineSegmentationElement(**kwargs))
 
     def removeSegmentation(self, segmentation_point:SegmentationPoint, check_end=False):
         """

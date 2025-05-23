@@ -27,12 +27,12 @@ from qgis.PyQt import uic
 from qgis.core import QgsMapLayerProxyModel, QgsFieldProxyModel, QgsVectorLayer, NULL
 from qgis.PyQt.QtCore import pyqtSignal, QVariant
 from PyQt5.QtCore import Qt
-from qgis.PyQt.QtWidgets import QDialog, QToolButton, QMenu, QCheckBox, QWidgetAction, QAction
+from qgis.PyQt.QtWidgets import QDialog, QToolButton, QMenu, QCheckBox, QWidgetAction
 
 from ..modules.PluginParametres import PluginParametres
-from ..mtq.core import Geocodage, Utilitaire, ReseauSegmenter
-from ..mtq.functions import reprojectGeometry
-from ..functions.getIcon import getPixmap, getIcon
+from ..mtq.core import Geocodage, ReseauSegmenter
+from ..mtq.utils import Utilitaire
+from ..mtq.fnt import reprojectGeometry
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(os.path.dirname(__file__), 'fenetre_geocodage_inverse.ui'))
 
@@ -77,7 +77,7 @@ class fenetreGeocodageInverse(QDialog, FORM_CLASS):
         self.progressBar.hide()
 
         # Définir l'image du logo de l'outil
-        self.lbl_logo.setPixmap(getPixmap("geocodage_inverse"))
+        self.lbl_logo.setPixmap(self.params.getPixmap("geocodage_inverse"))
         self.lbl_logo.setScaledContents(True)
 
         self.setActions()
@@ -92,7 +92,7 @@ class fenetreGeocodageInverse(QDialog, FORM_CLASS):
         self.tbx_option_rtss.setMenu(QMenu())
         self.tbx_option_rtss.setToolTip("Options")
         self.tbx_option_rtss.setPopupMode(QToolButton.InstantPopup)
-        self.tbx_option_rtss.setIcon(getIcon("parametres"))
+        self.tbx_option_rtss.setIcon(self.params.getIcon("parametres"))
 
         widget_action_r = QWidgetAction(self.tbx_option_rtss.menu())
         widget_action_r.setDefaultWidget(self.chx_formater_rtss)
@@ -102,7 +102,7 @@ class fenetreGeocodageInverse(QDialog, FORM_CLASS):
         self.tbx_option_chainage.setMenu(QMenu())
         self.tbx_option_chainage.setToolTip("Options")
         self.tbx_option_chainage.setPopupMode(QToolButton.InstantPopup)
-        self.tbx_option_chainage.setIcon(getIcon("parametres"))
+        self.tbx_option_chainage.setIcon(self.params.getIcon("parametres"))
 
         widget_action_c = QWidgetAction(self.tbx_option_chainage.menu())
         widget_action_c.setDefaultWidget(self.chx_formater_chainage)

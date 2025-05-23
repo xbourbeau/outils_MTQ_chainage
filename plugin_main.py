@@ -25,7 +25,7 @@
 from qgis.PyQt.QtGui import QIcon, QKeySequence
 from qgis.PyQt.QtWidgets import QAction, QToolButton, QMenu, QWidgetAction, QCheckBox
 from qgis.core import (QgsProject, QgsPointXY, QgsApplication, QgsCoordinateTransform,
-                       QgsRectangle, Qgis, QgsExpression)
+                       QgsRectangle, Qgis, QgsExpression, QgsVectorLayerUtils)
 from qgis.gui import QgsMapMouseEvent, QgisInterface
 
 # Import General
@@ -53,7 +53,6 @@ from .maptool.mtq_maptool_open_svn import MtqMapToolOpenSVN
 from .maptool.mtq_maptool_open_svn_360 import MtqMapToolOpenSVN360
 from .maptool.mtq_maptool_creer_geometry import MtqMapToolCreerGeometry
 
-from .modules.PluginUpdates import PluginUpdates
 from .modules.ToolbarWidjet import ToolbarWidjet
 from .modules.TemporaryGeometry import TemporaryGeometry
 from .modules.PluginParametres import PluginParametres
@@ -63,14 +62,14 @@ from .modules.PluginTemporaryLayer import PluginTemporaryLayer
 from .tasks.TaskGenerateReseauSegementation import TaskGenerateReseauSegementation
 
 from .mtq.core import Geocodage, Chainage, PointRTSS, ReseauSegmenter, SIGO, PlaniActif
-from .mtq.functions import validateLayer
+from .mtq.fnt import validateLayer
 from .mtq.utils import Utilitaire as Utils
 
 from .functions.getVisibleFeatures import getVisibleFeatures
 from .functions.getToolTipPosition import getToolTipPosition
-from .functions.getIcon import getIcon
 
 from .expressions.expression_geocodage import *
+from .expressions.expression_sigo import *
 
 # DEV: Ajouter l'option d'ouvrir la fenêtre de Géocodage
 # DEV: Add link to open folder of installation
@@ -85,8 +84,8 @@ class MtqPluginChainage:
         self.plugin_dir = os.path.dirname(__file__)
 
         # ******  À CHANGER LORS DE NOUVELLE MISE À JOUR **********
-        version = "3.3.3"
-        self.documentation = "file://sstao00-adm005/TridentAnalyst/Plugin_chainage_mtq/Documentation/Index.html"
+        version = "3.3.4"
+        self.documentation = "file://mtq.min.intra/fic/QC/Depot/Img/Courant/Geomatique/QgisPlugin/documentation/outils_MTQ_chainage/index.html"
         # *********************************************************
 
         # Declare instance attributes
@@ -142,10 +141,6 @@ class MtqPluginChainage:
         # Définir le text pour le suivi du chainage
         self.mouse_text = self.canvas.scene().addText("")
         self.mouse_text.hide()
-        
-        # Module qui verifie les nouvelles versions du plugin
-        self.plugin_updates = PluginUpdates(self.iface, version)
-        self.plugin_updates.checkForPluginUpdate()
 
     def add_action(
         self,
@@ -231,7 +226,7 @@ class MtqPluginChainage:
         # ------------------ Widjet checkbox ------------------
         self.chx_plugin_is_active = QWidgetAction(tool_button_setting)
         self.chx_plugin_is_active.setDefaultWidget(QCheckBox())
-        self.chx_plugin_is_active.defaultWidget().setText("Désactiver le module de géocodage du plugin")
+        self.chx_plugin_is_active.defaultWidget().setText("Désactiver temporairement le module de géocodage du plugin")
         tool_button_setting.menu().addAction(self.chx_plugin_is_active)
         self.chx_plugin_is_active.defaultWidget().clicked.connect(lambda s: self.setPluginInactive() if s else self.setPluginActive())
 
@@ -486,7 +481,6 @@ class MtqPluginChainage:
             # Connecter les changement de CRS du canvas
             self.canvas.destinationCrsChanged.connect(self.updateTransformContext)
             self.layer_rtss.selectionChanged.connect(self.afficherActionWithSelection)
-            # TODO check if other layer can be use after
             self.layer_rtss.willBeDeleted.connect(self.setPluginInactive)
             if self.params.getValue("use_only_on_visible"): self.layer_rtss.repaintRequested.connect(self.updateGeocode)
             if self.action_create_geometrie: self.iface.currentLayerChanged.connect(self.updateActionIcon)
@@ -546,7 +540,6 @@ class MtqPluginChainage:
         try:
             # Déconnecter la couche des RTSS
             self.layer_rtss.selectionChanged.disconnect(self.afficherActionWithSelection)
-            # BUG: Crash if layer delete and expressions are used
             self.layer_rtss.willBeDeleted.disconnect(self.setPluginInactive)
             if self.params.getValue("use_only_on_visible"): self.layer_rtss.repaintRequested.disconnect(self.updateGeocode)
             if self.params.showContextMenu(): self.canvas.contextMenuAboutToShow.disconnect(self.populateContextMenu)
@@ -581,6 +574,11 @@ class MtqPluginChainage:
                 QgsExpression.unregisterFunction('geocoder_line')
                 QgsExpression.unregisterFunction('geocoder_point')
                 QgsExpression.unregisterFunction('geocoder_polygon')
+                QgsExpression.unregisterFunction('lien_sigo')
+                QgsExpression.unregisterFunction('lien_sigo_complet')
+                QgsExpression.unregisterFunction('lien_planiactif')
+                QgsExpression.unregisterFunction('lien_planiactif_complet')
+                QgsExpression.unregisterFunction('rtss_side')
             except: Utils.warningMessage(self.iface, "Les expressions du plugin n'ont pas pu être retiré.")
 
     def loadCustomExpressions(self):
@@ -594,6 +592,12 @@ class MtqPluginChainage:
                 QgsExpression.registerFunction(geocoder_line) 
                 QgsExpression.registerFunction(geocoder_point)
                 QgsExpression.registerFunction(geocoder_polygon)
+                QgsExpression.registerFunction(lien_sigo)
+                QgsExpression.registerFunction(lien_sigo_complet)
+                QgsExpression.registerFunction(lien_planiactif)
+                QgsExpression.registerFunction(lien_planiactif_complet)
+                QgsExpression.registerFunction(rtss_side)
+                
             except: Utils.warningMessage(self.iface, "Les expressions du plugin n'ont pas pu être ajouté.")
 
     def openSIGO(self):
@@ -679,9 +683,8 @@ class MtqPluginChainage:
     
     def setReseauSegementation(self):
         """ Permet de définir le module du réseau segmenté à partir de la tache terminer """
-        self.reseau_context.setModuleGeocodage(self.task_generate_reseau.geocode)
-        self.reseau_context.setReseau(self.task_generate_reseau.getReseau())
-        self.task_generate_reseau = None
+        self.reseau_context = self.task_generate_reseau.getReseau()
+        del self.task_generate_reseau
         Utils.succesMessage(self.iface, "Le réseau a été généré avec succès!", subject="Réseau segmentation linéaire: ")
 
     def generateContextLayerIndex(self):
@@ -712,7 +715,7 @@ class MtqPluginChainage:
         except Exception as error:
             Utils.criticalMessage(
                 iface=self.iface,
-                message="Oups! Un problème est survenu en créant le module du réseau de segmentation linéaire pour la couche de context",
+                message=f"Oups! Un problème est survenu en créant le module du réseau de segmentation linéaire pour la couche de context : {error}",
                 subject="Réseau segmentation linéaire: ")
             return False
 
@@ -954,9 +957,9 @@ class MtqPluginChainage:
                         layer.editingStarted.connect(self.updateActionIcon)
                         layer.editingStopped.connect(self.updateActionIcon)
                         # Change icon
-                        if layer.geometryType() == 0: self.action_create_geometrie.setIcon(getIcon("create_point"))
-                        elif layer.geometryType() == 1: self.action_create_geometrie.setIcon(getIcon("create_line"))
-                        elif layer.geometryType() == 2: self.action_create_geometrie.setIcon(getIcon("create_polygon"))
+                        if layer.geometryType() == 0: self.action_create_geometrie.setIcon(self.params.getIcon("create_point"))
+                        elif layer.geometryType() == 1: self.action_create_geometrie.setIcon(self.params.getIcon("create_line"))
+                        elif layer.geometryType() == 2: self.action_create_geometrie.setIcon(self.params.getIcon("create_polygon"))
             return True
         except Exception as e: 
             Utils.warningMessage(

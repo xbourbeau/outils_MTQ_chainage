@@ -4,7 +4,7 @@ from qgis.PyQt.QtCore import QVariant
 from .PluginParametres import PluginParametres
 
 from ..functions.addLayerToMap import addLayerToMap
-from ..mtq.functions import validateLayer
+from ..mtq.fnt import validateLayer
 
 class PluginTemporaryLayer:
     

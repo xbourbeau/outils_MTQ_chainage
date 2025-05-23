@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
-from PyQt5.QtCore import (  QCoreApplication,
-                            QVariant)
+from PyQt5.QtCore import QCoreApplication, QVariant
 from qgis.core import (QgsProcessing,
                        QgsFeatureSink,
                        QgsPointXY,
@@ -16,12 +15,10 @@ from qgis.core import (QgsProcessing,
                        QgsFields,
                        QgsFeature,
                        QgsWkbTypes,
-                       NULL)
+                       )
 
-'''
-Fonction qui permet de générer des lignes perpendiculaire à un certain interval le long d'une ligne.
-'''
 class generatePerpendicularLines(QgsProcessingAlgorithm):
+    ''' Permet de générer des lignes perpendiculaire à un certain interval le long d'une ligne. '''
     # Constants used to refer to parameters and outputs. They will be
     # used when calling the algorithm from another algorithm, or when
     # calling from the QGIS console.

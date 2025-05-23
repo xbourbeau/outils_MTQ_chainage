@@ -4,7 +4,7 @@ from PyQt5.QtCore import QVariant
 try: import networkx as nx
 except: pass
 
-from ..fnt.layer import validateLayer
+from ..functions.layer import validateLayer
 
 from ..param import (
     DEFAULT_NOM_COUCHE_ROUTE,

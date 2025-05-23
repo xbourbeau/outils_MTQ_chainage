@@ -11,7 +11,7 @@ from ..param import (
     DEFAULT_NOM_CHAMP_LIDAR_ID,
     DEFAULT_NOM_CHAMP_LIDAR_DATE,
     DEFAULT_NOM_CHAMP_LIDAR_TELECHARGEMENT)
-from ..fnt.downloadFile import downloadFile
+from ..functions.downloadFile import downloadFile
 
 class IndexLidar:
     """

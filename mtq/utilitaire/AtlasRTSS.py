@@ -5,7 +5,9 @@ from qgis.core import (QgsProject, QgsLayoutExporter, QgsVectorLayerUtils,
 from qgis.PyQt.QtCore import QVariant
 import processing
 from typing import Union
-from .geomapping.imports import *
+from ..geomapping.Geocodage import Geocodage
+from ..geomapping.LineRTSS import LineRTSS
+from ..geomapping.Chainage import Chainage
 
 class AtlasRTSS:
     """

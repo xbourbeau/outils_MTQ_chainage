@@ -4,7 +4,7 @@ from qgis.gui import QgisInterface
 from typing import Dict, List, Optional
 import os
 import math
-from ..fnt.reprojections import reprojectGeometry, reprojectExtent, reprojectPoint
+from ..functions.reprojections import reprojectGeometry, reprojectExtent, reprojectPoint
 from ..layers.WFSLayerMTQ import WFSLayerMTQ
 
 # DEV: Ajouter une manière de faire une recherche à partir du lien:
@@ -63,14 +63,14 @@ class SIGO:
 
         layers_wms = {}
         if layers:
+            list_layers = []
             for layer_name in layers:
                 layer:WFSLayerMTQ = layers.get(layer_name)
                 if layer.dataProvider().lower() != "wfs": continue
                 if not layers.isLayerInProject(layer_name, use_name=False, use_source=True): continue
-                type_name = layer.typename()
-                if "ms:" in type_name: type_name = type_name.replace("ms:", "")
-                if layer.url() in layers_wms: layers_wms[layer.url()].append(type_name)
-                else: layers_wms[layer.url()] = [type_name]
+                list_layers.append(layer)
+
+            layers_wms = self._build_wms_layers(list_layers)
 
         return self.getURL(zoom_level=zoom_level, center_point=center_point, layers_wms=layers_wms, search=search)
 
@@ -82,13 +82,7 @@ class SIGO:
             - layers (list[WFSLayerMTQ]): Liste des couches à ajouter dans SIGO
             - iface (QgisInterface): L'interface pour avoir une localisation de carte
         """
-        layers_wms = {}
-        for layer in layers:
-            if layer.dataProvider().lower() != "wfs": continue
-            type_name = layer.typename()
-            if "ms:" in type_name: type_name = type_name.replace("ms:", "")
-            if layer.url() in layers_wms: layers_wms[layer.url()].append(type_name)
-            else: layers_wms[layer.url()] = [type_name]
+        layers_wms = self._build_wms_layers(layers)
 
         zoom_level, center_point = None, None
         if iface:
@@ -161,11 +155,21 @@ class SIGO:
 
     def _build_wms_parameters(self, layers_wms: Dict[str, List[str]]) -> str:
         """ Build WMS URL parameters from layers dict """
-        
         if not layers_wms: return ""
         urls = "wmsUrl=" + ",".join(layers_wms.keys())
         layers = "wmsLayers=" + ",".join(f"({','.join(layers)})" for layers in layers_wms.values())
         return f"&{urls}&{layers}"
+    
+    def _build_wms_layers(self, layers:list[WFSLayerMTQ]):
+        layers_wms = {}
+        for layer in layers:
+            if layer.dataProvider().lower() != "wfs": continue
+            type_name = layer.typename()
+            if "ms:" in type_name: type_name = type_name.replace("ms:", "")
+            layer_url = layer.url().replace("?", "")
+            if layer_url in layers_wms: layers_wms[layer_url].append(type_name)
+            else: layers_wms[layer_url] = [type_name]
+        return layers_wms
 
     def _get_canvas_center(self, canvas) -> Optional[QgsPointXY]:
         """Get reprojected canvas center point"""
@@ -177,8 +181,3 @@ class SIGO:
         if center.x() == 0.0 and center.y() == 0.0: return None
         return center
 
-
-class PlaniActif(SIGO):
-
-    def __init__(self, default_url="https://planiactifs.transports.qc/tq/planiactifs/?context=_default"):
-        super().__init__(default_url)

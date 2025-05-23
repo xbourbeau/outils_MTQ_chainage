@@ -24,12 +24,7 @@
 """
 import os
 from qgis.PyQt.QtGui import QFont, QIcon, QPixmap, QTransform, QMovie, QKeySequence
-from ..mtq.plugin_setting.Parametre import Parametre
-from ..mtq.plugin_setting.ParametreAction import ParametreAction
-from ..mtq.plugin_setting.ParametreInt import ParametreInt
-from ..mtq.plugin_setting.ParametreBool import ParametreBool
-from ..mtq.plugin_setting.ParametreFont import ParametreFont
-from ..mtq.plugin_setting.GestionParametre import GestionParametre
+from ..mtq.utils import Parametre, ParametreAction, ParametreInt, ParametreBool, ParametreFont, GestionParametre
 
 class PluginParametres(GestionParametre):
     """
@@ -232,12 +227,6 @@ class PluginParametres(GestionParametre):
                 categorie=categorie_config,
                 setting_name="layer_transect_style",
                 default_value=path_to_default_style_transect),
-            # Paramètre: Suivre les mise à jour du plugin
-            "suivi_plugin_update": ParametreBool(
-                plugin_name=plugin_name,
-                categorie=categorie_config,
-                setting_name="suivi_plugin_update",
-                default_value=True),
             # Paramètre: Couleur de la ligne de mesure
             "mesure_line_color": Parametre(
                 plugin_name=plugin_name,
@@ -280,6 +269,12 @@ class PluginParametres(GestionParametre):
                 categorie=categorie_config,
                 setting_name="raccourcis_clavier_perpendiculaire",
                 default_value='O'),
+            # Paramètre: Raccourci clavier pour l'interpolation sur le rtss lors de numérisation
+            "raccourcis_clavier_interpolate_rtss": Parametre(
+                plugin_name=plugin_name,
+                categorie=categorie_config,
+                setting_name="raccourcis_clavier_interpolate_rtss",
+                default_value='I'),
             # Paramètre: Affichier les options de copies des informations générale dans le menu
             "show_copie_menu_info": ParametreBool(
                 plugin_name=plugin_name,
@@ -358,12 +353,31 @@ class PluginParametres(GestionParametre):
                 categorie=categorie_option,
                 setting_name="open_sigo_plainiactif",
                 default_value=False),
+            # Paramètre: Le nom à utiliser pour les expressions personnalisé du plugin
+            "expression_group_name": Parametre(
+                plugin_name=plugin_name,
+                categorie=categorie_config,
+                setting_name="expression_group_name",
+                default_value="Géocodage MTQ"),
             # Paramètre: Chemin vers le répertoire des fichier ZIP des versions du plugin
             "dossier_plugin_update": Parametre(
                 plugin_name=plugin_name,
                 categorie=categorie_config,
                 setting_name="dossier_plugin_update",
-                default_value=r"//sstao00-adm005/TridentAnalyst/Plugin_chainage_mtq/Plugin")}
+                default_value=r"//sstao00-adm005/TridentAnalyst/Plugin_chainage_mtq/Plugin"),
+            # Paramètre: La dernière valueur de la précision du offset dans la fenêtre de géometrie
+            "last_edit_chainage_precision": ParametreInt(
+                plugin_name=plugin_name,
+                categorie=categorie_option,
+                setting_name="last_edit_chainage_precision",
+                default_value=0),
+            # Paramètre: La dernière valueur de la précision du offset dans la fenêtre de géometrie
+            "last_edit_offset_precision": ParametreInt(
+                plugin_name=plugin_name,
+                categorie=categorie_option,
+                setting_name="last_edit_offset_precision",
+                default_value=1)
+            }
         
         # =================== Définir les action du plugin =================
         # Dictionnaire des objets action de la barre d'outils du plugin
@@ -464,7 +478,6 @@ class PluginParametres(GestionParametre):
             }
     
         GestionParametre.__init__(self, dict_parametre=dict_parametre, dict_actions=dict_actions)
-
 
     def setIcon(self, icon_name):
         return os.path.join(self.plugin_dir, f"icons/{icon_name}")

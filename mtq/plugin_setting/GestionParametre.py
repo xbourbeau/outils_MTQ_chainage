@@ -50,10 +50,17 @@ class GestionParametre:
         """ Permer de retourner l'objet Parametre pour un paramètre du plugin """
         if name in self.dict_parametre: return self.dict_parametre[name]
     
-    def getValue(self, name:str):
+    def getValue(self, name:str, defaut=False):
         """ Permet de retourner la valeur d'un paramètre du plugin enregistrer dans QGIS """
         param = self.get(name)
-        if param: return param.get()
+        if not param: return None
+        
+        if defaut: return param.getDefaultValue()
+        else: return param.get()
+
+    def getDefaultValue(self, name:str):
+        """ Permet de retourner la valeur par défault d'un paramètre du plugin enregistrer dans QGIS """
+        return self.getValue(name, defaut=True)
 
     def getAction(self, name:str)->ParametreAction:
         """ Permer de retourner l'objet ParametreAction pour un QAction du plugin """

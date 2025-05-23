@@ -5,9 +5,10 @@ from datetime import datetime
 
 from qgis.core import (QgsVectorFileWriter, QgsFields, QgsField, QgsFeature,
                        QgsGeometry, QgsCoordinateReferenceSystem, QgsVectorLayerUtils,
-                       QgsCoordinateTransformContext)
+                       QgsCoordinateTransformContext, QgsProject)
 from PyQt5.QtCore import QVariant
 
+from ...functions.reprojections import reprojectGeometry
 from .ElementInventaire import ElementInventaire
 from .EspaceVert import EspaceVert
 
@@ -53,8 +54,7 @@ class SystemIIT:
     
     def createAjouts(self,
                      liste_element_iit:list[ElementInventaire],
-                     folder:str,
-                     files_name:str,
+                     output_path:str,
                      methode_releve:str="04",
                      precision:str="02"):
         """
@@ -62,8 +62,7 @@ class SystemIIT:
 
         Args:
             liste_element_iit (list[ElementInventaire]): La liste des éléments d'inventaire à ajouter
-            folder (str): Le répertoire de sortie
-            files_name (str): Le nom des fichiers de chargement
+            output_path (str): Le repertoire de sortie pour les fichiers de chargement
             methode_releve (str, optional): Le code de la méthode de relevé. Defaults to "04".
             precision (str, optional): Le code de la précision. Defaults to "02".
         """
@@ -74,25 +73,25 @@ class SystemIIT:
         elif not all(isinstance(elem, type(liste_element_iit[0])) for elem in liste_element_iit):
             raise ValueError("La liste des éléments d'inventaire contient des éléments d'inventaire différent.")
         
+        # Définir le nom du répertoire pour les fichiers de chargement
+        folder = os.path.dirname(output_path)
         # Vérifier si le répertoire de sortie existe
         if not os.path.exists(folder): raise FileNotFoundError(f"Le répertoire {folder} n'existe pas.")
-        # Créer le répertoire de sortie pour les fichiers de chargement
-        output_folder = os.path.join(folder, files_name)
         # Vérifier si le répertoire de sortie à créer existe
-        if os.path.exists(output_folder): raise FileExistsError(f"Le répertoire {output_folder} existe déjà.")
+        if os.path.exists(output_path): raise FileExistsError(f"Le répertoire {output_path} existe déjà.")
         # Créer le répertoire de sortie
-        os.makedirs(output_folder)
+        os.makedirs(output_path)
         
         try:
             # Créer le fichier de métadonnée
-            self.writeMetadata(os.path.join(output_folder, "metadata.txt"), methode_releve, precision)
+            self.writeMetadata(os.path.join(output_path, "metadata.txt"), methode_releve, precision)
             # Créer le fichier de description
-            self.writeDescription(liste_element_iit, os.path.join(output_folder, "description.txt"), "A")
+            self.writeDescription(liste_element_iit, os.path.join(output_path, "description.txt"), "A")
             # Créer le fichier de localisation
-            self.writeLocalisation(liste_element_iit, os.path.join(output_folder, "localisation"))
+            self.writeLocalisation(liste_element_iit, os.path.join(output_path, "localisation"))
         except Exception as e:
             # Supprimer le répertoire de sortie
-            shutil.rmtree(output_folder)
+            shutil.rmtree(output_path)
             # Retourner l'erreur
             raise e
         
@@ -102,6 +101,36 @@ class SystemIIT:
         """ Retourne la date du jour pour les fichiers de chargement """
         return datetime.today().strftime("%Y-%m-%d")
     
+    @staticmethod
+    def getMRCByCode(code):
+        """ Permet de retourner le nom de la MRC selon le code inscrit dans IIT """
+        code = str(code)
+        if code == '30': return "Le Granit"
+        elif code == '40': return "Les Sources"
+        elif code == '41': return "Le Haut-Saint-François"
+        elif code == '42': return "Le Val-Saint-François"
+        elif code == '43': return "Sherbrooke"
+        elif code == '44': return "Coaticook"
+        elif code == '45': return "Memphrémagog"
+        elif code == '46': return "Brome-Missisquoi"
+        elif code == '47': return "La Haute-Yamaska"
+        else: return None
+
+    @staticmethod
+    def getCEPByCode(code):
+        """ Permet de retourner le nom du CEP selon le code inscrit dans IIT """
+        code = str(code)
+        if code == '104': return "Mégantic"
+        elif code == '110': return "Saint-François"
+        elif code == '116': return "Sherbrooke"
+        elif code == '120': return "Orford"
+        elif code == '126': return "Johnson"
+        elif code == '132': return "Richmond"
+        elif code == '204': return "Brome-Missisquoi"
+        elif code == '206': return "Granby"
+        elif code == '802': return "Beauce-Sud"
+        else: return None
+
     def getMethodeReleve(self, methode_releve:str):
         """ Retourne la méthode de relevé selon le code spécifié """
         # Ajouter un zéro devant le code si nécessaire
@@ -222,16 +251,20 @@ class SystemIIT:
         feats = []
         for i, elem in enumerate(liste_element_iit):
             feat = QgsFeature()
-            feat.setGeometry(elem.geometry())
-            feat.setAttributes([str(self.offset_id + 1)])
+            feat.setGeometry(
+                reprojectGeometry(
+                    elem.geometry(),
+                    QgsCoordinateReferenceSystem("EPSG:3798"),
+                    QgsCoordinateReferenceSystem("EPSG:4269")))
+            feat.setAttributes([str(self.offset_id + i)])
             feats.append(feat)
-        
+
         # Create writer
         writer = QgsVectorFileWriter.create(
             output_file,
             fields,
             elem.geometry().wkbType(),
-            QgsCoordinateReferenceSystem("EPSG:3798"),
+            QgsCoordinateReferenceSystem("EPSG:4269"),
             QgsCoordinateTransformContext(),
             options)
         writer.addFeatures(feats)

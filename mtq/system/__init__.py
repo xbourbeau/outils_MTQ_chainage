@@ -7,4 +7,4 @@ Couriel: xavier.bourbeau@transport.gouv.qc.ca
 
 """
 
-__all__ = ["GSR", "IIT"]
+__all__ = ["GSR", "SIGO", "PlaniActif"]

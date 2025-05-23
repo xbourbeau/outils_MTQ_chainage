@@ -1,1 +1,1 @@
-__all__ = ["LayerManager", "LayerMTQ", "LoadLayer", "LoadLayers"]
+__all__ = ["LayerManager"]

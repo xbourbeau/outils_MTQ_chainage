@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 from qgis.core import QgsVectorLayerUtils, QgsApplication
-from qgis.gui import QgsMapTool, QgsMapCanvas, QgisInterface
+from qgis.gui import QgsMapTool, QgisInterface
 
-from ..mtq.core import Geocodage, Utilitaire
-from ..mtq.functions import reprojectGeometry
+from ..mtq.core import Geocodage
+from ..mtq.utils import Utilitaire
+from ..mtq.fnt import reprojectGeometry
 
 from ..modules.PluginParametres import PluginParametres
 from ..modules.TemporaryGeometry import TemporaryGeometry

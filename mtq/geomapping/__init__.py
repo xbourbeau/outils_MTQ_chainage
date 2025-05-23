@@ -1,1 +1,1 @@
-__all__ = ["Chainage", "FeatRTSS", "LineRTSS", "PointRTSS", "RTSS"]
+__all__ = ["Chainage", "FeatRTSS", "LineRTSS", "PointRTSS", "RTSS", "PolygonRTSS", "Geocodage"]

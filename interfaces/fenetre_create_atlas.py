@@ -30,7 +30,6 @@ from qgis.PyQt.QtWidgets import QDialog
 
 from ..modules.PluginParametres import PluginParametres
 from ..mtq.core import Geocodage
-from ..functions.getIcon import getPixmap
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(os.path.dirname(__file__), 'fenetre_create_atlas.ui'))
 
@@ -58,7 +57,7 @@ class fenetreCreateAtlas(QDialog, FORM_CLASS):
         self.btn_creer.clicked.connect(self.createAtlas)
         
         # Définir l'image du logo de l'outil
-        self.lbl_logo.setPixmap(getPixmap("atlas"))
+        self.lbl_logo.setPixmap(self.params.getPixmap("atlas"))
         self.lbl_logo.setScaledContents(True)
     
     def closeEvent(self, event):

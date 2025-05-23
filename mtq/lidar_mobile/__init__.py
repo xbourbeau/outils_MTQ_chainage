@@ -1,1 +1,1 @@
-__all__ = ["IndexLidar", "LidarMobile"]
+__all__ = ["IndexLidar", "LidarMobile", "Lidar"]

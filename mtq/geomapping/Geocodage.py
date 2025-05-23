@@ -5,8 +5,8 @@ from qgis.core import (QgsGeometry, QgsPointXY, QgsVectorLayer, QgsField,
 from qgis.PyQt.QtCore import QVariant
 from collections import Counter
 # Importer les fonction de formatage du module
-from ..fnt.format import verifyFormatPoint
-from ..fnt.layer import validateLayer
+from ..functions.format import verifyFormatPoint
+from ..functions.layer import validateLayer
 
 from ..search.SearchEngine import SearchEngine
 
@@ -404,15 +404,118 @@ class Geocodage:
         # Retourner la liste de toutes les featRTSS
         return list(self.dict_rtss.values())
     
-    def geocoder(self, object_rtss:Union[PointRTSS,LineRTSS,PolygonRTSS], on_rtss=False):
+    def getNextRTSS(self, rtss:RTSS, keep_route=True, keep_direction=True):
+        """
+        Permet de retourner une liste des RTSS possibles apès un RTSS donnée
+
+        Args:
+            rtss (RTSS): Le rtss à utiliser pour trouver le suivant
+            keep_route (bool): Indicateur de si les prochains RTSS devrait être sur la même route
+            keep_direction (bool): Indicateur de si les prochains RTSS devrait être dans la même direction
+
+        return (list[FeatRTSS]): Liste des RTSS suivant possible
+        """
+        # Définir le FeatRTSS en entréer
+        feat_rtss = self.get(rtss)
+        if feat_rtss is None: return None
+
+        # Retourner la liste des RTSS suivant possible
+        return self._getRTSSAtExtremity(
+            feat_rtss=feat_rtss,
+            use_extremity="End",
+            keep_route=keep_route,
+            keep_direction=keep_direction,
+            max_dist=2)
+    
+    def getPreviousRTSS(self, rtss:RTSS, keep_route=True, keep_direction=True):
+        """
+        Permet de retourner une liste des RTSS possibles apès un RTSS donnée
+
+        Args:
+            rtss (RTSS): Le rtss à utiliser pour trouver le suivant
+            keep_route (bool): Indicateur de si les prochains RTSS devrait être sur la même route
+            keep_direction (bool): Indicateur de si les prochains RTSS devrait être dans la même direction
+
+        return (list[FeatRTSS]): Liste des RTSS suivant possible
+        """
+        # Définir le FeatRTSS en entréer
+        feat_rtss = self.get(rtss)
+        if feat_rtss is None: return None
+
+        # Retourner la liste des RTSS suivant possible
+        return self._getRTSSAtExtremity(
+            feat_rtss=feat_rtss,
+            use_extremity="Start",
+            keep_route=keep_route,
+            keep_direction=keep_direction,
+            max_dist=2)
+    
+    def _getRTSSAtExtremity(self, feat_rtss:FeatRTSS, use_extremity:str, keep_route:bool, keep_direction:bool, max_dist=2):
+        """
+        Permet de retourner une liste des RTSS possibles à une extremitée d'un RTSS
+
+        Args:
+            feat_rtss (FeatRTSS): Le FeatRTSS à utiliser
+            use_extremity (str): "Start" or "End"
+            keep_route (bool): Indicateur de si les RTSS devrait être sur la même route
+            keep_direction (bool): Indicateur de si les RTSS devrait être dans la même direction
+            max_dist (float): Distance maximial des RTSS à chercher
+
+        return (list[FeatRTSS]): Liste des RTSS à l'extremitée du RTSS
+        """
+        # Calculer l'extremité du RTSS à utiliser
+        if use_extremity == "Start": extremite = feat_rtss.geocoderPointFromChainage(feat_rtss.chainageDebut())
+        elif use_extremity == "End": extremite = feat_rtss.geocoderPointFromChainage(feat_rtss.chainageFin())
+        else: raise Exception("use_extremity: L'extremite en entree doit etre egal sois a 'Start' ou 'End'")
+        
+        # Définir la liste des RTSS suivant possible
+        list_next_rtss = []
+        # Parcourir les id de RTSS à proximité de la fin du RTSS
+        for id in self.spatial_index.nearestNeighbor(extremite.asPoint(), neighbors=5, maxDistance=max_dist):
+            # Aller chercher le FeatRTSS selon le id courant
+            next_rtss = self.getRTSSById(id)
+            # Skip si le FeatRTSS est celui en entrée
+            if next_rtss == feat_rtss: continue
+            # Vérifier s'il faut vérifier que le prochain RTSS devrait être sur la même route
+            if keep_route: 
+                # Si oui, skip si le prochain RTSS n'est pas sur la même route
+                if next_rtss.getRoute() != feat_rtss.getRoute(): continue
+            # Vérifier que la vrai distance entre les deux est plus petite qu'une tolérance 
+            if extremite.distance(next_rtss.geometry()) < max_dist:
+                # Calculer le prochain PointRTSS sur le RTSS suivant
+                next_rtss_point = next_rtss.geocoderInversePoint(extremite)
+                # Vérifier s'il faut vérifier que le prochain RTSS devrait être dans la même direction
+                if keep_direction:
+                    # Indicateur que le prochain PointRTSS est plus proche du début de son RTSS
+                    is_close_to_start = next_rtss_point.getChainage() < (next_rtss.length(in_chainage=True)/2)
+                    # Skip le RTSS si selon l'extremitée, la direction est inverse au RTSS en entrée
+                    if use_extremity == "Start" and is_close_to_start: continue
+                    if use_extremity == "End" and not is_close_to_start: continue
+                # Si oui ajouter le FeatRTSS à la liste des RTSS suivant possible
+                list_next_rtss.append(next_rtss)
+        # Retourner la liste des RTSS suivant possible
+        return list_next_rtss
+
+    def geocoder(self, object_rtss:Union[PointRTSS,LineRTSS,PolygonRTSS], on_rtss=False, interpolate_on_rtss=None):
+        """
+        Permet de géocoder un objet de localition RTSS (PointRTSS, LineRTSS ou PolygonRTSS)
+        sur le RTSS
+        
+        Args:
+            - obj_rtss (PointRTSS, LineRTSS, PolygonRTSS): L'objet à géocoder
+            - on_rtss(bool): Permet d'overide la valeur de offset en géocodant l'objet_rtss sur le RTSS
+            - interpolate_on_rtss(bool): Permet d'overide l'interpolation de l'objet_rtss sur le RTSS 
+        
+        Return (QgsGeometry): La géometry géocoder sur le RTSS
+        """
         feat_rtss = self.get(object_rtss.getRTSS())
         # Retourner la géometries géocoder sur le RTSS
         if isinstance(object_rtss, PointRTSS):
             return feat_rtss.geocoderPoint(object_rtss, on_rtss=on_rtss)
         if isinstance(object_rtss, LineRTSS):
-            return feat_rtss.geocoderLine(object_rtss, on_rtss=on_rtss)
+            return feat_rtss.geocoderLine(object_rtss, on_rtss=on_rtss, interpolate_on_rtss=interpolate_on_rtss)
         if isinstance(object_rtss, PolygonRTSS):
-            return feat_rtss.geocoderPolygon(object_rtss)
+            return feat_rtss.geocoderPolygon(object_rtss, interpolate_on_rtss=interpolate_on_rtss)
 
     def geocoderFromChainages(self, rtss:Union[RTSS, str], chainages:list, offsets:list=[0], interpolate_on_rtss=True):
         """
@@ -579,7 +682,7 @@ class Geocodage:
         Convertir une geometry en objet PolygonRTSS
 
         Args:
-            - geom_line (QgsGeometry) = La géometrie du polygon
+            - geom_poly (QgsGeometry) = La géometrie du polygon
             - rtss (RTSS) = Indiquer un RTSS spécifique
         
         Return: PolygonRTSS = L'objet PolygonRTSS qui représente le mieux la géometrie
@@ -602,6 +705,18 @@ class Geocodage:
         """
         return self.dict_rtss == {}
 
+    def isOnExtremities(self, obj_rtss:Union[PointRTSS, LineRTSS, PolygonRTSS], tolerance=0):
+        """
+        Permet de vérifier si un objet RTSS se trouve sur une des extremitées du RTSS.
+
+        Args:
+            obj_rtss (Union[PointRTSS, LineRTSS, PolygonRTSS]): L'objet RTSS à vérifier
+            tolerance (int, optional): Tolérence des chainages. Defaults to 0.
+        """
+        feat_rtss = self.get(obj_rtss.getRTSS())
+        return feat_rtss.isOnExtremities(obj_rtss, tolerance=tolerance)
+
+
     def nearestRTSS(self, geometry:QgsGeometry, dist_max=0)->FeatRTSS:
         """
         Retourner le FeatRTSS le plus proche d'une géometry
@@ -614,7 +729,8 @@ class Geocodage:
         if list_rtss == []: return None
         else: return list_rtss[0]
 
-    def nearestRTSSFromPoint(self, geometry:QgsGeometry, dist_max=0)->FeatRTSS:
+    def nearestRTSSFromPoint(self, geometry:Union[QgsPointXY, QgsGeometry], dist_max=0)->FeatRTSS:
+        geometry = verifyFormatPoint(geometry)
         # Parcourir la liste des id de RTSS les plus proche de la geometrie en entrée
         for id in self.spatial_index.nearestNeighbor(geometry, neighbors=1, maxDistance=dist_max):
             return self.getRTSSById(id)

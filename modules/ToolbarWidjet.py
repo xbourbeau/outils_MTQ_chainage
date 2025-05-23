@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from qgis.PyQt.QtGui import QFont
-from qgis.PyQt.QtWidgets import QLineEdit, QLabel, QCheckBox
+from qgis.PyQt.QtWidgets import QLineEdit, QLabel
 
 class ToolbarWidjet:
 

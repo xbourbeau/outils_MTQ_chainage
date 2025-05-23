@@ -3,11 +3,8 @@
 from qgis.PyQt.QtCore import QCoreApplication
 from PyQt5.QtCore import QVariant
 from qgis.core import (QgsProcessing,
-                       QgsGeometry,
                        QgsFeature,
-                       QgsVectorLayer,
                        QgsField,
-                       QgsFields,
                        QgsFeatureSink,
                        QgsProcessingException,
                        QgsProcessingAlgorithm,

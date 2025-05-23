@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
-from ..fnt.interpolateOffsetOnLine import interpolateOffsetOnLine
+from ..functions.interpolateOffsetOnLine import interpolateOffsetOnLine
 from typing import Union
 from collections import Counter
+from qgis.core import QgsGeometry
 
 # Librairie MTQ
 from .RTSS import RTSS
@@ -10,7 +11,7 @@ from .PointRTSS import PointRTSS
 class LineRTSS:
     """ Définition d'une ligne selon le référencement linéaire RTSS/chainage du MTQ """
 
-    __slots__ = ("points", "interpolate_on_rtss")
+    __slots__ = ("points", "interpolate_on_rtss", "geom")
     
     def __init__ (self, points:list[PointRTSS]=[], interpolate_on_rtss=True):
         """
@@ -23,6 +24,7 @@ class LineRTSS:
         """
         self.setPoints(points)
         self.setInterpolation(interpolate_on_rtss)
+        self.setGeometry(None)
     
     @classmethod
     def fromChainages(cls, rtss:Union[str, RTSS], list_chainages:list):
@@ -85,6 +87,9 @@ class LineRTSS:
         if self.isEmpty(): return None
         else: return self.points[-1]
 
+    def getGeometry(self)->QgsGeometry:
+        return self.geom
+
     def getPoints(self):
         """ Permet de retourner la liste des PointRTSS de la ligne """
         return self.points
@@ -129,7 +134,10 @@ class LineRTSS:
         else: return len(set([round(pt.getOffset(), precision)  for pt in self.points])) == 1
 
     def isValide(self):
-        """ Permet de retourner un indicateur de si la ligne est valide donc contient plus de 1 point """
+        """
+        Permet de retourner un indicateur de si la ligne est valide.
+        Donc contient plus de 1 chainage différent.
+        """
         return len(set(self.points)) > 1
 
     def interpolate(self):
@@ -160,6 +168,10 @@ class LineRTSS:
     def setInterpolation(self, interpolate_on_rtss):
         """ Permet de définir si la ligne doit être interpolé sur le RTSS """
         self.interpolate_on_rtss = interpolate_on_rtss
+
+    def setGeometry(self, geometry:QgsGeometry):
+        """ Permet de définir une attribut de géometrie """
+        self.geom = geometry
 
     def setOffset(self, offset_d:Union[int, float], offset_f:Union[int, float]=None):
         """ 
@@ -249,3 +261,12 @@ class LineRTSS:
         if not sides: return None
         # Retourner le côté le plus fréquent
         return Counter(sides).most_common(1)[0][0]
+    
+    def toSensChainage(self, reverse=False):
+        """
+        Permet de réorganiser les chainages de la ligne dans la direction du chainage
+
+        Args:
+            reverse (bool, optional): Inverser la direction. Defaults to False.
+        """
+        self.points = sorted(self.points, key=lambda p: p.getChainage(), reverse=reverse)

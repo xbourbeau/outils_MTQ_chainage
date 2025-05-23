@@ -31,9 +31,10 @@ class ParametreAction(Parametre):
         self.groupe = groupe
         self.icon = icon
     
-    def get(self):
+    def get(self, defaut=False):
         """ Permet de retourner si l'action est visible """
-        return QSettings().value(self.setting, self.default_value, type=bool)
+        if defaut: return self.default_value
+        else: return QSettings().value(self.setting, self.default_value, type=bool)
     
     def getIcon(self):
         """ Permet de retoruner l'icon associé à l'action """

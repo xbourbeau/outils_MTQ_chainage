@@ -13,21 +13,21 @@ from qgis.core import (QgsProcessing,
                        QgsField,
                        QgsFields,
                        QgsFeature,
-                       QgsWkbTypes,
-                       NULL)
+                       QgsWkbTypes)
 
 from ..mtq.core import Geocodage, Chainage
 import numpy as np
 
-'''
-Fonction qui permet de générer des points le long d'un RTSS en fonction
-d'un interval de chaînage
-'''
+
 class generateChainagePointOnRTSS(QgsProcessingAlgorithm):
+    """
+    Fonction qui permet de générer des points le long d'un RTSS en fonction
+    d'un interval de chaînage
+    """
+    
     # Constants used to refer to parameters and outputs. They will be
     # used when calling the algorithm from another algorithm, or when
     # calling from the QGIS console.
-
     INPUT_RTSS = 'INPUT_RTSS'
     INPUT_FIELD_RTSS = 'INPUT_FIELD_RTSS'
     INPUT_FIELD_LONG = 'INPUT_FIELD_LONG'
