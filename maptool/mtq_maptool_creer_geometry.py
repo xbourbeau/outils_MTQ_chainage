@@ -27,7 +27,7 @@ class MtqMapToolCreerGeometry(QgsMapToolEdit):
         self.params = PluginParametres()
 
         # Créer la fenêtre d'input de la géométrie
-        self.dlg_geom = fenetreCreationGeometrie(self.iface, self.geocode, parent=self.iface.mainWindow())
+        self.dlg_geom = fenetreCreationGeometrie(self.iface, self.geocode)
         # Connecter les signaux de la fenêtre d'input
         self.dlg_geom.set_lock_chainage.connect(self.lockSnapPerpendicularlLine)
         self.dlg_geom.set_lock_offset.connect(self.lockSnapParralelLine)
@@ -286,34 +286,6 @@ class MtqMapToolCreerGeometry(QgsMapToolEdit):
         self.interpolate_on_rtss = interpolate_on_rtss
         if update_tool_button: 
             self.dlg_geom.act_interpolate_rtss.setChecked(interpolate_on_rtss)
-
-    def setPoint(self):
-        self.setSnapParralelLine()
-        self.setSnapPerpendicularlLine()
-        
-        if self.geom_type == 0:
-            point_geom = self.geocode.geocoderPoint(self.current_pt_rtss)
-            # Projeter le point sur le RTSS dans la projection de la carte
-            point_geom = self.toMapCoordinates(self.layer_rtss, point_geom.asPoint())
-            self.new_point_marker.setCenter(point_geom)
-            # Afficher le le marker de RTSS dans la carte
-            self.new_point_marker.show()
-            #self.dlg_geom.setValuesFromPoint(self.current_pt_rtss, is_signal=not update_window)
-
-        elif self.list_points:
-            list_point_temp = [self.list_points[-1], self.current_pt_rtss]
-            
-            # Line
-            if self.geom_type == 1 or len(self.list_points) == 1: object_rtss = self.createLine(list_point_temp)
-            # Polygon
-            elif self.geom_type == 2: object_rtss = self.createPolygon([self.list_points[0]] + list_point_temp)
-            else: object_rtss=LineRTSS([])
-
-            if object_rtss.hasOneRTSS() and object_rtss.isValide():
-                self.new_geom_prolg.setToGeometry(self.feat_rtss.geocoder(object_rtss))
-                self.new_geom_prolg.show()
-                #self.dlg_geom.setValuesFromPoint(self.current_pt_rtss, is_signal=not update_window)
-            else: self.new_geom_prolg.hide()
 
     def createPolygon(self, points=list[PointRTSS]):
         return PolygonRTSS(points + [points[0]])

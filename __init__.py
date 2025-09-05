@@ -22,7 +22,6 @@
  ***************************************************************************/
  This script initializes the plugin, making it known to QGIS.
 """
-from qgis.core import QgsMapLayerProxyModel
 
 # noinspection PyPep8Naming
 def classFactory(iface):  # pylint: disable=invalid-name

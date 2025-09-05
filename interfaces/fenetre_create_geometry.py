@@ -21,9 +21,7 @@
  *                                                                         *
  ***************************************************************************/
 """
-from math import e
 import os
-from mtq.geomapping.PointRTSS import PointRTSS
 from qgis.gui import QgisInterface, QgsDockWidget
 from qgis.PyQt import uic
 from qgis.PyQt.QtCore import pyqtSignal
