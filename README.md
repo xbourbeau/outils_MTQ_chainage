@@ -1,6 +1,3 @@
-Version: 3.3.1
-Question: xavier.bourbeau@transports.gouv.qc.ca
-
 # outils_MTQ_chainage
 Version: 3.4.0<br>
 Question: xavier.bourbeau@transports.gouv.qc.ca<br>
