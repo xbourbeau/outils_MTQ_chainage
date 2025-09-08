@@ -7,6 +7,7 @@ from qgis.core import QgsGeometry
 from ..geomapping.RTSS import RTSS
 from ..geomapping.Chainage import Chainage
 from .LineSegmentationElement import LineSegmentationElement
+from .SegmentationElement import SegmentationElement
 from ..geomapping.PointRTSS import PointRTSS
 
 class SegmentationPoint(PointRTSS):

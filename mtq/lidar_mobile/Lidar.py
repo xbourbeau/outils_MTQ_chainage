@@ -1,7 +1,7 @@
 import os
 import numpy as np
 from shapely.geometry import box
-from scipy.interpolate import interp1d
+import pyproj
 
 try: 
     import processing
@@ -25,6 +25,18 @@ except: LASPY_LIB = False
 
 class Lidar:
     """ Un objet Lidar qui représente un fichier .las ou .laz qui contient un nuage de point """
+
+    crs_defs = {
+        "NAD83(CSRS) / MTM zone 2": "EPSG:2944",
+        "NAD83(CSRS) / MTM zone 3": "EPSG:2945",
+        "NAD83(CSRS) / MTM zone 4": "EPSG:2946",
+        "NAD83(CSRS) / MTM zone 5": "EPSG:2947",
+        "NAD83(CSRS) / MTM zone 6": "EPSG:2948",
+        "NAD83(CSRS) / MTM zone 7": "EPSG:2949",
+        "NAD83(CSRS) / MTM zone 8": "EPSG:2950",
+        "NAD83(CSRS) / MTM zone 9": "EPSG:2951",
+        "NAD83(CSRS) / MTM zone 10": "EPSG:2952"
+    }
 
     def __init__(self, file_path:str):
         self.setPath(file_path)
@@ -55,13 +67,20 @@ class Lidar:
     def file(self): return self.file_path
 
     def crs(self):
+        # Assurer que l'objet Lidar ai un laz/las valide
         if not self.isValid(): return None
+        # Lire le fichier lidar
         with laspy.open(self.file()) as las_file:
+            # Lire l'entête du fichier
             header = las_file.header
+            # Définir un CRS vide
             crs = QgsCoordinateReferenceSystem()
+            # Associer le CRS à partir de l'entête
             crs.createFromWkt(header.parse_crs().to_wkt())
-            # Access the Coordinate Reference System (CRS)
-            return crs
+            # Retrourner les CRS s'il est valide
+            if crs.authid() != "": return crs
+            # Sinon essayer à partir de la description pour les lidar 2024 et plus dont le CRS n'est pas reconue
+            else: return Lidar.get_crs_from_description(header.parse_crs().to_json_dict()["name"])
 
     def clip(self, output, clipping_layer:QgsVectorLayer, expression=None):
         params = {
@@ -297,3 +316,88 @@ class Lidar:
         # Use the indices to filter the points
         return elevations
 
+    @staticmethod
+    def merge_lidar(input_files:list[str], output_file:str, **kwargs):
+        """
+        Permet de fusionner plusieurs nuages de points en un seul
+
+        Args:
+            list_lidar (list[srt]): La liste des nuages de points à fusionner
+            output_file (str): Le nom du fichier en sortie
+        kwargs (pour filtrer):
+            z_min (float) = Valeur minimale de z pour filtrer les points.
+            z_max (float) = Valeur maximale de z pour filtrer les points.
+            classifications (int/list) = Valeur de classification des points de sol à éliminer.
+            intensity_min (float) = Valeur minimale de l'intensité pour filtrer les points.
+            intensity_max (float) = Valeur maximale de l'intensité pour filtrer les points.
+            x_min (float) = Valeur minimale de X pour filtrer les points.
+            x_max (float) = Valeur maximale de X pour filtrer les points.
+            y_min (float) = Valeur minimale de Y pour filtrer les points.
+            y_max (float) = Valeur maximale de Y pour filtrer les points.
+
+        Returns (Lidar): L'objet Lidar du nuage de point généré
+        """
+        # List des valeurs des point à conserver dans le merge
+        all_pts, all_classification, all_intesity = [], [], []
+        # Parcourir les fichier lidar à combiner 
+        for file in input_files:
+            # Lire le fichier
+            las = laspy.read(file)
+            # Créer un mask de 0 et 1 de la même taile
+            mask = np.ones(len(las.x), dtype=bool)
+            # Parcourir les paramètres suplémentaire et appliquer les filtres
+            for arg_name, val in kwargs.items():
+                # Filtrer sur les Z
+                if arg_name == "z_min": mask &= (las.z >= val)
+                elif arg_name == "z_max": mask &= (las.z <= val)
+                # Filtrer sur les X
+                elif arg_name == "x_min": mask &= (las.x >= val)
+                elif arg_name == "x_max": mask &= (las.x <= val)
+                # Filtrer sur les Y
+                elif arg_name == "y_min": mask &= (las.y >= val)
+                elif arg_name == "y_max": mask &= (las.y <= val)
+                # Filtrer sur les intensité
+                elif arg_name == "intensity_min": mask &= (las.intensity >= val)
+                elif arg_name == "intensity_max": mask &= (las.intensity <= val)
+                # Filtrer sur les classification
+                elif arg_name == "classifications": 
+                    if not isinstance(val, list): val = [val]
+                    mask &= np.isin(las.classification, val)
+            # Ajouters les valeurs des points du fichiers au liste
+            all_pts.append(las.xyz[mask])
+            all_classification.append(las.classification[mask])
+            all_intesity.append(las.intensity[mask])
+        # Combiner les liste des coordonnées des points
+        all_pts = np.concatenate(all_pts)
+        # Créer un entête pour le fichier laz
+        header = laspy.LasHeader(point_format=3, version="1.2")
+        # Ajouter un CRS selon le dernier fichier de la list
+        header.add_crs(pyproj.CRS.from_epsg(Lidar(file).crs().authid().split(":")[-1]))
+        # Create a LasData object
+        las = laspy.LasData(header)
+        # Définir les valueurs combiner des lidar en entrée
+        las.x = np.array([pt[0] for pt in all_pts])
+        las.y = np.array([pt[1] for pt in all_pts])
+        las.z = np.array([pt[2] for pt in all_pts])
+        las.classification = np.array(np.concatenate(all_classification))
+        las.intensity = np.array(np.concatenate(all_intesity))
+        # Enregistirer le fichier 
+        las.write(output_file)
+        # Retourner le fichier enregistrer
+        return output_file
+
+    @staticmethod
+    def get_crs_from_description(crs_descr:str):
+        """
+        Permet de retourner un CRS probalbe à partir d'un description.
+        Pratique pour les laz de 2024 et plus dont le CRS n'est pas reconnue
+
+        Args:
+            crs_descr (str): La descritpion du CRS ex: NAD83(CSRS) / MTM zone 8 + CGVD2013a(2010) height
+
+        Returns:
+            QgsCoordinateReferenceSystem: Le CRS propable à partir de la description
+        """
+        for desc, epsg in Lidar.crs_defs.items():
+            if desc in crs_descr: return QgsCoordinateReferenceSystem(epsg)
+        return None

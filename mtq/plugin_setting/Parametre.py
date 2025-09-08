@@ -30,7 +30,7 @@ class Parametre:
     
     def set(self, val):
         """ Permet de modifier la valeur du paramètre dans les settings de QGIS """
-        QSettings().setValue(self.setting, val)
+        if val != self.get(): QSettings().setValue(self.setting, val)
     
     def get(self)->str:
         """ Permet de retourner la valeur du parmamètre """

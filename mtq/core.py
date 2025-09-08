@@ -46,3 +46,12 @@ from .lidar_mobile.LidarMobile import LidarMobile
 
 # Search engine
 from .search.SearchEngine import SearchEngine
+
+# Network Analysis
+from .network.TrajetSIGO import TrajetSIGO
+
+# Devers
+from .devers.Measurement import Measurement
+from .devers.Slope import Slope
+from .devers.VoieDevers import VoieDevers
+from .devers.AnalyseDevers import AnalyseDevers

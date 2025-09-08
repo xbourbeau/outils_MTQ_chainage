@@ -1,1 +1,1 @@
-__all__ = ["RoadNetwork"]
+__all__ = ["RoadNetwork", "TrajetSIGO"]
