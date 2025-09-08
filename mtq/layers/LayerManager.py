@@ -142,7 +142,7 @@ class LayerManager:
                 map_layer = QgsProject.instance().addMapLayer(layer)
                 
                 # Définir un style si spécifié
-                if name in  styles: map_layer.loadNamedStyle(styles[name])
+                if name in styles: map_layer.loadNamedStyle(styles[name])
                 if self.iface: self.iface.layerTreeView().refreshLayerSymbology(map_layer.id())
         
         task_load_layer = LoadLayers(layers, authid=self.authid, dt=dt, cs=cs, **kwargs)

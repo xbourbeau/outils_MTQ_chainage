@@ -1,7 +1,6 @@
 # Importer les objects du module core de QGIS 
 import os
-from qgis.core import (QgsGeometry, QgsPointXY, QgsVectorLayer, QgsField, QgsRectangle,
-                        QgsCoordinateReferenceSystem, QgsSpatialIndex, QgsFeature, QgsWkbTypes, QgsFeatureIterator)
+from qgis.core import (QgsVectorLayer, QgsRectangle, QgsSpatialIndex, QgsCoordinateReferenceSystem)
 from typing import Union, Dict
 
 from ..functions.reprojections import reprojectPoints
@@ -15,9 +14,8 @@ class LidarMobile:
     """
 
     def __init__(self, layer_index:QgsVectorLayer):
-        self.dict_index:Dict[str, IndexLidar] = {}
-        self.dict_index_id: Dict[int, str] = {}
-        self.dict_lidar:Dict[str, Lidar] = {}
+        # Set les valeurs des indexs vides
+        self.reset()
         # Mettre à jour l'index à partir de la couche
         self.updateIndex(layer_index)
 
@@ -32,6 +30,21 @@ class LidarMobile:
         except: raise KeyError(f"L'index lidar ({key}) n'existe pas")
 
     def __contains__(self, key): return key in self.dict_index
+
+    def reset(self):
+        """ Permet de reset toutes les indexs vides """
+        self.dict_index:Dict[str, IndexLidar] = {}
+        self.dict_index_id: Dict[int, str] = {}
+        self.dict_lidar:Dict[str, Lidar] = {}
+        self.crs = QgsCoordinateReferenceSystem()
+
+    def isEmpty(self): 
+        """
+        Permet de vérifier si le module est vide
+
+        Returns (bool): True si le module est vide, False sinon
+        """
+        return len(self.dict_index) == 0
 
     def addLidar(self, index:IndexLidar):
         """
@@ -98,26 +111,49 @@ class LidarMobile:
             if index.geometry().intersects(extent): indexs.append(index)
         return indexs
 
+    def set_output_folder(self, folder:str):
+        """
+        Permet de définir le dossier de sortie pour les fichiers lidar
+
+        Args:
+            folder (str): Le chemin vers le dossier de sortie
+        """
+        for index in self.listIndex(): index.set_folder(folder)
+        self.updateLidar(folder)
+
     def listIndex(self): return list(self.dict_index.values())
 
-    def updateIndex(self, layer_index:QgsVectorLayer):
+    def updateIndex(self, layer_index:QgsVectorLayer, **kwargs):
+        """
+        Mettre à jour les indexs lidar à partir d'un couche.
+
+        Args:
+            layer_index (QgsVectorLayer): La couche qui contient les index lidar à utiliser
+
+        kwargs:
+            champ_lidar_id (str): Le nom du champs qui contient l'indentifiant de la run lidar
+            champ_lidar_date (str): Le nom du champs qui contient la date de la run lidar
+            champ_lidar_telechargement (str): Le nom du champs qui contient le lien de téléchargement de la run lidar
+        """
+        if not layer_index: return False
         self.crs = layer_index.crs()
         # Index spatial des géometries des index
         self.spatial_index = QgsSpatialIndex(layer_index.getFeatures())
         # Parcourir toutes les entités de la couche d'index
         for feat_index in layer_index.getFeatures():
             # Créer l'objet IndexLidar pour la trajectoire
-            index = IndexLidar.fromFeat(feat_index, self.crs)
+            index = IndexLidar.fromFeat(feat_index, self.crs, **kwargs)
             # Ajouter l'objet IndexLidar au dictionnaire
             self.dict_index[index.id()] = index
             self.dict_index_id[feat_index.id()] = index.id()
+        return True
 
     def updateLidar(self, folder):
         for index in self.listIndex():
             if os.path.samefile(index.folder(), folder):
                 self.addLidar(index)
     
-    def clip(self, id_index:str, layer_poly:QgsVectorLayer, output=""):
+    def clip(self, id_index:str, layer_poly:QgsVectorLayer, output="", sufix="_clip"):
         """
         Permet de découper un nuage de point selon une couche de polygone
 
@@ -136,11 +172,35 @@ class LidarMobile:
         # Sinon télécharger le fichier
         if not lidar: lidar = self.download(id_index)
         # Créer un nom si aucun est défini
-        if output == "": output = index.createFile("_clip")
+        if output == "": output = index.createFile(sufix)
         # Découper le fichier
         return lidar.clip(output, layer_poly)
+    
+    def merge(self, list_index:list[str], output:str, **kwargs):
+        """
+        Permet de fusionner plusieurs nuages de points en un seul
 
-    def applatir(self, id_index:str, output=""):
+        Args:
+            list_index (list[str]): La liste des index à fusionner
+            output (str, optional): Le nom du fichier en sortie. Defaults to génération automatique.
+
+        Returns (Lidar): L'objet Lidar du nuage de point généré
+        """
+        # Vérifier si la liste d'index est vide
+        if not list_index: return False
+        list_lidar = []
+        for id_index in list_index:
+            # Définir la référence de l'index du lidar a découper
+            if not self.get(id_index): return False
+            # Vérifier si le lidar est téléchargé
+            lidar = self.getLidar(id_index)
+            # Sinon télécharger le fichier
+            if not lidar: lidar = self.download(id_index)
+            list_lidar.append(lidar.file())
+        
+        return Lidar.merge_lidar(list_lidar, output, **kwargs)
+
+    def applatir(self, id_index:str, output="", sufix="_applatit"):
         """
         Permet de découper un nuage de point selon une couche de polygone
 
@@ -164,6 +224,8 @@ class LidarMobile:
         # Ajouter les Z au coordonnée de la ligne
         points_z = lidar.fitLine(points, 0,5, classifications=[2])
         # Créer un nom si aucun est défini
-        if output == "": output = index.createFile("_applatit")
+        if output == "": output = index.createFile(sufix)
         return lidar.applatir(output, points_z)
+        
+    
         

@@ -203,11 +203,40 @@ class ReseauSegmenter(Geocodage):
             # Vérifier si l'objet LinearReferencing est valide
             if rtss_seg is None: continue
             # Ajouter l'id du projet au module de référence linéraire du RTSS
+            atts = {field_value:feat[field_value] for field_value in fields_value}
+            rtss_seg.addValues(feat[field_chainage_d], feat[field_chainage_f], **atts)
+
+    def addFromFeats(self,
+            feature_iter:QgsFeatureIterator,
+            fields_value,
+            field_rtss,
+            field_chainage_d,
+            field_chainage_f,
+            **kwargs):
+        """
+        Permet d'ajouter des éléments à partir d'un itérateur d'entité
+
+        Args:
+            feature_iter (QgsFeatureIterator): itérateur d'entité à ajouter au réseau 
+            fields_value (list of str): La liste des noms des champs qui contient les valeur à ajouter
+            field_rtss (str) Le champs des entitées contenant le RTSS 
+            field_chainage_d (str): Le champs des entitées contenant le chainage de début 
+            field_chainage_f (str): Le champs des entitées contenant le chainage de fin
+            copy_elements (bool, optional): Conserver les éléments de la segmentation intersectée.
+        """
+        # Parourir toutes les entitées de la couche
+        for feat in feature_iter:
+            # Definir l'objet LinearReferencing
+            rtss_seg = self.get(feat[field_rtss])
+            # Vérifier si l'objet LinearReferencing est valide
+            if rtss_seg is None: continue
+            # Ajouter l'id du projet au module de référence linéraire du RTSS
             rtss_seg.addValuesFromFeat(
                 feat,
                 fields=fields_value,
                 field_chainage_d=field_chainage_d,
-                field_chainage_f=field_chainage_f)
+                field_chainage_f=field_chainage_f,
+                **kwargs)
 
     def addFromInterpolation(
         self,

@@ -712,19 +712,8 @@ class FeatRTSS(RTSS):
         """
         point = FeatRTSS.verifyFormatPoint(point).asPoint()
         # Trouver les vertex du RTSS à proximité du point (avant, plus proche et après)
-        id, vertex_id, previous_vertex_id, nextVertexIndex, sqr_dist = self.geometry().closestVertex(point)
-        
-        # Verifier si le vertex avant existe donc que le point n'est pas au début complétement de la ligne
-        # Trouver le côté (vertex proche => vertex après)
-        if previous_vertex_id == -1: return QgsGeometryUtils.segmentSide(
-            self.geometry().vertexAt(vertex_id),
-            self.geometry().vertexAt(nextVertexIndex),
-            QgsPoint(point))
-        # Trouver le côté ligne(vertex avant => vertex proche)
-        else: return QgsGeometryUtils.segmentSide(
-            self.geometry().vertexAt(previous_vertex_id),
-            self.geometry().vertexAt(vertex_id),
-            QgsPoint(point))
+        dist, minDistPoint, nextVertexIndex, side = self.geometry().closestSegmentWithContext(point)
+        return side
 
     def verifyFormatPoint(point:Union[QgsPointXY, QgsPoint, QgsGeometry]) -> QgsGeometry:
         """

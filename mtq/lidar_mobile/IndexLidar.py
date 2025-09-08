@@ -53,22 +53,31 @@ class IndexLidar:
         self.index_file = self.getDefaultFile() if file is None else file
 
     @classmethod
-    def fromFeat(cls, feat:QgsFeature, crs:QgsCoordinateReferenceSystem=None):
+    def fromFeat(
+        cls,
+        feat:QgsFeature,
+        crs:QgsCoordinateReferenceSystem=None,
+        champ_lidar_id=DEFAULT_NOM_CHAMP_LIDAR_ID,
+        champ_lidar_date=DEFAULT_NOM_CHAMP_LIDAR_DATE,
+        champ_lidar_telechargement=DEFAULT_NOM_CHAMP_LIDAR_TELECHARGEMENT):
         """
         Permet de créer l'objet IndexLidar à partir du feature de la couche de la trajectoir du lidar mobile 
 
         Args:
             feat (QgsFeature): Le feature de la couche de la trajectoir du lidar mobile
             crs (QgsCoordinateReferenceSystem): Le système de coordonée de la géometry
+            champ_lidar_id (str): Le nom du champs qui contient l'indentifiant de la run lidar
+            champ_lidar_date (str): Le nom du champs qui contient la date de la run lidar
+            champ_lidar_telechargement (str): Le nom du champs qui contient le lien de téléchargement de la run lidar
 
         Returns: L'objet IndexLidar 
         """
         return cls(
-            id=feat[DEFAULT_NOM_CHAMP_LIDAR_ID],
-            date=datetime.strptime(feat[DEFAULT_NOM_CHAMP_LIDAR_DATE].toString("yyyy-MM-dd"), f"%Y-%m-%d"),
+            id=feat[champ_lidar_id],
+            date=datetime.strptime(feat[champ_lidar_date].toString("yyyy-MM-dd"), f"%Y-%m-%d"),
             geometry=feat.geometry(),
             crs=crs,
-            lien_telechargement=feat[DEFAULT_NOM_CHAMP_LIDAR_TELECHARGEMENT])
+            lien_telechargement=feat[champ_lidar_telechargement])
     
     def __str__ (self): return self.name()
     
@@ -94,6 +103,10 @@ class IndexLidar:
         """ Permet de retourner le chemin vers le dossier qui contient le las ou laz du lidar """
         return os.path.dirname(self.file())
 
+    def set_folder(self, folder:str):
+        # Définir le chemin vers le fichier (laz, las)
+        self.index_file = self.getDefaultFile(folder)
+
     def createFile(self, suffix:str):
         """ Permet de créer une nom de fichier avec un suffix """
         return os.path.join(self.folder(), self.name(suffix))
@@ -104,7 +117,7 @@ class IndexLidar:
         return self.index_geometry
 
     def download(self, file=""):
-        """ Permet de télégarger le fichier du lidar correspndant à l'index """
+        """ Permet de télécharger le fichier du lidar correspndant à l'index """
         if os.path.exists(os.path.dirname(file)): self.index_file = file
         if downloadFile(self.lien_telechargement, self.index_file): return True
         else: return False

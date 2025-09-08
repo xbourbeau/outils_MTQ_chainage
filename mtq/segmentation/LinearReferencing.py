@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from __future__ import annotations
 import bisect
 import copy
 from typing import Union, Dict
@@ -171,7 +172,7 @@ class LinearReferencing(FeatRTSS):
         Returns (bool): True: L'élément avec les valeurs est ajouter False: L'élément n'a pas pu être ajouter
         """
         elem = LineSegmentationElement(**kwargs)
-        if elem.isEmpty(): return False
+        #if elem.isEmpty(): return False
         self.addElement(elem, chainage_debut, chainage_fin, copy_elements=copy_elements)
         return True
     
@@ -219,7 +220,15 @@ class LinearReferencing(FeatRTSS):
             if not has_offset_f: of = line_rtss.endOffset()
 
         def getValue(arg, field):
-            if arg in kwargs: return kwargs[arg]
+            # Vérifier si l'argument est dans le dictionnaire
+            if arg in kwargs: 
+                # Garder la valeur de l'argument
+                val = kwargs[arg]
+                # Retirer la valeur du dictionnaire
+                kwargs.pop(arg)
+                # Retourner la valeur
+                return val
+            # Sinon retourner la valeur à partir du feature.
             else: return feat[field]
         
         if has_chainage_d: cd = getValue("chainage_debut", field_chainage_d)
@@ -563,9 +572,28 @@ class LinearReferencing(FeatRTSS):
         """ Permet de vérifier qu'un SegmentationPoint est unique sur le RTSS """
         return not segmentation_point.getChainage() in self
 
+    def isolateValue(self, elem_attribut_name:str):
+        """
+        Permet de créer un nouveau LinearReferencing qui considère seulment une seule valeur valeurs
+
+        Args:
+            elem_attribut_name (str): La valeurs à isoler dans le nouveau LinearReferencing
+
+        Return (LinearReferencing): Un objet LinearReferencing segmenter uniquement selon la valeur
+        """
+        single_linear_ref = LinearReferencing.fromFeatRTSS(self)
+        last_value = None
+        for pt in self.getSegmentations():
+            value = pt.getValues(elem_attribut_name)
+            if last_value != value:
+                single_linear_ref.addValues(pt.getChainage(), elem_attribut_name=value, copy_elements=False)
+                last_value = value
+
+        return single_linear_ref
+
     def keepOffset(self): return self.keep_offset
 
-    def merge(self, lineaire_ref):
+    def merge(self, lineaire_ref:LinearReferencing):
         """
         Méthode qui permet d'ajouter les elements d'un autre LinearReferencing au 
         LinearReferencing courant.
