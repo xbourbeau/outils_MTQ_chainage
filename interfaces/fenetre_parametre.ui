@@ -9,8 +9,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>830</width>
-    <height>819</height>
+    <width>844</width>
+    <height>881</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -32,7 +32,7 @@
       <enum>QTabWidget::Rounded</enum>
      </property>
      <property name="currentIndex">
-      <number>2</number>
+      <number>0</number>
      </property>
      <property name="iconSize">
       <size>
@@ -82,35 +82,32 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>786</width>
-            <height>752</height>
+            <width>800</width>
+            <height>814</height>
            </rect>
           </property>
           <layout class="QGridLayout" name="gridLayout_9">
-           <item row="1" column="0">
-            <spacer name="verticalSpacer_6">
-             <property name="orientation">
-              <enum>Qt::Vertical</enum>
-             </property>
-             <property name="sizeType">
-              <enum>QSizePolicy::Fixed</enum>
-             </property>
-             <property name="sizeHint" stdset="0">
-              <size>
-               <width>15</width>
-               <height>15</height>
-              </size>
-             </property>
-            </spacer>
-           </item>
-           <item row="3" column="0">
+           <item row="4" column="0">
             <widget class="QGroupBox" name="groupBox_3">
              <property name="title">
               <string>Options du plugin</string>
              </property>
              <layout class="QGridLayout" name="gridLayout_4">
+              <item row="1" column="0">
+               <widget class="QCheckBox" name="chx_add_expressions">
+                <property name="focusPolicy">
+                 <enum>Qt::ClickFocus</enum>
+                </property>
+                <property name="text">
+                 <string>Ajouter des expressions de géocodage à la fenêtre d'expression de QGIS</string>
+                </property>
+               </widget>
+              </item>
               <item row="0" column="0">
                <widget class="QCheckBox" name="chx_use_visible">
+                <property name="focusPolicy">
+                 <enum>Qt::ClickFocus</enum>
+                </property>
                 <property name="acceptDrops">
                  <bool>false</bool>
                 </property>
@@ -123,30 +120,112 @@
                 </property>
                </widget>
               </item>
-              <item row="1" column="0">
-               <widget class="QCheckBox" name="chx_add_expressions">
+             </layout>
+            </widget>
+           </item>
+           <item row="6" column="0" rowspan="2" colspan="2">
+            <widget class="QGroupBox" name="groupBox_7">
+             <property name="toolTip">
+              <string>Ajoute des options de copie lors d'un click droit dans la carte</string>
+             </property>
+             <property name="title">
+              <string>Menu de contexte (option de copies)</string>
+             </property>
+             <layout class="QGridLayout" name="gridLayout_24">
+              <item row="0" column="0">
+               <widget class="QCheckBox" name="chk_copie_non_formater">
+                <property name="focusPolicy">
+                 <enum>Qt::ClickFocus</enum>
+                </property>
                 <property name="text">
-                 <string>Ajouter des expressions de géocodage à la fenêtre d'expression de QGIS</string>
+                 <string>Afficher la copie des valeurs non formatées</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="0">
+               <widget class="QCheckBox" name="chk_copie_formater">
+                <property name="focusPolicy">
+                 <enum>Qt::ClickFocus</enum>
+                </property>
+                <property name="text">
+                 <string>Afficher la copie des valeurs formatées</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="0">
+               <widget class="QCheckBox" name="chk_copie_info_rtss">
+                <property name="focusPolicy">
+                 <enum>Qt::ClickFocus</enum>
+                </property>
+                <property name="text">
+                 <string>Afficher la copie des informations du RTSS</string>
                 </property>
                </widget>
               </item>
              </layout>
             </widget>
            </item>
-           <item row="9" column="0">
-            <spacer name="verticalSpacer">
+           <item row="3" column="0">
+            <spacer name="verticalSpacer_23">
              <property name="orientation">
               <enum>Qt::Vertical</enum>
+             </property>
+             <property name="sizeType">
+              <enum>QSizePolicy::Fixed</enum>
              </property>
              <property name="sizeHint" stdset="0">
               <size>
                <width>20</width>
-               <height>40</height>
+               <height>10</height>
               </size>
              </property>
             </spacer>
            </item>
-           <item row="4" column="0">
+           <item row="10" column="0">
+            <widget class="QPushButton" name="btn_set_default_values">
+             <property name="minimumSize">
+              <size>
+               <width>0</width>
+               <height>25</height>
+              </size>
+             </property>
+             <property name="focusPolicy">
+              <enum>Qt::ClickFocus</enum>
+             </property>
+             <property name="toolTip">
+              <string>Permet de restaurer toutes les paramètres avec leurs valeur par défault</string>
+             </property>
+             <property name="text">
+              <string>Restaurer toutes les paramètres par défault</string>
+             </property>
+             <property name="autoDefault">
+              <bool>false</bool>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="0">
+            <widget class="QLabel" name="label_27">
+             <property name="font">
+              <font>
+               <family>MS Shell Dlg 2</family>
+               <pointsize>12</pointsize>
+               <weight>75</weight>
+               <italic>false</italic>
+               <bold>true</bold>
+              </font>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">font: bold 12pt &quot;MS Shell Dlg 2&quot;;</string>
+             </property>
+             <property name="text">
+              <string>Paramètres général du plugin</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignBottom|Qt::AlignHCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="5" column="0">
             <widget class="QGroupBox" name="groupBox_4">
              <property name="title">
               <string>Formatage</string>
@@ -154,6 +233,9 @@
              <layout class="QGridLayout" name="gridLayout_6">
               <item row="0" column="0">
                <widget class="QCheckBox" name="chx_format_rtss">
+                <property name="focusPolicy">
+                 <enum>Qt::ClickFocus</enum>
+                </property>
                 <property name="text">
                  <string>Formater les RTSS (ex: 00220-01-120-000C)</string>
                 </property>
@@ -219,6 +301,9 @@
               </item>
               <item row="1" column="0">
                <widget class="QCheckBox" name="chx_format_chainage">
+                <property name="focusPolicy">
+                 <enum>Qt::ClickFocus</enum>
+                </property>
                 <property name="text">
                  <string>Formater les chainages (ex: 10+238)</string>
                 </property>
@@ -227,7 +312,23 @@
              </layout>
             </widget>
            </item>
-           <item row="7" column="0">
+           <item row="1" column="0">
+            <spacer name="verticalSpacer_6">
+             <property name="orientation">
+              <enum>Qt::Vertical</enum>
+             </property>
+             <property name="sizeType">
+              <enum>QSizePolicy::Fixed</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>15</width>
+               <height>15</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+           <item row="8" column="0">
             <widget class="QGroupBox" name="gbx_open_sigo">
              <property name="title">
               <string>Ouvrir SIGO/PlaniActif</string>
@@ -235,6 +336,9 @@
              <layout class="QGridLayout" name="gridLayout_31">
               <item row="0" column="0">
                <widget class="QRadioButton" name="rbt_sigo">
+                <property name="focusPolicy">
+                 <enum>Qt::ClickFocus</enum>
+                </property>
                 <property name="text">
                  <string>Ouvrir SIGO</string>
                 </property>
@@ -245,6 +349,9 @@
               </item>
               <item row="1" column="0">
                <widget class="QRadioButton" name="rbt_planiactif">
+                <property name="focusPolicy">
+                 <enum>Qt::ClickFocus</enum>
+                </property>
                 <property name="text">
                  <string>Ouvrir PlaniActif</string>
                 </property>
@@ -253,8 +360,27 @@
              </layout>
             </widget>
            </item>
+           <item row="9" column="0">
+            <spacer name="verticalSpacer">
+             <property name="orientation">
+              <enum>Qt::Vertical</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>20</width>
+               <height>40</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
            <item row="2" column="0">
             <widget class="QGroupBox" name="groupBox">
+             <property name="font">
+              <font>
+               <weight>75</weight>
+               <bold>true</bold>
+              </font>
+             </property>
              <property name="title">
               <string>Layers références</string>
              </property>
@@ -269,27 +395,226 @@
                     <verstretch>0</verstretch>
                    </sizepolicy>
                   </property>
+                  <property name="minimumSize">
+                   <size>
+                    <width>140</width>
+                    <height>0</height>
+                   </size>
+                  </property>
+                  <property name="font">
+                   <font>
+                    <pointsize>8</pointsize>
+                    <weight>50</weight>
+                    <bold>false</bold>
+                   </font>
+                  </property>
                   <property name="text">
-                   <string>Couche des RTSS:</string>
+                   <string>Nom de la couche des RTSS:</string>
                   </property>
                  </widget>
                 </item>
                 <item>
-                 <widget class="QgsMapLayerComboBox" name="cbx_layer_rtss">
+                 <widget class="QLineEdit" name="txt_layer_rtss">
+                  <property name="minimumSize">
+                   <size>
+                    <width>0</width>
+                    <height>25</height>
+                   </size>
+                  </property>
+                  <property name="font">
+                   <font>
+                    <pointsize>8</pointsize>
+                    <weight>50</weight>
+                    <bold>false</bold>
+                   </font>
+                  </property>
                   <property name="toolTip">
-                   <string>Nom de la couche des RTSS dans le projet</string>
+                   <string>Nom de la couche des RTSS à utiliser dans le projet</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="btn_geocatalogue">
+                  <property name="font">
+                   <font>
+                    <weight>50</weight>
+                    <bold>false</bold>
+                   </font>
+                  </property>
+                  <property name="toolTip">
+                   <string>Ouvrir la page du géocatologue pour la couche de BGR - RTSS</string>
+                  </property>
+                  <property name="text">
+                   <string/>
                   </property>
                  </widget>
                 </item>
                </layout>
               </item>
+              <item row="2" column="0">
+               <widget class="QPushButton" name="btn_selectionner_layer_rtss">
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>25</height>
+                 </size>
+                </property>
+                <property name="font">
+                 <font>
+                  <weight>75</weight>
+                  <italic>true</italic>
+                  <bold>true</bold>
+                 </font>
+                </property>
+                <property name="toolTip">
+                 <string>Permet de définir les informations sur la couche des RTSS à partir des couches du projets</string>
+                </property>
+                <property name="text">
+                 <string>Sélectionner une couche dans le projet</string>
+                </property>
+                <property name="default">
+                 <bool>false</bool>
+                </property>
+                <property name="flat">
+                 <bool>false</bool>
+                </property>
+               </widget>
+              </item>
               <item row="1" column="0">
                <widget class="QGroupBox" name="groupBox_2">
+                <property name="font">
+                 <font>
+                  <weight>50</weight>
+                  <italic>false</italic>
+                  <bold>false</bold>
+                 </font>
+                </property>
                 <property name="title">
-                 <string>Champs</string>
+                 <string>Nom des champs dans la couche</string>
+                </property>
+                <property name="flat">
+                 <bool>true</bool>
                 </property>
                 <layout class="QGridLayout" name="gridLayout_2">
-                 <item row="2" column="0" colspan="2">
+                 <item row="5" column="0">
+                  <layout class="QHBoxLayout" name="horizontalLayout_18">
+                   <item>
+                    <spacer name="horizontalSpacer_11">
+                     <property name="orientation">
+                      <enum>Qt::Horizontal</enum>
+                     </property>
+                     <property name="sizeType">
+                      <enum>QSizePolicy::Fixed</enum>
+                     </property>
+                     <property name="sizeHint" stdset="0">
+                      <size>
+                       <width>15</width>
+                       <height>20</height>
+                      </size>
+                     </property>
+                    </spacer>
+                   </item>
+                   <item>
+                    <widget class="QLabel" name="label_6">
+                     <property name="sizePolicy">
+                      <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                       <horstretch>0</horstretch>
+                       <verstretch>0</verstretch>
+                      </sizepolicy>
+                     </property>
+                     <property name="minimumSize">
+                      <size>
+                       <width>115</width>
+                       <height>0</height>
+                      </size>
+                     </property>
+                     <property name="maximumSize">
+                      <size>
+                       <width>16777215</width>
+                       <height>16777215</height>
+                      </size>
+                     </property>
+                     <property name="font">
+                      <font>
+                       <weight>50</weight>
+                       <italic>true</italic>
+                       <bold>false</bold>
+                      </font>
+                     </property>
+                     <property name="text">
+                      <string>Classification:</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QLineEdit" name="txt_field_class">
+                     <property name="toolTip">
+                      <string>Code de la classification fonctionnelle des RTSS</string>
+                     </property>
+                    </widget>
+                   </item>
+                  </layout>
+                 </item>
+                 <item row="4" column="0">
+                  <layout class="QHBoxLayout" name="horizontalLayout_19">
+                   <item>
+                    <spacer name="horizontalSpacer_12">
+                     <property name="orientation">
+                      <enum>Qt::Horizontal</enum>
+                     </property>
+                     <property name="sizeType">
+                      <enum>QSizePolicy::Fixed</enum>
+                     </property>
+                     <property name="sizeHint" stdset="0">
+                      <size>
+                       <width>15</width>
+                       <height>20</height>
+                      </size>
+                     </property>
+                    </spacer>
+                   </item>
+                   <item>
+                    <widget class="QLabel" name="label_7">
+                     <property name="sizePolicy">
+                      <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                       <horstretch>0</horstretch>
+                       <verstretch>0</verstretch>
+                      </sizepolicy>
+                     </property>
+                     <property name="minimumSize">
+                      <size>
+                       <width>115</width>
+                       <height>0</height>
+                      </size>
+                     </property>
+                     <property name="maximumSize">
+                      <size>
+                       <width>16777215</width>
+                       <height>16777215</height>
+                      </size>
+                     </property>
+                     <property name="font">
+                      <font>
+                       <weight>50</weight>
+                       <italic>true</italic>
+                       <bold>false</bold>
+                      </font>
+                     </property>
+                     <property name="text">
+                      <string>Chainage début:</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QLineEdit" name="txt_field_chainage_debut">
+                     <property name="toolTip">
+                      <string>Chainage de début du RTSS. Si aucun champ n'est défini, la valeur de 0 est utilisé pour toutes les RTSS</string>
+                     </property>
+                    </widget>
+                   </item>
+                  </layout>
+                 </item>
+                 <item row="1" column="0">
                   <layout class="QHBoxLayout" name="horizontalLayout_4">
                    <item>
                     <spacer name="horizontalSpacer_3">
@@ -333,7 +658,7 @@
                     </widget>
                    </item>
                    <item>
-                    <widget class="QgsFieldComboBox" name="cbx_field_chainage">
+                    <widget class="QLineEdit" name="txt_field_chainage_fin">
                      <property name="toolTip">
                       <string>Longueur du RTSS en chainage</string>
                      </property>
@@ -341,7 +666,7 @@
                    </item>
                   </layout>
                  </item>
-                 <item row="0" column="0" colspan="2">
+                 <item row="0" column="0">
                   <layout class="QHBoxLayout" name="horizontalLayout_3">
                    <item>
                     <spacer name="horizontalSpacer_4">
@@ -385,7 +710,13 @@
                     </widget>
                    </item>
                    <item>
-                    <widget class="QgsFieldComboBox" name="cbx_field_rtss">
+                    <widget class="QLineEdit" name="txt_field_rtss">
+                     <property name="minimumSize">
+                      <size>
+                       <width>0</width>
+                       <height>20</height>
+                      </size>
+                     </property>
                      <property name="toolTip">
                       <string>Numéro du RTSS (non formaté)</string>
                      </property>
@@ -393,192 +724,53 @@
                    </item>
                   </layout>
                  </item>
-                 <item row="1" column="0" colspan="2">
-                  <layout class="QHBoxLayout" name="horizontalLayout_19">
+                 <item row="3" column="0">
+                  <layout class="QHBoxLayout" name="horizontalLayout_35">
                    <item>
-                    <spacer name="horizontalSpacer_12">
-                     <property name="orientation">
-                      <enum>Qt::Horizontal</enum>
-                     </property>
-                     <property name="sizeType">
-                      <enum>QSizePolicy::Fixed</enum>
-                     </property>
-                     <property name="sizeHint" stdset="0">
-                      <size>
-                       <width>15</width>
-                       <height>20</height>
-                      </size>
-                     </property>
-                    </spacer>
-                   </item>
-                   <item>
-                    <widget class="QLabel" name="label_7">
+                    <widget class="QLabel" name="label_39">
                      <property name="sizePolicy">
-                      <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                      <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
                        <horstretch>0</horstretch>
                        <verstretch>0</verstretch>
                       </sizepolicy>
                      </property>
-                     <property name="minimumSize">
-                      <size>
-                       <width>115</width>
-                       <height>0</height>
-                      </size>
-                     </property>
-                     <property name="maximumSize">
-                      <size>
-                       <width>16777215</width>
-                       <height>16777215</height>
-                      </size>
+                     <property name="styleSheet">
+                      <string notr="true">font: italic 7pt &quot;Arial&quot;;</string>
                      </property>
                      <property name="text">
-                      <string>* Chainage début:</string>
+                      <string>Optionnel </string>
                      </property>
                     </widget>
                    </item>
                    <item>
-                    <widget class="QgsFieldComboBox" name="cbx_field_chainage_d">
-                     <property name="toolTip">
-                      <string>Chainage de début du RTSS</string>
-                     </property>
-                     <property name="allowEmptyFieldName">
-                      <bool>true</bool>
+                    <widget class="Line" name="line_3">
+                     <property name="orientation">
+                      <enum>Qt::Horizontal</enum>
                      </property>
                     </widget>
                    </item>
                   </layout>
                  </item>
-                 <item row="3" column="0" rowspan="2" colspan="2">
-                  <layout class="QHBoxLayout" name="horizontalLayout_18">
-                   <item>
-                    <spacer name="horizontalSpacer_11">
-                     <property name="orientation">
-                      <enum>Qt::Horizontal</enum>
-                     </property>
-                     <property name="sizeType">
-                      <enum>QSizePolicy::Fixed</enum>
-                     </property>
-                     <property name="sizeHint" stdset="0">
-                      <size>
-                       <width>15</width>
-                       <height>20</height>
-                      </size>
-                     </property>
-                    </spacer>
-                   </item>
-                   <item>
-                    <widget class="QLabel" name="label_6">
-                     <property name="sizePolicy">
-                      <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
-                       <horstretch>0</horstretch>
-                       <verstretch>0</verstretch>
-                      </sizepolicy>
-                     </property>
-                     <property name="minimumSize">
-                      <size>
-                       <width>115</width>
-                       <height>0</height>
-                      </size>
-                     </property>
-                     <property name="maximumSize">
-                      <size>
-                       <width>16777215</width>
-                       <height>16777215</height>
-                      </size>
-                     </property>
-                     <property name="text">
-                      <string>* Classification:</string>
-                     </property>
-                    </widget>
-                   </item>
-                   <item>
-                    <widget class="QgsFieldComboBox" name="cbx_field_class">
-                     <property name="toolTip">
-                      <string>Code de classification fonctionnelle</string>
-                     </property>
-                     <property name="allowEmptyFieldName">
-                      <bool>true</bool>
-                     </property>
-                    </widget>
-                   </item>
-                  </layout>
-                 </item>
-                 <item row="5" column="0">
-                  <widget class="QLabel" name="label_2">
-                   <property name="styleSheet">
-                    <string notr="true">font: italic 7pt &quot;Arial&quot;;</string>
+                 <item row="2" column="0">
+                  <spacer name="verticalSpacer_24">
+                   <property name="orientation">
+                    <enum>Qt::Vertical</enum>
                    </property>
-                   <property name="text">
-                    <string>* Champ optionnel</string>
+                   <property name="sizeType">
+                    <enum>QSizePolicy::Fixed</enum>
                    </property>
-                  </widget>
+                   <property name="sizeHint" stdset="0">
+                    <size>
+                     <width>20</width>
+                     <height>5</height>
+                    </size>
+                   </property>
+                  </spacer>
                  </item>
                 </layout>
                </widget>
               </item>
              </layout>
-            </widget>
-           </item>
-           <item row="0" column="0">
-            <widget class="QLabel" name="label_27">
-             <property name="font">
-              <font>
-               <family>MS Shell Dlg 2</family>
-               <pointsize>12</pointsize>
-               <weight>75</weight>
-               <italic>false</italic>
-               <bold>true</bold>
-              </font>
-             </property>
-             <property name="styleSheet">
-              <string notr="true">font: bold 12pt &quot;MS Shell Dlg 2&quot;;</string>
-             </property>
-             <property name="text">
-              <string>Paramètres général du plugin</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignBottom|Qt::AlignHCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item row="5" column="0" rowspan="2" colspan="2">
-            <widget class="QGroupBox" name="groupBox_7">
-             <property name="toolTip">
-              <string>Ajoute des options de copie lors d'un click droit dans la carte</string>
-             </property>
-             <property name="title">
-              <string>Menu de contexte (option de copies)</string>
-             </property>
-             <layout class="QGridLayout" name="gridLayout_24">
-              <item row="0" column="0">
-               <widget class="QCheckBox" name="chk_copie_non_formater">
-                <property name="text">
-                 <string>Afficher la copie des valeurs non formatées</string>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="0">
-               <widget class="QCheckBox" name="chk_copie_formater">
-                <property name="text">
-                 <string>Afficher la copie des valeurs formatées</string>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="0">
-               <widget class="QCheckBox" name="chk_copie_info_rtss">
-                <property name="text">
-                 <string>Afficher la copie des informations du RTSS</string>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </widget>
-           </item>
-           <item row="8" column="0">
-            <widget class="QPushButton" name="btn_set_default_values">
-             <property name="text">
-              <string>Restaurer les paramètres par défault</string>
-             </property>
             </widget>
            </item>
           </layout>
@@ -623,8 +815,8 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>786</width>
-            <height>752</height>
+            <width>800</width>
+            <height>814</height>
            </rect>
           </property>
           <layout class="QGridLayout" name="gridLayout_30">
@@ -653,7 +845,7 @@
            <item row="5" column="0" colspan="2">
             <widget class="QCheckBox" name="chk_keep_marker">
              <property name="text">
-              <string>Toujours garder le marqueur de la postion dans la carte</string>
+              <string>Toujours garder le marqueur de la position dans la carte</string>
              </property>
             </widget>
            </item>
@@ -906,7 +1098,7 @@
                   </size>
                  </property>
                  <property name="text">
-                  <string>Suivre le chainage:</string>
+                  <string>Raccourcci d'activation du suivi de chainage:</string>
                  </property>
                  <property name="checked">
                   <bool>true</bool>
@@ -1057,8 +1249,8 @@ color:rgb(255, 0, 0)</string>
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>786</width>
-            <height>752</height>
+            <width>800</width>
+            <height>814</height>
            </rect>
           </property>
           <layout class="QGridLayout" name="gridLayout_17">
@@ -1323,8 +1515,8 @@ color:rgb(255, 0, 0)</string>
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>786</width>
-            <height>752</height>
+            <width>800</width>
+            <height>814</height>
            </rect>
           </property>
           <layout class="QGridLayout" name="gridLayout_12">
@@ -1385,7 +1577,7 @@ color:rgb(255, 0, 0)</string>
                   </size>
                  </property>
                  <property name="text">
-                  <string>Mesurer une distance</string>
+                  <string>Raccourci de mesure d'une distance</string>
                  </property>
                  <property name="checked">
                   <bool>true</bool>
@@ -1557,8 +1749,8 @@ color:rgb(255, 0, 0)</string>
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>786</width>
-            <height>752</height>
+            <width>800</width>
+            <height>814</height>
            </rect>
           </property>
           <layout class="QGridLayout" name="gridLayout_15">
@@ -1619,7 +1811,7 @@ color:rgb(255, 0, 0)</string>
                   </size>
                  </property>
                  <property name="text">
-                  <string>Placer un écusson:</string>
+                  <string>Raccourci pour placer un écusson:</string>
                  </property>
                  <property name="checked">
                   <bool>true</bool>
@@ -1912,12 +2104,12 @@ color:rgb(255, 0, 0)</string>
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>786</width>
-            <height>752</height>
+            <width>800</width>
+            <height>814</height>
            </rect>
           </property>
-          <layout class="QGridLayout" name="gridLayout_18">
-           <item row="0" column="0">
+          <layout class="QGridLayout" name="gridLayout_32">
+           <item row="0" column="0" colspan="2">
             <widget class="QLabel" name="label_33">
              <property name="font">
               <font>
@@ -1955,7 +2147,7 @@ color:rgb(255, 0, 0)</string>
              </property>
             </spacer>
            </item>
-           <item row="2" column="0">
+           <item row="2" column="0" colspan="2">
             <widget class="QLabel" name="label_18">
              <property name="text">
               <string>** Outil expérimental (Fonctionnel, mais en cours de développement)</string>
@@ -1965,115 +2157,124 @@ color:rgb(255, 0, 0)</string>
              </property>
             </widget>
            </item>
-           <item row="3" column="0">
-            <layout class="QHBoxLayout" name="horizontalLayout_25">
-             <item>
-              <widget class="QCheckBox" name="chk_shorcut_parallele">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="minimumSize">
-                <size>
-                 <width>210</width>
-                 <height>0</height>
-                </size>
-               </property>
-               <property name="text">
-                <string>Accrochage parallèle:</string>
-               </property>
-               <property name="checked">
-                <bool>true</bool>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QKeySequenceEdit" name="key_shortcut_parallele">
-               <property name="minimumSize">
-                <size>
-                 <width>100</width>
-                 <height>0</height>
-                </size>
-               </property>
-              </widget>
-             </item>
-            </layout>
+           <item row="3" column="0" colspan="2">
+            <widget class="QGroupBox" name="groupBox_9">
+             <property name="title">
+              <string>Raccourci</string>
+             </property>
+             <layout class="QGridLayout" name="gridLayout_18">
+              <item row="0" column="0">
+               <layout class="QHBoxLayout" name="horizontalLayout_25">
+                <item>
+                 <widget class="QCheckBox" name="chk_shorcut_parallele">
+                  <property name="sizePolicy">
+                   <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                    <horstretch>0</horstretch>
+                    <verstretch>0</verstretch>
+                   </sizepolicy>
+                  </property>
+                  <property name="minimumSize">
+                   <size>
+                    <width>210</width>
+                    <height>0</height>
+                   </size>
+                  </property>
+                  <property name="text">
+                   <string>Accrochage parallèle:</string>
+                  </property>
+                  <property name="checked">
+                   <bool>true</bool>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QKeySequenceEdit" name="key_shortcut_parallele">
+                  <property name="minimumSize">
+                   <size>
+                    <width>100</width>
+                    <height>0</height>
+                   </size>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item row="1" column="0">
+               <layout class="QHBoxLayout" name="horizontalLayout_27">
+                <item>
+                 <widget class="QCheckBox" name="chk_shorcut_perpendiculaire">
+                  <property name="sizePolicy">
+                   <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                    <horstretch>0</horstretch>
+                    <verstretch>0</verstretch>
+                   </sizepolicy>
+                  </property>
+                  <property name="minimumSize">
+                   <size>
+                    <width>210</width>
+                    <height>0</height>
+                   </size>
+                  </property>
+                  <property name="text">
+                   <string>Accrochage perpendiculaire:</string>
+                  </property>
+                  <property name="checked">
+                   <bool>true</bool>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QKeySequenceEdit" name="key_shortcut_perpendiculaire">
+                  <property name="minimumSize">
+                   <size>
+                    <width>100</width>
+                    <height>0</height>
+                   </size>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item row="2" column="0">
+               <layout class="QHBoxLayout" name="horizontalLayout_32">
+                <item>
+                 <widget class="QCheckBox" name="chk_shorcut_interpolate">
+                  <property name="sizePolicy">
+                   <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                    <horstretch>0</horstretch>
+                    <verstretch>0</verstretch>
+                   </sizepolicy>
+                  </property>
+                  <property name="minimumSize">
+                   <size>
+                    <width>210</width>
+                    <height>0</height>
+                   </size>
+                  </property>
+                  <property name="text">
+                   <string>Interpoler la géométrie selon le RTSS:</string>
+                  </property>
+                  <property name="checked">
+                   <bool>true</bool>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QKeySequenceEdit" name="key_shortcut_interpolate">
+                  <property name="minimumSize">
+                   <size>
+                    <width>100</width>
+                    <height>0</height>
+                   </size>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+             </layout>
+            </widget>
            </item>
-           <item row="4" column="0">
-            <layout class="QHBoxLayout" name="horizontalLayout_27">
-             <item>
-              <widget class="QCheckBox" name="chk_shorcut_perpendiculaire">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="minimumSize">
-                <size>
-                 <width>210</width>
-                 <height>0</height>
-                </size>
-               </property>
-               <property name="text">
-                <string>Accrochage perpendiculaire:</string>
-               </property>
-               <property name="checked">
-                <bool>true</bool>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QKeySequenceEdit" name="key_shortcut_perpendiculaire">
-               <property name="minimumSize">
-                <size>
-                 <width>100</width>
-                 <height>0</height>
-                </size>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </item>
-           <item row="5" column="0">
-            <layout class="QHBoxLayout" name="horizontalLayout_32">
-             <item>
-              <widget class="QCheckBox" name="chk_shorcut_interpolate">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="minimumSize">
-                <size>
-                 <width>210</width>
-                 <height>0</height>
-                </size>
-               </property>
-               <property name="text">
-                <string>Interpoler la géométrie selon le RTSS:</string>
-               </property>
-               <property name="checked">
-                <bool>true</bool>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QKeySequenceEdit" name="key_shortcut_interpolate">
-               <property name="minimumSize">
-                <size>
-                 <width>100</width>
-                 <height>0</height>
-                </size>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </item>
-           <item row="6" column="0">
+           <item row="4" column="0" colspan="2">
             <spacer name="verticalSpacer_14">
              <property name="orientation">
               <enum>Qt::Vertical</enum>
@@ -2128,8 +2329,8 @@ color:rgb(255, 0, 0)</string>
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>786</width>
-            <height>752</height>
+            <width>800</width>
+            <height>814</height>
            </rect>
           </property>
           <layout class="QGridLayout" name="gridLayout_21">
@@ -2236,8 +2437,8 @@ color:rgb(255, 0, 0)</string>
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>786</width>
-            <height>752</height>
+            <width>800</width>
+            <height>814</height>
            </rect>
           </property>
           <layout class="QGridLayout" name="gridLayout_29">
@@ -2693,8 +2894,8 @@ color:rgb(255, 0, 0)</string>
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>786</width>
-            <height>752</height>
+            <width>800</width>
+            <height>814</height>
            </rect>
           </property>
           <layout class="QGridLayout" name="gridLayout_10">
@@ -3210,19 +3411,6 @@ color:rgb(255, 0, 0)</string>
       </spacer>
      </item>
      <item>
-      <widget class="QPushButton" name="btn_close">
-       <property name="minimumSize">
-        <size>
-         <width>0</width>
-         <height>25</height>
-        </size>
-       </property>
-       <property name="text">
-        <string>Fermer</string>
-       </property>
-      </widget>
-     </item>
-     <item>
       <widget class="QPushButton" name="btn_annuler">
        <property name="enabled">
         <bool>true</bool>
@@ -3281,7 +3469,7 @@ color:rgb(255, 0, 0)</string>
         </font>
        </property>
        <property name="text">
-        <string>Enregistrer</string>
+        <string> Enregistrer</string>
        </property>
       </widget>
      </item>
@@ -3314,34 +3502,18 @@ color:rgb(255, 0, 0)</string>
  <resources/>
  <connections>
   <connection>
-   <sender>btn_close</sender>
-   <signal>clicked()</signal>
-   <receiver>Dialog</receiver>
-   <slot>close()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>238</x>
-     <y>767</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>246</x>
-     <y>287</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
    <sender>chx_tooltip_offset</sender>
    <signal>toggled(bool)</signal>
    <receiver>spx_precision_dist</receiver>
    <slot>setEnabled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>118</x>
-     <y>254</y>
+     <x>139</x>
+     <y>146</y>
     </hint>
     <hint type="destinationlabel">
-     <x>233</x>
-     <y>293</y>
+     <x>139</x>
+     <y>146</y>
     </hint>
    </hints>
   </connection>
@@ -3356,8 +3528,8 @@ color:rgb(255, 0, 0)</string>
      <y>93</y>
     </hint>
     <hint type="destinationlabel">
-     <x>486</x>
-     <y>92</y>
+     <x>139</x>
+     <y>102</y>
     </hint>
    </hints>
   </connection>
@@ -3372,8 +3544,8 @@ color:rgb(255, 0, 0)</string>
      <y>119</y>
     </hint>
     <hint type="destinationlabel">
-     <x>476</x>
-     <y>121</y>
+     <x>139</x>
+     <y>131</y>
     </hint>
    </hints>
   </connection>
@@ -3388,8 +3560,8 @@ color:rgb(255, 0, 0)</string>
      <y>75</y>
     </hint>
     <hint type="destinationlabel">
-     <x>235</x>
-     <y>78</y>
+     <x>139</x>
+     <y>88</y>
     </hint>
    </hints>
   </connection>
@@ -3404,8 +3576,8 @@ color:rgb(255, 0, 0)</string>
      <y>79</y>
     </hint>
     <hint type="destinationlabel">
-     <x>181</x>
-     <y>79</y>
+     <x>139</x>
+     <y>89</y>
     </hint>
    </hints>
   </connection>
@@ -3420,8 +3592,8 @@ color:rgb(255, 0, 0)</string>
      <y>83</y>
     </hint>
     <hint type="destinationlabel">
-     <x>225</x>
-     <y>85</y>
+     <x>139</x>
+     <y>95</y>
     </hint>
    </hints>
   </connection>
