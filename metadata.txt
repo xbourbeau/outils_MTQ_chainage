@@ -3,9 +3,9 @@
 # This file should be included when you package your plugin.
 [general]
 name=Outils chainage MTQ
-qgisMinimumVersion=3.16
+qgisMinimumVersion=3.38
 description=Regroupe les outils pratiques pour les RTSS/Chainage
-version=3.3.4
+version=3.4.0
 author=Xavier Bourbeau
 email=xavier.bourbeau@transports.gouv.qc.ca
 
@@ -34,7 +34,7 @@ tags=python;chainage;mtq;rtss
 
 homepage=file://mtq.min.intra/fic/QC/Depot/Img/Courant/Geomatique/QgisPlugin/documentation/outils_MTQ_chainage/index.html
 category=Plugins
-icon=Icons/Chainage.png
+icon=icons/chainage.png
 # experimental flag
 experimental=False
 

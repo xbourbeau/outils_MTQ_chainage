@@ -72,7 +72,6 @@ from .expressions.expression_geocodage import *
 from .expressions.expression_sigo import *
 
 # DEV: Ajouter l'option d'ouvrir la fenêtre de Géocodage
-# DEV: Add link to open folder of installation
 
 class MtqPluginChainage:
     """ QGIS Plugin Implementation."""
@@ -84,7 +83,7 @@ class MtqPluginChainage:
         self.plugin_dir = os.path.dirname(__file__)
 
         # ******  À CHANGER LORS DE NOUVELLE MISE À JOUR **********
-        version = "3.3.4"
+        version = "3.4.0"
         self.documentation = "file://mtq.min.intra/fic/QC/Depot/Img/Courant/Geomatique/QgisPlugin/documentation/outils_MTQ_chainage/index.html"
         # *********************************************************
 
