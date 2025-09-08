@@ -96,7 +96,6 @@ class MtqPluginChainage:
         # Liste des Outils (QgsMapTools) nécéssitant une référence à la couche des RTSS
         self.maptools_needing_layer = []
         self.menu_name = u"&Outils de chainage (MTQ)"
-        self.menu = self.menu_name
         # Interfaces
         self.plugin_active_dlg = []
         self.plugin_dlg = []
@@ -170,7 +169,7 @@ class MtqPluginChainage:
                 if status_tip is not None: action.setStatusTip(status_tip)
                 if whats_this is not None: action.setWhatsThis(whats_this)
                 if add_to_toolbar: self.toolbar_chaine.addAction(action)
-                if add_to_menu: self.iface.addPluginToMenu(self.menu,action)
+                if add_to_menu: self.menu.addAction(action)
                 if add_to_active_plugin: self.plugin_active_actions.append(action)
                 if active_on_rtss_selection: self.actions_selection_rtss.append(action)
 
@@ -195,6 +194,8 @@ class MtqPluginChainage:
 
     def initGui(self):
         """ Create the menu entries and toolbar icons inside the QGIS GUI."""
+        self.menu = self.iface.pluginMenu().addMenu(self.params.getIcon("chainage"), self.menu_name)
+
         # QFont for lables
         font_lable = ToolbarWidjet.createLableFont()
         # QFont for lineedits
@@ -452,9 +453,9 @@ class MtqPluginChainage:
         # Fermer toute les fenêtres du plugin
         for dlg in self.plugin_dlg: dlg.close()
         # Retirer les Qaction du menu et de la barre d'outils 
-        for action in self.actions:
-            self.iface.removePluginMenu(self.menu_name, action)
-            self.iface.removeToolBarIcon(action)
+        for action in self.actions: self.iface.removeToolBarIcon(action)
+        self.iface.pluginMenu().removeAction(self.menu.menuAction())
+
         
         self.canvas.layersChanged.disconnect(self.setPluginActive)
         # Retirer de la carte les géometries temporaire
