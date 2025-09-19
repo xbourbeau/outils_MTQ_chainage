@@ -42,17 +42,13 @@ class fenetreSelectionCouche(QDialog, FORM_CLASS):
 
     def update_fields_comboboxs(self, layer):
         self.cbx_field_rtss.setLayer(layer)
-        idx = self.cbx_field_rtss.findText(self.field_rtss_name)
-        if idx != -1: self.cbx_field_rtss.setCurrentIndex(idx)
+        self.cbx_field_rtss.setField(self.field_rtss_name)
 
         self.cbx_field_chainage.setLayer(layer)
-        idx = self.cbx_field_chainage.findText(self.field_chainage_f_name)
-        if idx != -1: self.cbx_field_chainage.setCurrentIndex(idx)
+        self.cbx_field_chainage.setField(self.field_chainage_f_name)
 
         self.cbx_field_chainage_d.setLayer(layer)
-        idx = self.cbx_field_chainage_d.findText(self.field_chainage_d_name)
-        if idx != -1: self.cbx_field_chainage_d.setCurrentIndex(idx)
+        self.cbx_field_chainage_d.setField(self.field_chainage_d_name)
 
         self.cbx_field_class.setLayer(layer)
-        idx = self.cbx_field_class.findText(self.field_class_name)
-        if idx != -1: self.cbx_field_class.setCurrentIndex(idx)
+        self.cbx_field_class.setField(self.field_class_name)
