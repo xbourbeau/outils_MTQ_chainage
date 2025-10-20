@@ -137,7 +137,6 @@ def get_rtss(geom_point, feature, parent):
     except: val = ""
     return val
 
-
 @qgsfunction(args='auto', group=GROUP_NAME, referenced_columns=[])
 def get_rtss_formater(geom_point, feature, parent):
     """
@@ -157,48 +156,59 @@ def get_rtss_formater(geom_point, feature, parent):
     return val
     
 @qgsfunction(args='auto', group=GROUP_NAME, referenced_columns=[])
-def get_chainage(geom_point, feature, parent):
+def get_chainage(geom_point, rtss=None, feature=None, parent=None):
     """
     Permet de retourner le chainage le plus proche d'une geometry ponctuel<br>
     
     <ul>
       <li>geom_point(QgsGeometry) -> La géometrie du point à utiliser</li>
+      <li>[rtss](str) -> Spécifier le RTSS s'il est connue. Défault = RTSS le plus proche</li>
     </ul>
     <h2>Example usage:</h2>
     <ul>
-      <li>get_chainage($geometry) -> 1030</li>
+      <li>get_chainage($geometry) -> 1030.347</li>
+      <li>get_chainage($geometry, '0013901020000C') -> 1030.347</li>
     </ul>
     """
     geocode = plugins['outils_MTQ_chainage'].getModuleGeocodage()
-    try: val = geocode.geocoderInversePoint(geom_point).getChainage().value()
+    try:
+      feat_rtss = geocode.get(rtss)
+      if feat_rtss is None: val = geocode.geocoderInversePoint(geom_point).getChainage().value()
+      else: val = feat_rtss.geocoderInversePoint(geom_point).getChainage().value()
     except: val = ""
     return val
 
 @qgsfunction(args='auto', group=GROUP_NAME, referenced_columns=[])
-def get_chainage_formater(geom_point, feature, parent):
+def get_chainage_formater(geom_point, rtss=None, feature=None, parent=None):
     """
     Permet de retourner le chainage formater le plus proche d'une geometry ponctuel<br>
     
     <ul>
       <li>geom_point(QgsGeometry) -> La géometrie du point à utiliser</li>
+      <li>[rtss](str) -> Spécifier le RTSS s'il est connue. Défault = RTSS le plus proche</li>
     </ul>
     <h2>Example usage:</h2>
     <ul>
       <li>get_chainage_formater($geometry) -> 1+030</li>
+      <li>get_chainage_formater($geometry, '0013901020000C') -> 1+030</li>
     </ul>
     """
     geocode = plugins['outils_MTQ_chainage'].getModuleGeocodage()
-    try: val = geocode.geocoderInversePoint(geom_point).getChainage().value(True)
+    try:
+      feat_rtss = geocode.get(rtss)
+      if feat_rtss is None: val = geocode.geocoderInversePoint(geom_point).getChainage().value(True)
+      else: val = feat_rtss.geocoderInversePoint(geom_point).getChainage().value(True)
     except: val = ""
     return val
     
 @qgsfunction(args='auto', group=GROUP_NAME, referenced_columns=[])
-def get_distance_to_rtss(geom_point, feature, parent):
+def get_distance_to_rtss(geom_point, rtss=None, feature=None, parent=None):
     """
     Permet de retourner la distance du RTSS le plus proche d'une geometry ponctuel<br>
     
     <ul>
       <li>geom_point(QgsGeometry) -> La géometrie du point à utiliser</li>
+      <li>[rtss](str) -> Spécifier le RTSS s'il est connue. Défault = RTSS le plus proche</li>
     </ul>
     <h2>Example usage:</h2>
     <ul>
@@ -206,7 +216,10 @@ def get_distance_to_rtss(geom_point, feature, parent):
     </ul>
     """
     geocode = plugins['outils_MTQ_chainage'].getModuleGeocodage()
-    try: val = geocode.geocoderInversePoint(geom_point).getOffset()
+    try: 
+      feat_rtss = geocode.get(rtss)
+      if feat_rtss is None: val = geocode.geocoderInversePoint(geom_point).getOffset()
+      else: val = feat_rtss.geocoderInversePoint(geom_point).getOffset()
     except: val = ""
     return val
 
