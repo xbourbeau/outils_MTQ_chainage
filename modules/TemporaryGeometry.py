@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from qgis.gui import QgsVertexMarker, QgsMapCanvas, QgsRubberBand
+from qgis.core import QgsWkbTypes
 from qgis.PyQt.QtGui import QColor
 from PyQt5.QtGui import QPen, QBrush
 from PyQt5.QtCore import Qt, QPointF
@@ -279,4 +280,20 @@ class TemporaryGeometry:
         segment.setFillColor(color)
         segment.setLineStyle(Qt.DotLine)
         segment.setWidth(1)
+        return segment
+    
+    @staticmethod
+    def createNewGeomArrow(canvas:QgsMapCanvas):
+        """
+        Méthode qui permet de créer un QgsRubberBand pour montrer la ligne d'une flèche
+
+        Args:
+            canvas (QgsMapCanvas): La référence de la carte
+
+        Returns:
+            QgsRubberBand: La geometrie temporaire 
+        """
+        segment = QgsRubberBand(canvas, QgsWkbTypes.LineGeometry)
+        segment.setColor(QColor("#0008ff"))
+        segment.setWidth(2)
         return segment

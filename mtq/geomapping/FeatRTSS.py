@@ -187,7 +187,7 @@ class FeatRTSS(RTSS):
         """
         if isinstance(obj_rtss, PointRTSS): return self.geocoderPoint(obj_rtss, on_rtss=on_rtss)
         elif isinstance(obj_rtss, LineRTSS): return self.geocoderLine(obj_rtss, on_rtss=on_rtss, interpolate_on_rtss=interpolate_on_rtss)
-        elif isinstance(obj_rtss, PolygonRTSS): return self.geocoderPolygon(obj_rtss, on_rtss=on_rtss, interpolate_on_rtss=interpolate_on_rtss)
+        elif isinstance(obj_rtss, PolygonRTSS): return self.geocoderPolygon(obj_rtss, interpolate_on_rtss=interpolate_on_rtss)
 
     def geocoderInverse(self, geometry:QgsGeometry):
         """
