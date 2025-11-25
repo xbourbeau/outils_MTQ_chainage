@@ -85,8 +85,8 @@ class PolygonRTSS:
         # Identifier les coins du polygon
         chainages, offsets = zip(*identifyPolygonCorners(pts_coords, tolerance_angle=tolerance_angle))
         # Identifier les débuts fin du polygon
-        # BUGS: Il faut tester si la librairie est installer
-        labels = groupeValues(chainages)
+        try: labels = groupeValues(chainages)
+        except Exception as e: raise Exception("La librairie sklearn n'est pas installé") from e
         # Identifier le numéro du groupe qui représente le chainage de début
         start_nbr = labels[chainages.index(min(chainages))]
         # Séparer les coordonnées des coins du début

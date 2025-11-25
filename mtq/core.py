@@ -38,6 +38,8 @@ from .system.iit.ElementInventaire import ElementInventaire
 from .system.iit.EspaceVert import EspaceVert
 from .system.iit.Marquage import Marquage
 from .system.iit.SystemIIT import SystemIIT
+from .system.svn360.SVN360 import SVN360
+from .system.svn360.LocalisationSVN import LocalisationSVN
 
 # Lidar 
 from .lidar_mobile.IndexLidar import IndexLidar
