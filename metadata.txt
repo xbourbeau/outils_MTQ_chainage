@@ -5,7 +5,7 @@
 name=Outils chainage MTQ
 qgisMinimumVersion=3.38
 description=Regroupe les outils pratiques pour les RTSS/Chainage
-version=3.4.0
+version=3.4.1
 author=Xavier Bourbeau
 email=xavier.bourbeau@transports.gouv.qc.ca
 
@@ -18,9 +18,10 @@ about=L'outil de chainage est une extention de QGIS qui a pour but de faciliter 
         &nbsp&nbsp&nbsp3) Rechercher un RTSS.
         &nbsp&nbsp&nbsp4) Calculer les RTSS et chainage d'une couche.
         &nbsp&nbsp&nbsp5) Ouvrir SIGO avec la vue courante.
-        &nbsp&nbsp&nbsp6) Faire le placement ponctuel d'écussons de route.
-        &nbsp&nbsp&nbsp7) Mesurer des distances le long d'un RTSS.
-        &nbsp&nbsp&nbsp8) Afficher un intervalle de chainage pour les RTSS sélectionnées.
+        &nbsp&nbsp&nbsp6) Ouvrir SVN360 à partir de la carte.
+        &nbsp&nbsp&nbsp7) Faire le placement ponctuel d'écussons de route.
+        &nbsp&nbsp&nbsp8) Mesurer des distances le long d'un RTSS.
+        &nbsp&nbsp&nbsp9) Afficher un intervalle de chainage pour les RTSS sélectionnées.
 
 tracker=https://github.com/xbourbeau/outils_MTQ_chainage
 repository=https://github.com/xbourbeau/outils_MTQ_chainage
