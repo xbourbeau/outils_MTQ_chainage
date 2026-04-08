@@ -17,16 +17,17 @@ from .Chainage import Chainage
 from .LineRTSS import LineRTSS
 from .PointRTSS import PointRTSS
 from .PolygonRTSS import PolygonRTSS
+from .ClassFonct import ClassFonct
 
 from ..param import (DEFAULT_NOM_CHAMP_RTSS, DEFAULT_NOM_CHAMP_DEBUT_CHAINAGE,
-                     DEFAULT_NOM_CHAMP_FIN_CHAINAGE)
+                     DEFAULT_NOM_CHAMP_FIN_CHAINAGE, DEFAULT_NOM_CHAMP_CLASSIFICATION)
 
 class FeatRTSS(RTSS):
     """
     Class qui défini un objet FeatRTSS.
     Elle permet ainsi de regrouper les méthodes pouvant être associer au RTSS (géocodage)
     """
-    __slots__ = ("num_rts", "chainage_d", "chainage_f", "attributs", "geom", "geom_densify", "use_densify_geom")
+    __slots__ = ("num_rts", "chainage_d", "chainage_f", "class_fonct", "attributs", "geom", "geom_densify", "use_densify_geom")
 
     def __init__ (self, num_rtss, chainage_f, geometry:QgsGeometry, chainage_d=0, **kwargs):
         """
@@ -38,11 +39,13 @@ class FeatRTSS(RTSS):
             - chainage_f (real/str): Le chainage de fin du RTSS, sois sa longueur en chainage
             - geometry (QgsGeometry): La geometrie du RTSS
             - chainage_d (real/str): Le chainage de début du RTSS, par défault toujours 0
+            - class_fonct(str/in): La classification fonctionnelle de la route
             - kwargs: Attributs suplémentaire du RTSS
         """
         # Initialiser les informations du RTSS
         self.setChainageDebut(chainage_d)
         self.setChainageFin(chainage_f)
+        self.setClassification(kwargs.get("class_fonct", ""))
         self.geom = geometry
         self.geom_densify = self.geom.densifyByDistance(5)
         self.use_densify_geom = False
@@ -54,6 +57,7 @@ class FeatRTSS(RTSS):
                     nom_champ_rtss=DEFAULT_NOM_CHAMP_RTSS,
                     nom_champ_long=DEFAULT_NOM_CHAMP_FIN_CHAINAGE,
                     chainage_d=DEFAULT_NOM_CHAMP_DEBUT_CHAINAGE,
+                    nom_champ_classification=DEFAULT_NOM_CHAMP_CLASSIFICATION,
                     **kwargs):
         """
         Méthode d'initialitation de la class à partir d'une entitée.
@@ -63,12 +67,15 @@ class FeatRTSS(RTSS):
             - nom_champ_rtss (str): Le nom du champ contenant le RTSS
             - nom_champ_long (str): Le nom du champ contenant le chainage de fin
             - chainage_d (str): Le nom du champ contenant le chainage de début
+            - nom_champ_classification(str): Le nom du champs contenant la classification fonctionnelle
             - kwargs: Attributs suplémentaire du RTSS (nom de l'attribut = nom du champs de la valeur)
         """
         if isinstance(feat, QgsFeature):
             # Définir le chainage de début
             chainage_d = 0 if chainage_d is None else feat[chainage_d]
-            rtss = cls(feat[nom_champ_rtss], feat[nom_champ_long], feat.geometry(), chainage_d=chainage_d)
+            try: classification = feat[nom_champ_classification]
+            except: classification = ""
+            rtss = cls(feat[nom_champ_rtss], feat[nom_champ_long], feat.geometry(), chainage_d=chainage_d, class_fonct=classification)
             for name, val in kwargs.items(): 
                 if val: rtss.setAttribut(name, feat[val])
             return rtss
@@ -111,6 +118,19 @@ class FeatRTSS(RTSS):
     def chainageFin(self) -> Chainage:
         """ Renvoie le chainage de fin du RTSS, sois sa longueur en chainage. """
         return self.chainage_f
+
+    def classification(self, format=2):
+        """
+        Permet de retourner la classification fonctionnelle de la route
+            - 1 = code (10)
+            - 2 = description (Autoroute)
+            - 3 = les 2 ([10] - Autoroute)
+        Args:
+            format (int, optional): Indique le format à utiliser. Defaults to 1.
+        """
+        if format == 1: return self.class_fonct.code
+        elif format == 3: return f"[{self.class_fonct.code}] - {self.class_fonct.description}"
+        else: return self.class_fonct.description
 
     def createLine(self, chainages:list[int, float, Chainage, str], offsets:list=[0], interpolate_on_rtss=True) -> LineRTSS:
         """
@@ -699,6 +719,15 @@ class FeatRTSS(RTSS):
         if self.chainage_d >= chainage: 
             raise ValueError("Le chainage de fin doit etre plus grand que le chainage de debut")
         self.chainage_f = Chainage(chainage)
+
+    def setClassification(self, classification:str):
+        """
+        Permet de définir une classification fonctionnelle à partir du code ou de la descritpion
+
+        Args:
+            classification (str): Code ou descritpion de la classification fonctionnelle de la route
+        """
+        self.class_fonct = ClassFonct.from_text(classification)
 
     def side(self, point:Union[QgsPointXY, QgsGeometry]):
         """

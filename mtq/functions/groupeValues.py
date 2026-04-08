@@ -10,9 +10,12 @@ def groupeValues(values, n_clusters=2):
 
     Returns:
         _type_: _description_
+
+    Exceptions:
+        Si sklearn n'est pas installé.
     """
     try: from sklearn.cluster import KMeans
-    except: return None
+    except: return Exception("sklearn is not installed")
     # Reshape the data to a 2D array
     X = np.array(values).reshape(-1, 1)
     # Apply K-means clustering

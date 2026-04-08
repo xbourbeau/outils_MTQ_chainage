@@ -166,8 +166,9 @@ class AnalyseDevers:
             geom = self.feat_rtss.geocoderLineFromChainage([c, c], [self.initial_offset*-1, self.initial_offset])
             # Creer une list de devers pour les voie trouver
             list_of_devers:list[VoieDevers] = []
+            list_of_voie = {}
             # Créer une liste de devers optionnelle pour les cas que la fin des voie arrive au chainage spécifier
-            list_of_devers_2:list[VoieDevers] = []
+            #list_of_devers_2:list[VoieDevers] = []
             # Parcourir toute les voie qui intersecte le transect
             for id in self._voie_spatial_index.intersects(geom.boundingBox()):
                 # Retrouver son feature
@@ -176,22 +177,34 @@ class AnalyseDevers:
                 if self.feat_rtss.getRTSS() != feat[self.field_rtss_voie]: continue
                 # Vérfier si les géométrie s'intersectio réellement
                 if feat.geometry().intersects(geom):
+                    if self.feat_rtss.getChausse() == 'C' and feat["seqncvoie"] != 1: continue
+                    elif self.feat_rtss.getChausse() != 'C' and int(feat["seqncvoie"]) > 2: continue
+                    key = feat["coddirvoie"] + feat["seqncvoie"]
+                    if key in list_of_voie: list_of_voie[key].append(feat.geometry())
+                    else: list_of_voie[key] = [feat.geometry()]
                     # Gecocoder une LineRTSS à partir de la géometrie d'intersection
-                    line_rtss = self.feat_rtss.geocoderInverseLine(feat.geometry().intersection(geom))
+                    #line_rtss = self.feat_rtss.geocoderInverseLine(feat.geometry().intersection(geom))
                     # Ajouter la VoieDevers si le chainage est flush avec le chainage courrant
-                    if c == feat[self.field_chainage_fin_voie]: list_of_devers_2.append(VoieDevers.from_line_rtss(line_rtss))
+                    #if c == feat[self.field_chainage_fin_voie]: list_of_devers_2.append(VoieDevers.from_line_rtss(line_rtss))
                     # Sinon ajouter directement la VoieDevers à la liste
-                    else: list_of_devers.append(VoieDevers.from_line_rtss(line_rtss))
+                    #else: list_of_devers.append(VoieDevers.from_line_rtss(line_rtss))
+            for voies in list_of_voie.values():
+                voie = QgsGeometry.unaryUnion(voies)
+                line_rtss = self.feat_rtss.geocoderInverseLine(voie.intersection(geom))
+                list_of_devers.append(VoieDevers.from_line_rtss(line_rtss))
 
             # TODO: Permettre 1 voies ou plus 
             # Assurer que 2 voies maximum ont été trouvé
-            if len(list_of_devers) > 2: raise Exception(f"Plus de deux voies RTSS trouvées pour le chainage {c}. Veuillez vérifier les données BGR surfacique.") 
+            #if len(list_of_devers) > 2: raise Exception(f"Plus de deux voies RTSS trouvées pour le chainage {c}. Veuillez vérifier les données BGR surfacique.") 
             # Vérifier si moins de 2 voies ont été trouver
-            elif len(list_of_devers) < 2:
+            #if len(list_of_devers) < 2:
+            #if len(list_of_devers) < len(list_of_devers_2):
                 # Vérifier si l'option 2 contient elle 2 voies 
-                if len(list_of_devers_2) == 2: list_of_devers = list_of_devers_2
+                #if len(list_of_devers_2) >= 2: list_of_devers = list_of_devers_2
+                #list_of_devers = list_of_devers_2
                 # Sinon c'est qu'il manque des voies
-                else: raise Exception(f"Moins de deux voies RTSS trouvées pour le chainage {c}. Veuillez vérifier les données BGR surfacique.") 
+                #else: raise Exception(f"Moins de deux voies RTSS trouvées pour le chainage {c}. Veuillez vérifier les données BGR surfacique.") 
+            #if len(list_of_devers) == 0: raise Exception(f"Aucune voie RTSS trouvée pour le chainage {c}. Veuillez vérifier les données BGR surfacique.")
             # Ajouter les VoieDevers à l'index
             self._index_devers[c] = list_of_devers
         # Indique que l'étape à été complétéer

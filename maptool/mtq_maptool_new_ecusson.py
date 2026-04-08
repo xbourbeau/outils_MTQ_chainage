@@ -79,8 +79,7 @@ class MtqMapToolNewEcusson(QgsMapTool):
             if point_on_rtss is not None:
                 att = {self.field_index: point_on_rtss.getRTSS().getRoute(zero=False)}
                 # Ajouter la classification fonctionnelle si possible
-                if point_on_rtss.getRTSS().hasAttribut("class_fonct") and self.field_index_classe:
-                    att[self.field_index_classe] = str(point_on_rtss.getRTSS().getAttribut("class_fonct"))
+                if self.field_index_classe: att[self.field_index_classe] = self.geocode.get(point_on_rtss.getRTSS()).classification(1)
                 # Avertir l'utilisateur qu'il n'y a pas de champs de classification fonctionnelle
                 elif self.first_message:
                     self.first_message = False

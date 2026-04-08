@@ -154,7 +154,7 @@ class TrajetSIGO:
         Returns (str): Le text qui représente l'url du calcule d'itinéraire
         """
         if self.has_obstacle():
-            type_name = "tq_routing_v250804"
+            type_name = "v251003_tq_routing"
             obstacles = f"&coordsobstacle={';'.join(self.list_obstacles)}"
         else: 
             type_name = "pg_routing_iterative_multiple"

@@ -324,6 +324,5 @@ def rtss_side(rtss, geom_point, feature, parent):
     """
     geocode = plugins['outils_MTQ_chainage'].getModuleGeocodage()
     try: 
-        feat_rtss = geocode.nearestRTSSFromPoint(rtss, geom_point)
-        return feat_rtss.side()
+        return geocode.get(rtss).side(geom_point)
     except: return None

@@ -984,21 +984,20 @@ class MtqPluginChainage:
             # Liste des champs de la couche des RTSS
             fields_name = [field.name() for field in self.layer_rtss.fields()]
             # Vérifier si la couche des RTSS à un champ pour le chainage de début 
-            if self.params.getValue("field_chainage_debut") in fields_name:
-                field_chainage_debut = self.params.getValue("field_chainage_debut")
-            else: field_chainage_debut = None
+            field_chainage_debut = self.params.getValue("field_chainage_debut")
+            if not field_chainage_debut in fields_name: field_chainage_debut = None
             # Vérifier si la couche des RTSS à un champ pour la classification fonctionnel 
-            if self.params.getValue("field_classification") in fields_name:
-                field_class_fonct = self.params.getValue("field_classification")
-            else: field_class_fonct = None
+            field_class_fonct = self.params.getValue("field_classification")
+            if not field_class_fonct in fields_name: field_class_fonct = None
+
             # Mettre à jour la référence des RTSS du module de géocodage 
             self.geocode.updateRTSS(
                 features,
                 self.layer_rtss.crs(),
                 self.params.getValue("field_num_rtss"), 
                 self.params.getValue("field_chainage_fin"),
-                field_chainage_debut,
-                class_fonct=field_class_fonct)
+                nom_champ_chainage_d=field_chainage_debut,
+                nom_champ_classification=field_class_fonct)
             # Définir la précision
             self.geocode.setPrecision(self.params.getValue("precision_chainage"))
             

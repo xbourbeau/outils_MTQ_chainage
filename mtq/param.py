@@ -9,6 +9,8 @@ DEFAULT_NOM_CHAMP_RTSS = "num_rts"
 DEFAULT_NOM_CHAMP_DEBUT_CHAINAGE = None
 # Nom du champ qui contient le chainage de fin 
 DEFAULT_NOM_CHAMP_FIN_CHAINAGE = "val_longr_sous_route"
+# Nom du champ qui contient la classe fonctionnelle
+DEFAULT_NOM_CHAMP_CLASSIFICATION = "cod_clasf_fonct"
 
 # Chemin vers le Excel contenant les couches vectorielle de base
 DEFAULT_LAYER_REFERENCE = "//Mtq.min.intra/fic/ESTRIE/Espace Collaboratif/Cartographie/Profils SIG/QGIS/Référence des couches.xlsx"

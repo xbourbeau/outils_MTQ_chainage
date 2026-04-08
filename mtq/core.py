@@ -1,6 +1,7 @@
 # Géocodage
 from .geomapping.RTSS import RTSS
 from .geomapping.Chainage import Chainage
+from .geomapping.ClassFonct import ClassFonct
 from .geomapping.FeatRTSS import FeatRTSS
 from .geomapping.PointRTSS import PointRTSS
 from .geomapping.LineRTSS import LineRTSS
@@ -48,6 +49,8 @@ from .lidar_mobile.LidarMobile import LidarMobile
 
 # Search engine
 from .search.SearchEngine import SearchEngine
+from .search.iCherche import iCherche
+from .search.terrapi import terrapi
 
 # Network Analysis
 from .network.TrajetSIGO import TrajetSIGO

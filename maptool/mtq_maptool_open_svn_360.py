@@ -64,14 +64,16 @@ class MtqMapToolOpenSVN360(QgsMapTool):
     def canvasPressEvent(self, e):
         self.reset()
         try:
-            self.first_point_on_rtss = self.toLayerCoordinates(self.layer_rtss, e.pos())
-            self.fleche_pt_1 = self.toMapCoordinates(self.layer_rtss, self.first_point_on_rtss)
-            # Geometrie du point dans la projection de la couche des RTSS
-            point_on_rtss = self.geocode.geocoderPointOnRTSS(self.first_point_on_rtss)
-            # Définir le point cliqué sur la route dans la bonne projection
-            center_point = reprojectGeometry(point_on_rtss.getGeometry(), self.layer_rtss.crs(), self.layer_epsg).asPoint()
-            # Définir le point de localisation pour l'ouvertur de SVN360
-            self.loc = self.svn.create_loc_from_point(center_point, self.layer_epsg)
+            # Click Gauche    
+            if e.button() == 1:
+                self.first_point_on_rtss = self.toLayerCoordinates(self.layer_rtss, e.pos())
+                self.fleche_pt_1 = self.toMapCoordinates(self.layer_rtss, self.first_point_on_rtss)
+                # Geometrie du point dans la projection de la couche des RTSS
+                point_on_rtss = self.geocode.geocoderPointOnRTSS(self.first_point_on_rtss)
+                # Définir le point cliqué sur la route dans la bonne projection
+                center_point = reprojectGeometry(point_on_rtss.getGeometry(), self.layer_rtss.crs(), self.layer_epsg).asPoint()
+                # Définir le point de localisation pour l'ouverture de SVN360
+                self.loc = self.svn.create_loc_from_point(center_point, self.layer_epsg)
         except: self.reset()
     
     def canvasMoveEvent(self, e):
@@ -92,12 +94,19 @@ class MtqMapToolOpenSVN360(QgsMapTool):
         """ Méthode appelée quand le bouton de la souris est relaché """
         # Skip si le premier point n'est pas encore défini
         if self.first_point_on_rtss is None: return
+        self.arrow.hide()
+        self.line.hide()
         # Geometrie du point dans la projection de la couche des RTSS
         last_point_on_rtss = self.toLayerCoordinates(self.layer_rtss, e.pos())
         # Définir l'azimut horizontal
         if self.first_point_on_rtss.distance(last_point_on_rtss) <= 1: h_az = None
-        else: h_az = 360 - ( self.svn.get_azimuth(self.loc, rayon=self.rayon) - self.first_point_on_rtss.azimuth(last_point_on_rtss))
-        
+        else: 
+            # Calculer l'azimut en degres pour une localisation donnée.
+            az_svn = self.svn.get_azimuth(self.loc, rayon=self.rayon)
+            # Si l'azimut est null, alors on considère que l'angle horizontal n'est pas défini
+            # (probablement parce que la localisation n'a pas d'images dans SVN360)
+            if az_svn is None: h_az = None
+            else: h_az = 360 - (az_svn - self.first_point_on_rtss.azimuth(last_point_on_rtss))
         # Ouvrir SVN360 avec les paramètres définies
         self.svn.open(self.loc, rayon=self.rayon, ahoriz=h_az)
         # Reset pour le prochain usage

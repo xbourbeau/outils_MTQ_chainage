@@ -1,1 +1,1 @@
-__all__ = ["CS", "DT", "Province", "Region", "Municipalite"]
+__all__ = ["IdProjet", "Projet", "Axe", "PPS_ACCESS", "LocalisationProjet"]

@@ -18,6 +18,7 @@ class SVN360:
     def __init__(self):
         # Initialiser la session avec les informations d'authentification
         self.session = None
+        self.images = "file://mtq.min.intra/fic/QC/Depot/Systeme/LidarMobile/Produits/Reseau/ImagesPanoramiques/2023/90/"
 
         # L'url par défault pour SVN360
         self.default_url = "https://svn360.mtq.min.intra"
@@ -142,7 +143,7 @@ class SVN360:
                 url = f"https://svn360.mtq.min.intra/api/Trace/Rtss/{loc.rtss()}/Chainage/{loc.chainage()}/Rayon/{rayon}"
             else:
                 url = f"https://svn360.mtq.min.intra/api/Trace/CoordonneeX/{loc.x()}/CoordonneeY/{loc.y()}/Epsg/{loc.epsg()}/Rayon/{rayon}"
-            response = self.session.get(url)
+            response = self.session.get(url, timeout=200)
             # Erreur si status code != 200
             response.raise_for_status()
             
@@ -174,7 +175,7 @@ class SVN360:
                 url = f"https://svn360.mtq.min.intra/api/PositionGps/Trace/{trace_id}/Rtss/{loc.rtss()}/Chainage/{loc.chainage()}/Rayon/{rayon}"
             else:
                 url = f"https://svn360.mtq.min.intra/api/PositionGps/Trace/{trace_id}/CoordonneeX/{loc.x()}/CoordonneeY/{loc.y()}/Epsg/{loc.epsg()}/Rayon/{rayon}"
-            response = self.session.get(url)
+            response = self.session.get(url, timeout=200)
             # Erreur si status code != 200
             response.raise_for_status()  
             
