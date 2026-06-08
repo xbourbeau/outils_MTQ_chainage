@@ -1,1 +1,0 @@
-__all__ = ["IdProjet", "Projet", "Axe", "PPS_ACCESS", "LocalisationProjet"]
