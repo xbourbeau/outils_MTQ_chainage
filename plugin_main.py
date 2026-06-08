@@ -72,6 +72,7 @@ from .expressions.expression_geocodage import *
 from .expressions.expression_sigo import *
 
 # DEV: Ajouter l'option d'ouvrir la fenêtre de Géocodage
+# DEV: Ajouter une option de modifer les sommet par RTSS chainge
 
 class MtqPluginChainage:
     """ QGIS Plugin Implementation."""
@@ -220,6 +221,7 @@ class MtqPluginChainage:
         dlg_params.plugin_inactif.connect(self.setPluginInactive)
         dlg_params.generate_index.connect(self.generateContextLayerIndex)
         dlg_params.delete_index.connect(self.deleteContextLayerIndex)
+        dlg_params.parametre_updated.connect(self.updatedSettings)
         self.plugin_dlg.append(dlg_params)
         tool_button_setting.setDefaultAction(action_parametre)
 
@@ -421,9 +423,12 @@ class MtqPluginChainage:
         self.maptools_needing_layer.append(tool_open_svn_360)
         
         # ------------------ Ouvrir une fenêtre SIGO ------------------
-        action_open_sigo = self.add_action(
+        # Mettre à jour le tooltip selon l'option SIGO ou PlaniActifs
+        if self.params.getValue("open_sigo_plainiactif"): help_str='Ouvrir la vue courante dans PlaniActifs'
+        else: help_str='Ouvrir la vue courante dans SIGO'
+        self.action_open_sigo = self.add_action(
             name="Open SIGO",
-            help_str='Ouvrir la vue courante dans SIGO ou PlaniActif',
+            help_str=help_str,
             callback=self.openSIGO,
             parent=self.iface.mainWindow(),
             add_to_menu=False)
@@ -599,6 +604,15 @@ class MtqPluginChainage:
                 QgsExpression.registerFunction(rtss_side)
                 
             except: Utils.warningMessage(self.iface, "Les expressions du plugin n'ont pas pu être ajouté.")
+
+    def updatedSettings(self):
+        """ Permet de suivre lorsque des paramètres du plugins on été enregistrer à partir de la fenêtre des paramètres  """
+        
+        # Mettre à jour le tooltip selon l'option SIGO ou PlaniActifs
+        if self.params.getValue("open_sigo_plainiactif"): help_str='Ouvrir la vue courante dans PlaniActifs'
+        else: help_str='Ouvrir la vue courante dans SIGO'
+        self.action_open_sigo.setToolTip(help_str)
+
 
     def openSIGO(self):
         """ Méthode qui permet d'ouvrir la vue courante dans SIGO ou Planiactif """

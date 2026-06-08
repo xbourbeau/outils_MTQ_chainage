@@ -25,6 +25,8 @@ class fenetreParametre(QDialog, FORM_CLASS):
     plugin_actif = pyqtSignal()
     generate_index = pyqtSignal()
     delete_index = pyqtSignal()
+    parametre_updated = pyqtSignal()
+
 
     def __init__(self, iface:QgisInterface, parent=None):
         """Constructor."""
@@ -293,9 +295,12 @@ class fenetreParametre(QDialog, FORM_CLASS):
         for action_name, widget in self.widgets_action.items():
             action = self.params.getAction(action_name)
             if action.get() != widget.isChecked(): action.set(widget.isChecked())
+        
+        self.parametre_updated.emit()
+        
         self.close()
-        Utilitaire.succesMessage(self.iface, " Les paramètres enregistrés avec succès!", subject="Plugin chainage MTQ:")
-    
+        Utilitaire.succesMessage(self.iface, " Les paramètres enregistrés avec succès!", subject="Plugin chainage MTQ:")    
+
     def saveContextLayerSettings(self):
         """ Permet d'enregistrer les paramètres pour la Tab de la couche de context """
         self.params.setValue("context_layer", self.cbx_layer_context.currentText())

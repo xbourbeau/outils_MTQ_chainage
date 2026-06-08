@@ -331,7 +331,7 @@
            <item row="8" column="0">
             <widget class="QGroupBox" name="gbx_open_sigo">
              <property name="title">
-              <string>Ouvrir SIGO/PlaniActif</string>
+              <string>Ouvrir SIGO ou PlaniActifs</string>
              </property>
              <layout class="QGridLayout" name="gridLayout_31">
               <item row="0" column="0">
@@ -353,7 +353,7 @@
                  <enum>Qt::ClickFocus</enum>
                 </property>
                 <property name="text">
-                 <string>Ouvrir PlaniActif</string>
+                 <string>Ouvrir PlaniActifs</string>
                 </property>
                </widget>
               </item>
@@ -815,8 +815,8 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>800</width>
-            <height>814</height>
+            <width>360</width>
+            <height>486</height>
            </rect>
           </property>
           <layout class="QGridLayout" name="gridLayout_30">
@@ -1249,8 +1249,8 @@ color:rgb(255, 0, 0)</string>
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>800</width>
-            <height>814</height>
+            <width>308</width>
+            <height>220</height>
            </rect>
           </property>
           <layout class="QGridLayout" name="gridLayout_17">
@@ -1515,8 +1515,8 @@ color:rgb(255, 0, 0)</string>
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>800</width>
-            <height>814</height>
+            <width>446</width>
+            <height>169</height>
            </rect>
           </property>
           <layout class="QGridLayout" name="gridLayout_12">
@@ -1749,8 +1749,8 @@ color:rgb(255, 0, 0)</string>
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>800</width>
-            <height>814</height>
+            <width>304</width>
+            <height>286</height>
            </rect>
           </property>
           <layout class="QGridLayout" name="gridLayout_15">
@@ -2104,8 +2104,8 @@ color:rgb(255, 0, 0)</string>
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>800</width>
-            <height>814</height>
+            <width>356</width>
+            <height>202</height>
            </rect>
           </property>
           <layout class="QGridLayout" name="gridLayout_32">
@@ -2329,8 +2329,8 @@ color:rgb(255, 0, 0)</string>
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>800</width>
-            <height>814</height>
+            <width>350</width>
+            <height>85</height>
            </rect>
           </property>
           <layout class="QGridLayout" name="gridLayout_21">
@@ -2437,8 +2437,8 @@ color:rgb(255, 0, 0)</string>
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>800</width>
-            <height>814</height>
+            <width>350</width>
+            <height>417</height>
            </rect>
           </property>
           <layout class="QGridLayout" name="gridLayout_29">
@@ -2894,8 +2894,8 @@ color:rgb(255, 0, 0)</string>
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>800</width>
-            <height>814</height>
+            <width>452</width>
+            <height>393</height>
            </rect>
           </property>
           <layout class="QGridLayout" name="gridLayout_10">
