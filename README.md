@@ -1,5 +1,5 @@
 # outils_MTQ_chainage
-Version: 3.4.1<br>
+Version: 3.4.2<br>
 Question: xavier.bourbeau@transports.gouv.qc.ca<br>
 
 L'outil de chainage est une extention de QGIS qui a pour but de faciliter l'utilisation du système de référencement linéaire du MTQ (RTSS/Chainage).<br>

@@ -221,6 +221,24 @@ class PluginParametres(GestionParametre):
                 categorie=categorie_config,
                 setting_name="layer_chainage_style",
                 default_value=path_to_default_style_chainage),
+            # Paramètre: Nom du champs du RTSS dans la couche des chainages 
+            "layer_chainage_field_rtss": Parametre(
+                plugin_name=plugin_name,
+                categorie=categorie_config,
+                setting_name="layer_chainage_field_rtss",
+                default_value='RTSS'),
+            # Paramètre: Nom du champs du chainage dans la couche des chainages 
+            "layer_chainage_field_chainage": Parametre(
+                plugin_name=plugin_name,
+                categorie=categorie_config,
+                setting_name="layer_chainage_field_chainage",
+                default_value='Chainage'),
+            # Paramètre: Nom du champs du chainage formater dans la couche des chainages 
+            "layer_chainage_field_chainage_formater": Parametre(
+                plugin_name=plugin_name,
+                categorie=categorie_config,
+                setting_name="layer_chainage_field_chainage_formater",
+                default_value='Chainage_formater'),
             # Paramètre: Chemin vers le fichier qml de style pour la couche des transects
             "layer_transect_style": Parametre(
                 plugin_name=plugin_name,
@@ -519,5 +537,34 @@ class PluginParametres(GestionParametre):
         """
         return os.path.realpath(os.path.join(self.pluginDir(), f"aide/{file_name}.html"))
         
+    def getStyle(self, style_name:str):
+        """
+        Permet de retourner le chemin vers le fichier QML de style.
 
+        Args:
+            file_name (str): Le nom du fichier de style dans le dossier styles du plugin. (sans l'extention)
+
+        Returns: Le chemin vers le fichier QML de style
+        """
+        return os.path.realpath(os.path.join(self.pluginDir(), f"styles/{style_name}.qml"))
+
+    def getStyles(self, dossier:str=""):
+        """
+        Permet de retourner la liste des QML des styles du plugin.
+        Un dossier peut être spécifier pour la recherche.
+
+        Args:
+            dossier (str): le nom du dossier dans les styles du plugin pour la recherche
+        
+        Return: Un dictionnaire des styles (ex: {"ombrage.qml": "path/to/ombrage.qml", ...} )
+        """
+        dict_styles = {}
+        style_path = os.path.join(self.plugin_dir, f"styles/{dossier}")
+        # Vérifier que le chemin vers les styles existe
+        if os.path.exists(style_path):
+            # Parcourir le dossier des styles QML
+            for style in os.listdir(style_path):
+                # Ajouter au dictionnaire des styles toutes les fichier QML dans le dossier
+                if style.endswith('.qml'): dict_styles[style] = os.path.join(style_path, style)
+        return dict_styles
     

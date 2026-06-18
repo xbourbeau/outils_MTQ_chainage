@@ -58,11 +58,19 @@ class PluginTemporaryLayer:
         """
         params = PluginParametres()
         layer_name = params.getValue("layer_recherche_chainage_name")
+        field_rtss = params.getValue("layer_chainage_field_rtss")
+        field_chainage = params.getValue("layer_chainage_field_chainage")
+        field_chainage_formater = params.getValue("layer_chainage_field_chainage_formater")
 
         # Rétourner la couche existante si elle est dans le projet
-        layer = validateLayer(layer_name, geom_type=0, crs_authid=crs_authid)
+        layer = validateLayer(layer_name, fields_name=[field_rtss, field_chainage, field_chainage_formater], geom_type=0, crs_authid=crs_authid)
         if layer: return layer
 
         # Create layer
         layer = QgsVectorLayer(f"point?crs={crs_authid}", layer_name, "memory")
-        return addLayerToMap(canvas, layer)
+        layer.dataProvider().addAttributes([
+            QgsField(field_rtss, QVariant.String),
+            QgsField(field_chainage, QVariant.Int),
+            QgsField(field_chainage_formater, QVariant.String)])
+        layer.updateFields()
+        return addLayerToMap(canvas, layer, style=params.getValue("layer_chainage_style"))

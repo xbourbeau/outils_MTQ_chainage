@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import os
 
+from mtq import param
 from qgis.core import QgsMapLayerProxyModel, QgsFieldProxyModel, QgsProject
 from qgis.gui import QgisInterface
 from qgis.PyQt.QtWidgets import QDialog, QMessageBox
@@ -15,6 +16,7 @@ from .fenetre_selection_couche import fenetreSelectionCouche
 
 from ..mtq.fnt import choisirFichier
 from ..mtq.utils import Utilitaire
+from ..mtq.core import WFSLayerMTQ
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(os.path.dirname(__file__), 'fenetre_parametre.ui'))
     
@@ -74,6 +76,7 @@ class fenetreParametre(QDialog, FORM_CLASS):
         self.btn_generate_index.clicked.connect(self.generateContextLayerIndex)
         self.btn_delete_index.clicked.connect(lambda: self.delete_index.emit())
         self.btn_selectionner_layer_rtss.clicked.connect(self.selectionnerCoucheRTSS)
+        self.btn_add_wfs_layer.clicked.connect(self.add_wfs_rtss_layer)
         self.btn_geocatalogue.clicked.connect(lambda: os.startfile("http://geocatalogue.mtq.qc/geonetwork/srv/fre/catalog.search#/metadata/180589bb-ccfa-464c-95ad-2b620c62e398"))
 
         self.btn_symblologie_ecusson.clicked.connect(lambda: self.choisirQML(self.txt_sybologie_ecusson))
@@ -105,6 +108,7 @@ class fenetreParametre(QDialog, FORM_CLASS):
         self.rbt_sigo.setIcon(self.params.getIcon("igo"))
         self.btn_enregistrer.setIcon(self.params.getIcon("save"))
         self.btn_geocatalogue.setIcon(self.params.getIcon("geocatalogue"))
+        self.btn_add_wfs_layer.setIcon(self.params.getIcon("add_wfs_layer"))
 
         # Définir l'icon du checkbox pour montrer le marqueur de direction du RTSS
         self.chx_marqueur_dir.setIcon(self.params.getIcon("marker_dir"))
@@ -358,3 +362,24 @@ class fenetreParametre(QDialog, FORM_CLASS):
         """ Permet d'enregistrer les paramètres et d'emmetre le signal pour générer le réseau """
         self.saveContextLayerSettings()
         self.generate_index.emit()
+
+    def add_wfs_rtss_layer(self):
+        """ Permet de créer et ajouter au projet une couche des RTSS. """
+        layer_rtss = WFSLayerMTQ(
+            id="BGR - RTSS",
+            name="BGR - RTSS",
+            source="{'url':'https://ws.mapserver.mtq.min.intra/donnee_systeme?', 'srsname':'EPSG:3798', 'typename':'bgr_v_sous_route_res_inv_act', 'version':'auto'}",
+            provider="wfs",
+            key_field_name="num_rts",
+            key_field_type="str",
+            dt_field_name="cod_niv_hierc_2",
+            dt_field_type="code",
+            cs_field_name="cod_niv_hierc_3",
+            cs_field_type="code",
+            default_style="SIGO",
+            styles={"SIGO": self.params.getStyle("style_rtss")},
+        )
+        # Charger une première couche vide pour demander l'authentification
+        layer_rtss.asVectorLayer(use_dt=00)
+        # Ajouter la couche au projet
+        layer_rtss.show(self.iface, use_style=True)

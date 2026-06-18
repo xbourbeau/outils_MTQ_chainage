@@ -2,6 +2,9 @@
 from qgis.core import QgsVectorLayerUtils, QgsApplication
 from qgis.gui import QgsMapTool, QgisInterface
 
+from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QCursor
+
 from ..mtq.core import Geocodage
 from ..mtq.utils import Utilitaire
 from ..mtq.fnt import reprojectGeometry
@@ -20,12 +23,24 @@ class MtqMapToolNewEcusson(QgsMapTool):
         self.layer_rtss = None
         self.iface = iface
         self.first_message = True
+        self._has_class_fonct = False
+        self._last_cursor = None
         # Créer un instance de l'outil d'edition sur la carte
         QgsMapTool.__init__(self, self.iface.mapCanvas())
-        self.mCursor = QgsApplication.getThemeCursor(3)
+        
         # Class qui gère l'enregistrement des paramètres
         self.params = PluginParametres()
-    
+
+        # Définir le cursor personnalisé des routes par défault
+        cursor_pixmap = self.params.getPixmap("ecusson_cursor")
+        cursor_pixmap = cursor_pixmap.scaled(24, 24, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        self.cursor_route = QCursor(cursor_pixmap, cursor_pixmap.width()//2, cursor_pixmap.height()//2)
+
+        # Définir le cursor personnalisé des autoroutes
+        cursor_pixmap_2 = self.params.getPixmap("ecusson_cursor_2")
+        cursor_pixmap_2 = cursor_pixmap_2.scaled(24, 24, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        self.cursor_autoroute = QCursor(cursor_pixmap_2, cursor_pixmap_2.width()//2, cursor_pixmap_2.height()//2)
+
     def setLayer(self, layer_id):
         """ Méthode qui permet de définir la couche des RTSS """
         self.layer_rtss = self.layer(layer_id)
@@ -33,7 +48,7 @@ class MtqMapToolNewEcusson(QgsMapTool):
     def activate(self):
         """ Méthode appelée quand l'outil est activé """
         # Définir le cursor à utiliser
-        self.canvas().setCursor(self.mCursor)
+        self.set_cursor()
         # Geometry temporaire de la position sur le RTSS
         self.rtss_marker = TemporaryGeometry.createMarkerEcusson(self.canvas())
         
@@ -48,6 +63,17 @@ class MtqMapToolNewEcusson(QgsMapTool):
 
         self.updateTolerance(self.canvas().scale())
     
+    def set_cursor(self, autoroute=False):
+        """ Permet de définir le cursor à utiliser """
+        # Choisir le bon cursor
+        self.mCursor = self.cursor_autoroute if autoroute else self.cursor_route
+        # Ne pas redéfinir le cursor si c'est déjà le bon 
+        if self._last_cursor == self.mCursor: return
+
+        # Définir le cursor à utiliser
+        self.canvas().setCursor(self.mCursor)
+        self._last_cursor = self.mCursor
+
     def setFieldsIndex(self):
         """ Permet de définir l'index des champs spécifé de la couche des éccussons """
         # Champs à connaitre les index
@@ -63,7 +89,12 @@ class MtqMapToolNewEcusson(QgsMapTool):
         self.field_index_classe = [i for i, field in enumerate(self.layer_ecusson.fields()) if field.name() == field_name_classe]
         if self.field_index_classe: self.field_index_classe = self.field_index_classe[0]
         else: self.field_index_classe = None 
+        self._has_class_fonct = not self.field_index_classe is None
         
+    def has_class_fonct(self):
+        """ Permet de retourner si une classe fonctionnel est défini pour le module de géocodage """
+        return self._has_class_fonct
+
     def canvasPressEvent(self, e):
         """
         Méthode activé quand la carte est cliquée
@@ -79,7 +110,7 @@ class MtqMapToolNewEcusson(QgsMapTool):
             if point_on_rtss is not None:
                 att = {self.field_index: point_on_rtss.getRTSS().getRoute(zero=False)}
                 # Ajouter la classification fonctionnelle si possible
-                if self.field_index_classe: att[self.field_index_classe] = self.geocode.get(point_on_rtss.getRTSS()).classification(1)
+                if self.has_class_fonct(): att[self.field_index_classe] = self.geocode.get(point_on_rtss.getRTSS()).classification(1)
                 # Avertir l'utilisateur qu'il n'y a pas de champs de classification fonctionnelle
                 elif self.first_message:
                     self.first_message = False
@@ -101,12 +132,19 @@ class MtqMapToolNewEcusson(QgsMapTool):
         geom = self.toLayerCoordinates(self.layer_rtss, e.pos())
         # Get infos du RTSS le plus proche du cursor
         point_on_rtss = self.geocode.geocoderPointOnRTSS(geom, dist_max=self.tolerance)
+
         # Ne pas afficher le curseur s'il n'est pas assez proche d'un RTSS
-        if point_on_rtss is None : self.rtss_marker.hide()
+        if point_on_rtss is None : 
+            self.rtss_marker.hide()
+            self.set_cursor(False)
         else:
+            # Update le cursor selon la bonne classe fonctionnelle
+            if self.has_class_fonct(): self.set_cursor(autoroute=self.geocode.get(point_on_rtss.getRTSS()).classification(1) == "10")
+            else: self.set_cursor(False)
             # Projeter le point sur le RTSS dans la projection de la carte
             point_on_rtss = self.toMapCoordinates(self.layer_rtss, point_on_rtss.getGeometry().asPoint())
             self.rtss_marker.setCenter(point_on_rtss)
+
             # Afficher le le marker de RTSS dans la carte
             self.rtss_marker.show()
     
@@ -117,6 +155,7 @@ class MtqMapToolNewEcusson(QgsMapTool):
     def deactivate(self):
         """ Méthode appelée quand l'outil est désactivé """
         if self.isActive():
+            self._last_cursor = None
             # Émettre le signal de desactivation de l'outil
             self.deactivated.emit()
             try: 

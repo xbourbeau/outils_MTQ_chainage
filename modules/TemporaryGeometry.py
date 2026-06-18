@@ -43,11 +43,11 @@ class TemporaryGeometry:
             QgsVertexMarker: Le marker pour le maptool
         """
         marker = QgsVertexMarker(canvas)
-        marker.setColor(QColor("#178e0c"))
-        marker.setFillColor(QColor("#178e0c"))
+        marker.setColor(QColor("#ff00ff"))
+        marker.setFillColor(QColor("#178e0c00"))
         marker.setIconSize(10)
         marker.setIconType(QgsVertexMarker.ICON_CIRCLE)
-        marker.setPenWidth(1)
+        marker.setPenWidth(3)
         return marker
     
     @staticmethod
