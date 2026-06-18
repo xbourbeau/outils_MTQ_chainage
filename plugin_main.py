@@ -22,10 +22,6 @@
  ***************************************************************************/
 """
 # Import QGIS
-from encodings.punycode import T
-
-from sqlalchemy import true
-
 from qgis.PyQt.QtGui import QIcon, QKeySequence
 from qgis.PyQt.QtWidgets import QAction, QToolButton, QMenu, QWidgetAction, QCheckBox
 from qgis.core import (QgsProject, QgsPointXY, QgsApplication, QgsCoordinateTransform,
