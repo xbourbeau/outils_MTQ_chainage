@@ -1,6 +1,7 @@
 # Géocodage
 from .geomapping.RTSS import RTSS
 from .geomapping.Chainage import Chainage
+from .geomapping.ClassFonct import ClassFonct
 from .geomapping.FeatRTSS import FeatRTSS
 from .geomapping.PointRTSS import PointRTSS
 from .geomapping.LineRTSS import LineRTSS
@@ -31,29 +32,12 @@ from .layers.LoadLayers import LoadLayers
 from .layers.LayerManager import LayerManager
 
 # System
-from .system.GSR import GSR
 from .system.SIGO import SIGO
 from .system.PlaniActif import PlaniActif
-from .system.iit.ElementInventaire import ElementInventaire
-from .system.iit.EspaceVert import EspaceVert
-from .system.iit.Marquage import Marquage
-from .system.iit.SystemIIT import SystemIIT
 from .system.svn360.SVN360 import SVN360
 from .system.svn360.LocalisationSVN import LocalisationSVN
 
-# Lidar 
-from .lidar_mobile.IndexLidar import IndexLidar
-from .lidar_mobile.Lidar import Lidar
-from .lidar_mobile.LidarMobile import LidarMobile
-
 # Search engine
 from .search.SearchEngine import SearchEngine
-
-# Network Analysis
-from .network.TrajetSIGO import TrajetSIGO
-
-# Devers
-from .devers.Measurement import Measurement
-from .devers.Slope import Slope
-from .devers.VoieDevers import VoieDevers
-from .devers.AnalyseDevers import AnalyseDevers
+from .search.iCherche import iCherche
+from .search.terrapi import terrapi

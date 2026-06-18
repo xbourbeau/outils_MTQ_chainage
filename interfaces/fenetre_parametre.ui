@@ -9,8 +9,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>844</width>
-    <height>881</height>
+    <width>554</width>
+    <height>624</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -81,9 +81,9 @@
           <property name="geometry">
            <rect>
             <x>0</x>
-            <y>0</y>
-            <width>800</width>
-            <height>814</height>
+            <y>-64</y>
+            <width>493</width>
+            <height>764</height>
            </rect>
           </property>
           <layout class="QGridLayout" name="gridLayout_9">
@@ -331,7 +331,7 @@
            <item row="8" column="0">
             <widget class="QGroupBox" name="gbx_open_sigo">
              <property name="title">
-              <string>Ouvrir SIGO/PlaniActif</string>
+              <string>Ouvrir SIGO ou PlaniActifs</string>
              </property>
              <layout class="QGridLayout" name="gridLayout_31">
               <item row="0" column="0">
@@ -353,7 +353,7 @@
                  <enum>Qt::ClickFocus</enum>
                 </property>
                 <property name="text">
-                 <string>Ouvrir PlaniActif</string>
+                 <string>Ouvrir PlaniActifs</string>
                 </property>
                </widget>
               </item>
@@ -430,6 +430,16 @@
                   </property>
                   <property name="toolTip">
                    <string>Nom de la couche des RTSS à utiliser dans le projet</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="btn_add_wfs_layer">
+                  <property name="toolTip">
+                   <string>Ajouter la couche WFS des RTSS au projet</string>
+                  </property>
+                  <property name="text">
+                   <string/>
                   </property>
                  </widget>
                 </item>
@@ -815,8 +825,8 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>800</width>
-            <height>814</height>
+            <width>510</width>
+            <height>557</height>
            </rect>
           </property>
           <layout class="QGridLayout" name="gridLayout_30">
@@ -1249,8 +1259,8 @@ color:rgb(255, 0, 0)</string>
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>800</width>
-            <height>814</height>
+            <width>510</width>
+            <height>557</height>
            </rect>
           </property>
           <layout class="QGridLayout" name="gridLayout_17">
@@ -1515,8 +1525,8 @@ color:rgb(255, 0, 0)</string>
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>800</width>
-            <height>814</height>
+            <width>510</width>
+            <height>557</height>
            </rect>
           </property>
           <layout class="QGridLayout" name="gridLayout_12">
@@ -1749,8 +1759,8 @@ color:rgb(255, 0, 0)</string>
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>800</width>
-            <height>814</height>
+            <width>510</width>
+            <height>557</height>
            </rect>
           </property>
           <layout class="QGridLayout" name="gridLayout_15">
@@ -2104,8 +2114,8 @@ color:rgb(255, 0, 0)</string>
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>800</width>
-            <height>814</height>
+            <width>510</width>
+            <height>557</height>
            </rect>
           </property>
           <layout class="QGridLayout" name="gridLayout_32">
@@ -2329,8 +2339,8 @@ color:rgb(255, 0, 0)</string>
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>800</width>
-            <height>814</height>
+            <width>510</width>
+            <height>557</height>
            </rect>
           </property>
           <layout class="QGridLayout" name="gridLayout_21">
@@ -2437,8 +2447,8 @@ color:rgb(255, 0, 0)</string>
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>800</width>
-            <height>814</height>
+            <width>510</width>
+            <height>557</height>
            </rect>
           </property>
           <layout class="QGridLayout" name="gridLayout_29">
@@ -2894,8 +2904,8 @@ color:rgb(255, 0, 0)</string>
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>800</width>
-            <height>814</height>
+            <width>510</width>
+            <height>557</height>
            </rect>
           </property>
           <layout class="QGridLayout" name="gridLayout_10">

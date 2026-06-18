@@ -22,6 +22,10 @@
  ***************************************************************************/
 """
 # Import QGIS
+from encodings.punycode import T
+
+from sqlalchemy import true
+
 from qgis.PyQt.QtGui import QIcon, QKeySequence
 from qgis.PyQt.QtWidgets import QAction, QToolButton, QMenu, QWidgetAction, QCheckBox
 from qgis.core import (QgsProject, QgsPointXY, QgsApplication, QgsCoordinateTransform,
@@ -72,6 +76,7 @@ from .expressions.expression_geocodage import *
 from .expressions.expression_sigo import *
 
 # DEV: Ajouter l'option d'ouvrir la fenêtre de Géocodage
+# DEV: Ajouter une option de modifer les sommet par RTSS chainage
 
 class MtqPluginChainage:
     """ QGIS Plugin Implementation."""
@@ -83,7 +88,6 @@ class MtqPluginChainage:
         self.plugin_dir = os.path.dirname(__file__)
 
         # ******  À CHANGER LORS DE NOUVELLE MISE À JOUR **********
-        version = "3.4.1"
         self.documentation = "file://mtq.min.intra/fic/QC/Depot/Img/Courant/Geomatique/QgisPlugin/documentation/outils_MTQ_chainage/index.html"
         # *********************************************************
 
@@ -203,7 +207,6 @@ class MtqPluginChainage:
         # Ajouter un menu pour désactiver le plugin
         tool_button_setting = QToolButton(parent=self.iface.mainWindow())
         tool_button_setting.setMenu(QMenu())
-        tool_button_setting.setToolTip("Test")
         tool_button_setting.setPopupMode(QToolButton.MenuButtonPopup)
         self.toolbar_chaine.addWidget(tool_button_setting)
         
@@ -220,6 +223,7 @@ class MtqPluginChainage:
         dlg_params.plugin_inactif.connect(self.setPluginInactive)
         dlg_params.generate_index.connect(self.generateContextLayerIndex)
         dlg_params.delete_index.connect(self.deleteContextLayerIndex)
+        dlg_params.parametre_updated.connect(self.updatedSettings)
         self.plugin_dlg.append(dlg_params)
         tool_button_setting.setDefaultAction(action_parametre)
 
@@ -421,9 +425,12 @@ class MtqPluginChainage:
         self.maptools_needing_layer.append(tool_open_svn_360)
         
         # ------------------ Ouvrir une fenêtre SIGO ------------------
-        action_open_sigo = self.add_action(
+        # Mettre à jour le tooltip selon l'option SIGO ou PlaniActifs
+        if self.params.getValue("open_sigo_plainiactif"): help_str='Ouvrir la vue courante dans PlaniActifs'
+        else: help_str='Ouvrir la vue courante dans SIGO'
+        self.action_open_sigo = self.add_action(
             name="Open SIGO",
-            help_str='Ouvrir la vue courante dans SIGO ou PlaniActif',
+            help_str=help_str,
             callback=self.openSIGO,
             parent=self.iface.mainWindow(),
             add_to_menu=False)
@@ -494,7 +501,6 @@ class MtqPluginChainage:
             if self.txt_distance: self.txt_distance.setText(Chainage(0).valueFormater(self.params.getValue("precision_chainage")))
                 
             for maptool in self.maptools_needing_layer: maptool.setLayer(self.layer_rtss.id())
-            #if self.actionAfficherAtlas: self.dlg_atlas.setLayerRTSS(self.layer_rtss.id())
             # Rendre la toolbar active
             for widjet in self.plugin_active_actions: widjet.setEnabled(True)
         # Afficher le message
@@ -600,6 +606,14 @@ class MtqPluginChainage:
                 
             except: Utils.warningMessage(self.iface, "Les expressions du plugin n'ont pas pu être ajouté.")
 
+    def updatedSettings(self):
+        """ Permet de suivre lorsque des paramètres du plugins on été enregistrer à partir de la fenêtre des paramètres  """
+        
+        # Mettre à jour le tooltip selon l'option SIGO ou PlaniActifs
+        if self.params.getValue("open_sigo_plainiactif"): help_str='Ouvrir la vue courante dans PlaniActifs'
+        else: help_str='Ouvrir la vue courante dans SIGO'
+        self.action_open_sigo.setToolTip(help_str)
+
     def openSIGO(self):
         """ Méthode qui permet d'ouvrir la vue courante dans SIGO ou Planiactif """
         if self.params.getValue("open_sigo_plainiactif"): app = PlaniActif()
@@ -613,13 +627,33 @@ class MtqPluginChainage:
                 self.params.getValue("layer_rtss"),
                 fields_name=[self.params.getValue("field_num_rtss"), self.params.getValue("field_chainage_fin")],
                 geom_type=1)
-            return self.layer_rtss is not None
+            
+            # Retourner Faux si Aucune couche n'est trouver
+            if self.layer_rtss is None: return False
+            
+            # Vérifier la projection de la couche pour qu'elle soit projeter
+            if self.layer_rtss.crs().isGeographic():
+                Utils.criticalMessage(
+                    iface=self.iface,
+                    message="Attention! La couche des RTSS doit être dans un système de coordonnée projeté.",
+                    subject="CRS des RTSS : ")
+                return False
+            # Vérifier la projection de la couche pour qu'elle soit valide
+            if not self.layer_rtss.crs().isValid():
+                Utils.criticalMessage(
+                    iface=self.iface,
+                    message=f"Attention! Le CRS de la couche des RTSS n'est pas valide: {str(self.layer_rtss.crs())}",
+                    subject="CRS des RTSS : ")
+                return False
+            # Retourner qu'une couche valide à été défini
+            return True
+        
         # Afficher le message
-        except: 
+        except Exception as e: 
             Utils.criticalMessage(
                 iface=self.iface,
-                message="Oups! Un problème est survenu avec la recherche de la couche des RTSS...",
-                subject="Set Layer RTSS: ")
+                message=f"Oups! Un problème est survenu avec la recherche de la couche des RTSS dans le projet... Exception: {str(e)}",
+                subject="Couche RTSS: ")
             return False
     
     def setTooltipStyle(self):
@@ -984,21 +1018,20 @@ class MtqPluginChainage:
             # Liste des champs de la couche des RTSS
             fields_name = [field.name() for field in self.layer_rtss.fields()]
             # Vérifier si la couche des RTSS à un champ pour le chainage de début 
-            if self.params.getValue("field_chainage_debut") in fields_name:
-                field_chainage_debut = self.params.getValue("field_chainage_debut")
-            else: field_chainage_debut = None
+            field_chainage_debut = self.params.getValue("field_chainage_debut")
+            if not field_chainage_debut in fields_name: field_chainage_debut = None
             # Vérifier si la couche des RTSS à un champ pour la classification fonctionnel 
-            if self.params.getValue("field_classification") in fields_name:
-                field_class_fonct = self.params.getValue("field_classification")
-            else: field_class_fonct = None
+            field_class_fonct = self.params.getValue("field_classification")
+            if not field_class_fonct in fields_name: field_class_fonct = None
+
             # Mettre à jour la référence des RTSS du module de géocodage 
             self.geocode.updateRTSS(
                 features,
                 self.layer_rtss.crs(),
                 self.params.getValue("field_num_rtss"), 
                 self.params.getValue("field_chainage_fin"),
-                field_chainage_debut,
-                class_fonct=field_class_fonct)
+                nom_champ_chainage_d=field_chainage_debut,
+                nom_champ_classification=field_class_fonct)
             # Définir la précision
             self.geocode.setPrecision(self.params.getValue("precision_chainage"))
             
@@ -1052,6 +1085,12 @@ class MtqPluginChainage:
             if add_to_layer_chainage:
                 # Définir la couche
                 layer_chainage = PluginTemporaryLayer.createLayerChainage(self.canvas, self.layer_rtss.crs().authid())
+                # Définir les champs de la couche
+                index_field = {field.name(): i for i, field in enumerate(layer_chainage.fields())}
+                field_rtss_idx = index_field.get(self.params.getValue("layer_chainage_field_rtss"), None)
+                field_chainage_idx = index_field.get(self.params.getValue("layer_chainage_field_chainage"), None)
+                field_chainage_formater_idx = index_field.get(self.params.getValue("layer_chainage_field_chainage_formater"), None)
+                # Liste des entitées chainage à ajouter
                 feats_chainage = []
 
             # Parcourir les objets featRTSS pour le numéro de route cherché
@@ -1061,12 +1100,22 @@ class MtqPluginChainage:
                     extent.combineExtentWith(feat_rtss.geometry().boundingBox()) 
                     flash_geom.append(feat_rtss.geometry())
                 else:
+                    # Skip les chainages si il s'on plus grand que la longueur du rtss
+                    if feat_rtss.chainageFin() < use_chainage: continue
                     # Portion du RTSS autour du chainage
                     geom = feat_rtss.geocoderPointFromChainage(use_chainage)
                     flash_geom.append(geom)
                     extent.combineExtentWith(geom.buffer(100, 5).boundingBox())
                     # Ajouter le point au chainage recherché si l'option est actif
-                    if add_to_layer_chainage: feats_chainage.append(QgsVectorLayerUtils.createFeature(layer_chainage, geom))
+                    if add_to_layer_chainage: 
+                        # Créer les attributs du points
+                        if field_rtss_idx is None or field_chainage_idx is None or field_chainage_formater_idx is None: att = {}
+                        else: att = {
+                            field_rtss_idx: feat_rtss.getRTSS().value(),
+                            field_chainage_idx: int(Chainage(use_chainage)),
+                            field_chainage_formater_idx: Chainage(use_chainage).valueFormater()}
+                        # Ajouter l'entitée chainage à la liste
+                        feats_chainage.append(QgsVectorLayerUtils.createFeature(layer_chainage, geom, att))
 
         # Afficher le message
         except: return Utils.warningMessage(self.iface, "Oups! Un problème est survenu avec la recherche...")
@@ -1090,6 +1139,8 @@ class MtqPluginChainage:
                 self.canvas.refresh()
                 # Faire clignoter les entitées resultants 
                 self.canvas.flashGeometries(flash_geom, self.geocode.getCrs(), flashes=3, duration=500)
+            else:
+                return Utils.InfoMessage(self.iface, "Chainage inexistant!", temps=1)
         # Afficher le message
         except: return Utils.warningMessage(self.iface, "Oups! Un problème est survenu avec le repérange dans la carte...")
         

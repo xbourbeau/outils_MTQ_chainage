@@ -1,3 +1,1 @@
-__all__ = ["SearchEngine"]
-
-from .SearchEngine import SearchEngine
+__all__ = ["SearchEngine", "iCherche", "terrapi", "sigo_applicatif"]

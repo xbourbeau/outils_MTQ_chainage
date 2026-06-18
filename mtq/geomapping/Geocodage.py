@@ -24,7 +24,7 @@ from .RTSS import RTSS
 from .PointRTSS import PointRTSS
 from .PolygonRTSS import PolygonRTSS
 
-from ..param import (DEFAULT_NOM_COUCHE_RTSS, DEFAULT_NOM_CHAMP_RTSS,
+from ..param import (DEFAULT_NOM_COUCHE_RTSS, DEFAULT_NOM_CHAMP_RTSS, DEFAULT_NOM_CHAMP_CLASSIFICATION,
                      DEFAULT_NOM_CHAMP_DEBUT_CHAINAGE, DEFAULT_NOM_CHAMP_FIN_CHAINAGE)
 
 class Geocodage:
@@ -35,6 +35,7 @@ class Geocodage:
                   nom_champ_rtss=DEFAULT_NOM_CHAMP_RTSS,
                   nom_champ_long=DEFAULT_NOM_CHAMP_FIN_CHAINAGE,
                   nom_champ_chainage_d=DEFAULT_NOM_CHAMP_DEBUT_CHAINAGE,
+                  nom_champ_classification=DEFAULT_NOM_CHAMP_CLASSIFICATION,
                   precision=0,
                   **kwargs):
         """ 
@@ -49,6 +50,7 @@ class Geocodage:
             - nom_champ_rtss (str): Le nom du champ de la couche contenant les numéros des RTSS
             - nom_champ_long (str): Le nom du champ de la couche contenant le chainage de fin du RTSS
             - nom_champ_chainage_d (str): Le nom du champ de la couche contenant le chainage de début du RTSS
+            - nom_champ_classification (str): Le nom du champ de la classification fonctionnelle du RTSS
             - precision (int): Précison du chainage, Nombre de chiffre après la virgule
             - kwargs: Attributs suplémentaire du RTSS (nom de l'attribut = nom du champs de la valeur)
         """
@@ -56,6 +58,7 @@ class Geocodage:
         self.nom_champ_rtss = nom_champ_rtss
         self.nom_champ_long = nom_champ_long
         self.nom_champ_chainage_d = nom_champ_chainage_d
+        self.nom_champ_classification = nom_champ_classification
         self.spatial_index = None
         self.setPrecision(precision)
         # Référence des RTSS
@@ -74,6 +77,7 @@ class Geocodage:
                   nom_champ_rtss=DEFAULT_NOM_CHAMP_RTSS,
                   nom_champ_long=DEFAULT_NOM_CHAMP_FIN_CHAINAGE,
                   nom_champ_chainage_d=DEFAULT_NOM_CHAMP_DEBUT_CHAINAGE,
+                  nom_champ_classification=DEFAULT_NOM_CHAMP_CLASSIFICATION,
                   precision=0,
                   **kwargs):
         """ 
@@ -84,6 +88,7 @@ class Geocodage:
             - nom_champ_rtss (str): Le nom du champ de la couche contenant les numéros des RTSS
             - nom_champ_long (str): Le nom du champ de la couche contenant le chainage de fin du RTSS
             - nom_champ_chainage_d (str): Le nom du champ de la couche contenant le chainage de début du RTSS
+            - nom_champ_classification (str): Le nom du champ de la classification fonctionnelle du RTSS
             - precision (int): Précison du chainage, Nombre de chiffre après la virgule
             - interpolate_on_rtss (bool): L'indicateur pour interpoler les valeurs le long du rtss entre les deux points
         """
@@ -94,6 +99,7 @@ class Geocodage:
                 nom_champ_rtss=nom_champ_rtss,
                 nom_champ_long=nom_champ_long,
                 nom_champ_chainage_d=nom_champ_chainage_d,
+                nom_champ_classification=nom_champ_classification,
                 precision=precision,
                 **kwargs)
         else: return cls(None, None)
@@ -104,6 +110,7 @@ class Geocodage:
                     nom_champ_rtss=DEFAULT_NOM_CHAMP_RTSS,
                     nom_champ_long=DEFAULT_NOM_CHAMP_FIN_CHAINAGE,
                     nom_champ_chainage_d=DEFAULT_NOM_CHAMP_DEBUT_CHAINAGE,
+                    nom_champ_classification=DEFAULT_NOM_CHAMP_CLASSIFICATION,
                     precision=0,
                     **kwargs):
         """ 
@@ -114,6 +121,7 @@ class Geocodage:
             - nom_champ_rtss (str): Le nom du champ de la couche contenant les numéros des RTSS
             - nom_champ_long (str): Le nom du champ de la couche contenant le chainage de fin du RTSS
             - nom_champ_chainage_d (str): Le nom du champ de la couche contenant le chainage de début du RTSS
+            - nom_champ_classification (str): Le nom du champ de la classification fonctionnelle du RTSS
             - precision (int): Précison du chainage, Nombre de chiffre après la virgule
             - kwargs: Attributs suplémentaire du RTSS (nom de l'attribut = nom du champs de la valeur)
         """
@@ -125,6 +133,7 @@ class Geocodage:
             nom_champ_rtss=nom_champ_rtss,
             nom_champ_long=nom_champ_long,
             nom_champ_chainage_d=nom_champ_chainage_d,
+            nom_champ_classification=nom_champ_classification,
             precision=precision,
             **kwargs)
         else: return cls(None, None)
@@ -138,6 +147,7 @@ class Geocodage:
             nom_champ_rtss=geocode.nom_champ_rtss,
             nom_champ_long=geocode.nom_champ_long,
             nom_champ_chainage_d=geocode.nom_champ_chainage_d,
+            nom_champ_classification=geocode.nom_champ_classification,
             precision=geocode.precision)
         new_geocode.dict_ids = geocode.dict_ids
         new_geocode.dict_rtss = geocode.dict_rtss
@@ -881,6 +891,7 @@ class Geocodage:
             nom_champ_rtss=None,
             nom_champ_long=None,
             nom_champ_chainage_d=None,
+            nom_champ_classification=None,
             **kwarg):
         """ Méthode qui permet de créer ou de mettre à jour la référence des RTSS
         
@@ -890,11 +901,13 @@ class Geocodage:
             - nom_champ_rtss (str): Le nom du champ contenant les numéros des RTSS
             - nom_champ_long (str): Le nom du champ contenant le chainage de fin du RTSS
             - nom_champ_chainage_d (str): Le nom du champ contenant le chainage de début du RTSS
+            - nom_champ_classification (str): Le nom du champ de la classification fonctionnelle du RTSS
         """
         # Modifier la référence du nom du champs si un nouveau nom est défini
         if nom_champ_rtss: self.nom_champ_rtss = nom_champ_rtss
         if nom_champ_long: self.nom_champ_long = nom_champ_long
         self.nom_champ_chainage_d = nom_champ_chainage_d
+        self.nom_champ_classification = nom_champ_classification
         # Dictionnaire utiliser pour la recherche par RTSS
         dict_index = {}
         # Définir le nouveau CRS si défini
@@ -913,6 +926,7 @@ class Geocodage:
                     nom_champ_rtss=self.nom_champ_rtss,
                     nom_champ_long=self.nom_champ_long,
                     chainage_d=self.nom_champ_chainage_d,
+                    nom_champ_classification=self.nom_champ_classification,
                     **kwarg)
                 # Ajouter le RTSS à l'index des identifiants
                 self.dict_ids[rtss.id()] = num_rts

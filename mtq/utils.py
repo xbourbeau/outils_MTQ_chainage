@@ -10,7 +10,3 @@ from .plugin_setting.ParametreFont import ParametreFont
 from .plugin_setting.ParametreInt import ParametreInt
 from .plugin_setting.ParametreListe import ParametreListe
 from .plugin_setting.GestionParametre import GestionParametre
-
-# Network Analysis
-from .network.Itineraire import Itineraire
-from .network.RoadNetwork import RoadNetwork
