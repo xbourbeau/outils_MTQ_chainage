@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 import os
 
-from mtq import param
 from qgis.core import QgsMapLayerProxyModel, QgsFieldProxyModel, QgsProject
 from qgis.gui import QgisInterface
 from qgis.PyQt.QtWidgets import QDialog, QMessageBox
